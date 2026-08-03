@@ -160,6 +160,15 @@
   }
   @media (prefers-reduced-motion:reduce){.ekg-line{animation:none;stroke-dashoffset:0;}.ekg-image{animation:none;clip-path:none;}}
 
+  @media(max-width:700px){
+    .topbar{flex-wrap:wrap; row-gap:10px; padding:10px 16px;}
+    .brand{font-size:1.05rem;}
+    .nav-tabs{order:3; width:100%; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; justify-content:flex-start;}
+    .nav-tabs button{padding:6px 4px; font-size:.72rem; white-space:nowrap; flex-shrink:0;}
+    .user-chip{font-size:.72rem; gap:6px; flex-shrink:0;}
+    .user-chip .avatar{width:24px;height:24px;font-size:.7rem;}
+  }
+
   @media(max-width:820px){
     #view-auth{align-items:flex-start; overflow-y:auto; height:auto; padding:0;}
     .auth-scale{
@@ -485,7 +494,7 @@
     </div>
     <div class="nav-tabs">
       <button class="tab-btn active" data-tab="dashboard" onclick="showTab('dashboard')">Mis materias</button>
-      <button class="tab-btn" data-tab="quiz" onclick="showTab('quiz')">Preguntas</button>
+      <button class="tab-btn" data-tab="quiz" onclick="openQuizPicker()">Preguntas</button>
       <button class="tab-btn" data-tab="booking" id="nav-booking-btn" onclick="showTab('booking')">Reservas</button>
     </div>
     <div class="user-chip" id="user-chip"><span class="avatar">--</span> Cargando…</div>
@@ -568,7 +577,12 @@
         <p>Elegí una respuesta. Si te equivocás, te mostramos por qué.</p>
       </div>
 
-      <div class="quiz-card">
+      <div class="quiz-card" id="quiz-subject-picker" style="display:none">
+        <div class="quiz-q-count">Elegí una materia para practicar</div>
+        <div id="quiz-subject-list"></div>
+      </div>
+
+      <div class="quiz-card" id="quiz-active-card">
         <div class="quiz-q-count">Cargando…</div>
         <div class="quiz-question" id="quiz-question-text"></div>
         <div class="quiz-options" id="quiz-options"></div>
@@ -1022,12 +1036,48 @@ function startSubjectQuiz(){
   const questions = adminData.quizQuestions.filter(q=>q.subjectId===currentSubjectId).sort((a,b)=>(a.order||0)-(b.order||0));
   quizSession = {subjectId: currentSubjectId, questions, index: 0, correct: 0};
   showTab('quiz');
+  const picker = document.getElementById('quiz-subject-picker');
+  const active = document.getElementById('quiz-active-card');
+  if(picker) picker.style.display='none';
+  if(active) active.style.display='';
   renderQuizQuestion();
+}
+
+function openQuizPicker(){
+  showTab('quiz');
+  if(quizSession && quizSession.subjectId){
+    document.getElementById('quiz-subject-picker').style.display='none';
+    document.getElementById('quiz-active-card').style.display='';
+    renderQuizQuestion();
+  }else{
+    renderQuizSubjectPicker();
+  }
+}
+
+function renderQuizSubjectPicker(){
+  document.getElementById('quiz-active-card').style.display='none';
+  const picker = document.getElementById('quiz-subject-picker');
+  picker.style.display='';
+  const list = document.getElementById('quiz-subject-list');
+  const subjectIdsWithQuiz = new Set(adminData.quizQuestions.map(q=>q.subjectId));
+  const subjects = flatSubjects.filter(s=>subjectIdsWithQuiz.has(s.id));
+  if(!subjects.length){
+    list.innerHTML = '<p class="admin-mini">Tu profesor todavía no cargó preguntas para ninguna materia.</p>';
+    return;
+  }
+  list.innerHTML = subjects.map(s=>`<div class="video-item" style="cursor:pointer" onclick="selectQuizSubject('${s.id}')"><div class="vi-info"><div class="vi-title">${escapeHtml(s.unitName)} · ${escapeHtml(s.name)}</div></div><span class="vi-status pending">Practicar →</span></div>`).join('');
+}
+
+function selectQuizSubject(subjectId){
+  currentSubjectId = subjectId;
+  document.getElementById('quiz-subject-picker').style.display='none';
+  document.getElementById('quiz-active-card').style.display='';
+  startSubjectQuiz();
 }
 
 function renderQuizQuestion(){
   const subject = findSubjectById(quizSession.subjectId);
-  const countEl = document.querySelector('#tab-quiz .quiz-q-count');
+  const countEl = document.querySelector('#quiz-active-card .quiz-q-count');
   const qTextEl = document.getElementById('quiz-question-text');
   const optsEl = document.getElementById('quiz-options');
   const fb = document.getElementById('quiz-feedback');
@@ -1088,7 +1138,7 @@ function finishQuiz(){
       .catch(err=>alert('Error al guardar el resultado: '+err.message));
   }
   const subject = findSubjectById(subjectId);
-  const countEl = document.querySelector('#tab-quiz .quiz-q-count');
+  const countEl = document.querySelector('#quiz-active-card .quiz-q-count');
   const qTextEl = document.getElementById('quiz-question-text');
   const optsEl = document.getElementById('quiz-options');
   const fb = document.getElementById('quiz-feedback');
@@ -1491,7 +1541,7 @@ renderAdmin();
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut
+  onAuthStateChanged, signOut, updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, onSnapshot, increment
@@ -1559,15 +1609,30 @@ window.handleRegister = async function(){
   const pass1 = document.getElementById('register-password').value;
   const pass2 = document.getElementById('register-password2').value;
   if(!name || !email || !pass1){ setError('register-error','Completá todos los campos.'); return; }
+  if(name.split(' ').filter(Boolean).length < 2){ setError('register-error','Ingresá tu nombre y apellido completos.'); return; }
   if(pass1 !== pass2){ setError('register-error','Las contraseñas no coinciden.'); return; }
   const btn = document.getElementById('register-btn');
   btn.disabled = true; btn.textContent = 'Creando...';
   try{
     const cred = await createUserWithEmailAndPassword(auth, email, pass1);
-    await setDoc(doc(db,'students',cred.user.uid), {
-      name, email, package: 'Sin asignar', status: 'Pendiente',
-      startDate: new Date().toISOString().slice(0,10), classesUsed: 0
-    });
+    try{ await updateProfile(cred.user, {displayName: name}); }catch(e){}
+    try{
+      await setDoc(doc(db,'students',cred.user.uid), {
+        name, email, package: 'Sin asignar', status: 'Pendiente',
+        startDate: new Date().toISOString().slice(0,10), classesUsed: 0
+      });
+    }catch(saveErr){
+      // La cuenta ya existe en Firebase Auth aunque falle este guardado.
+      // Reintentamos una vez más antes de continuar, para no dejar al alumno sin ficha.
+      try{
+        await setDoc(doc(db,'students',cred.user.uid), {
+          name, email, package: 'Sin asignar', status: 'Pendiente',
+          startDate: new Date().toISOString().slice(0,10), classesUsed: 0
+        }, {merge:true});
+      }catch(retryErr){
+        console.error('No se pudo guardar la ficha del alumno:', retryErr);
+      }
+    }
     await routeUser(cred.user);
   }catch(err){
     setError('register-error', friendlyAuthError(err));
@@ -1678,7 +1743,24 @@ function updateUserChip(){
   const chip = document.getElementById('user-chip');
   if(!chip || !window.__currentUid) return;
   const s = window.adminData.students.find(x=>x.id===window.__currentUid);
-  if(!s) return;
+  if(!s){
+    // La ficha del alumno no existe todavía en la base (ej: falló al guardarse en el registro).
+    // La recreamos automáticamente con los datos de la cuenta para no dejarlo trabado en "Cargando...".
+    const u = auth.currentUser;
+    if(u){
+      const fallbackName = u.displayName || 'Alumno sin nombre cargado';
+      if(!chip.dataset.healing){
+        chip.dataset.healing = '1';
+        setDoc(doc(db,'students', window.__currentUid), {
+          name: fallbackName, email: u.email || '', package: 'Sin asignar', status: 'Pendiente',
+          startDate: new Date().toISOString().slice(0,10), classesUsed: 0
+        }, {merge:true}).catch(err=>console.error('Autorreparación de ficha de alumno falló:', err));
+      }
+      const initials = fallbackName.split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('') || '?';
+      chip.innerHTML = `<span class="avatar">${initials}</span> ${fallbackName.split(' ')[0]} <button onclick="doLogout()" style="margin-left:10px;border:0;background:none;cursor:pointer;color:var(--gold-soft);font-size:.78rem;text-decoration:underline">Salir</button>`;
+    }
+    return;
+  }
   const initials = s.name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('') || '?';
   chip.innerHTML = `<span class="avatar">${initials}</span> ${s.name.split(' ')[0]} <button onclick="doLogout()" style="margin-left:10px;border:0;background:none;cursor:pointer;color:var(--gold-soft);font-size:.78rem;text-decoration:underline">Salir</button>`;
 }
