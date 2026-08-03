@@ -819,7 +819,9 @@ window.addEventListener('orientationchange', fitAuthScale);
 fitAuthScale();
 
 function goDashboard(){
-  document.getElementById('view-auth').classList.remove('active');
+  const authView = document.getElementById('view-auth');
+  authView.classList.remove('active');
+  authView.style.display='none';
   document.getElementById('app-shell').style.display='block';
   showTab('dashboard');
 }
@@ -1695,7 +1697,9 @@ async function routeUser(user){
       window.openAdmin();
     }else{
       setCurrentStudentId(user.uid);
-      document.getElementById('view-auth').classList.remove('active');
+      const authView = document.getElementById('view-auth');
+      authView.classList.remove('active');
+      authView.style.display='none';
       document.getElementById('app-shell').style.display='block';
       window.showTab('dashboard');
     }
