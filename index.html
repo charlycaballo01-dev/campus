@@ -419,6 +419,9 @@
 
 </head>
 <body>
+<div id="boot-loading" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg-page,#F8F6EE);">
+  <span style="font-family:var(--font-display,serif);font-weight:600;color:var(--forest,#184F36);font-size:1.1rem;letter-spacing:.03em;">C.A.E.R.</span>
+</div>
 
 <svg class="brand-defs" aria-hidden="true">
   <defs>
@@ -1704,7 +1707,9 @@ async function routeUser(user){
 }
 
 /* ---------- se dispara al cargar la página (sesión ya guardada) y al cerrar sesión ---------- */
+setTimeout(()=>{ document.getElementById('boot-loading')?.remove(); }, 4000);
 onAuthStateChanged(auth, async (user) => {
+  document.getElementById('boot-loading')?.remove();
   if(user){
     await routeUser(user);
   }else{
