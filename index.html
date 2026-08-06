@@ -467,6 +467,15 @@
 </div>
 </section>
 
+<section id="view-pending" style="display:none; min-height:100vh; align-items:center; justify-content:center; padding:32px; background:var(--bg-page,#F8F6EE); text-align:center;">
+  <div style="max-width:440px; background:var(--bg-panel,#fff); border:1px solid var(--line,#e5e0cf); border-radius:var(--radius-lg,18px); padding:40px 32px; box-shadow:0 2px 14px rgba(20,59,42,.06);">
+    <div style="font-size:2rem; margin-bottom:14px;">⏳</div>
+    <h2 style="font-family:var(--font-display,serif); color:var(--forest,#184F36); font-weight:600; margin:0 0 12px;">Cuenta creada, esperando aprobación</h2>
+    <p style="color:var(--text-muted,#6b7563); font-size:.94rem; line-height:1.5; margin:0 0 24px;">Tu cuenta ya está registrada. Un administrador de C.A.E.R. tiene que habilitar tu acceso y asignarte un paquete antes de que puedas ver el contenido de la plataforma. Te vamos a avisar apenas esté listo.</p>
+    <button class="admin-btn secondary" onclick="doLogout()">Cerrar sesión</button>
+  </div>
+</section>
+
 <div id="app-shell" style="display:none">
   <div class="topbar">
     <div class="brand">
@@ -1997,9 +2006,11 @@ window.doLogout = async function(){
   stopCollectionListeners();
   await signOut(auth);
   window.__currentUid = null;
+  window.__isAdminSession = false;
   setCurrentStudentId(null);
   document.getElementById('admin-shell')?.style.setProperty('display','none');
   document.getElementById('app-shell')?.style.setProperty('display','none');
+  document.getElementById('view-pending')?.style.setProperty('display','none');
   const authView = document.getElementById('view-auth');
   if(authView){ authView.style.display=''; authView.classList.add('active'); }
   window.setAuthMode('login');
@@ -2055,7 +2066,7 @@ function startCollectionListeners(){
   stopCollectionListeners();
   unsubStudents = onSnapshot(collection(db,'students'), snap=>{
     window.adminData.students = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    safeRenderAdmin(); safeRenderStudentDashboard(); updateUserChip();
+    safeRenderAdmin(); safeRenderStudentDashboard(); updateUserChip(); applyAccessGate();
   });
   unsubPackages = onSnapshot(collection(db,'packages'), snap=>{
     window.adminData.packages = snap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -2104,6 +2115,18 @@ function safeRenderAdmin(){ if(typeof window.renderAdmin==='function') window.re
 function safeRenderStudentDashboard(){ if(window.__currentUid && typeof window.renderStudentDashboard==='function') window.renderStudentDashboard(); }
 function safeRenderUnits(){ if(typeof renderUnits==='function') renderUnits(); }
 
+/* ---------- control de acceso: mientras el administrador no habilite al alumno (status Activo + paquete asignado), no se muestra nada de la plataforma ---------- */
+function applyAccessGate(){
+  if(!window.__currentUid || window.__isAdminSession) return;
+  const appShell = document.getElementById('app-shell');
+  const pendingView = document.getElementById('view-pending');
+  const s = window.adminData.students.find(x=>x.id===window.__currentUid);
+  const allowed = !!(s && isStudentActive(s));
+  if(pendingView) pendingView.style.display = allowed ? 'none' : 'flex';
+  if(appShell) appShell.style.display = allowed ? 'block' : 'none';
+}
+window.applyAccessGate = applyAccessGate;
+
 function updateUserChip(){
   const chip = document.getElementById('user-chip');
   if(!chip || !window.__currentUid) return;
@@ -2140,15 +2163,23 @@ async function routeUser(user){
     const adminSnap = await getDoc(doc(db,'admins',user.uid));
     startCollectionListeners();
     if(adminSnap.exists()){
+      window.__isAdminSession = true;
       setCurrentStudentId(null);
+      document.getElementById('view-pending').style.display='none';
       window.openAdmin();
     }else{
+      window.__isAdminSession = false;
       setCurrentStudentId(user.uid);
       const authView = document.getElementById('view-auth');
       authView.classList.remove('active');
       authView.style.display='none';
-      document.getElementById('app-shell').style.display='block';
+      // Por defecto se muestra la pantalla de "esperando aprobación" hasta confirmar
+      // que el administrador ya activó al alumno (applyAccessGate decide si corresponde
+      // mostrar el contenido real, una vez que llegue la ficha desde Firestore).
+      document.getElementById('app-shell').style.display='none';
+      document.getElementById('view-pending').style.display='flex';
       window.showTab('dashboard');
+      applyAccessGate();
     }
   }catch(err){
     alert('Error al cargar tu cuenta: ' + err.message + '\n\nProbá recargar la página e iniciar sesión de nuevo.');
@@ -2165,10 +2196,12 @@ onAuthStateChanged(auth, async (user) => {
     await routeUser(user);
   }else{
     window.__currentUid = null;
+    window.__isAdminSession = false;
     setCurrentStudentId(null);
     stopCollectionListeners();
     document.getElementById('admin-shell')?.style.setProperty('display','none');
     document.getElementById('app-shell')?.style.setProperty('display','none');
+    document.getElementById('view-pending')?.style.setProperty('display','none');
     const authView = document.getElementById('view-auth');
     if(authView){ authView.style.display=''; authView.classList.add('active'); }
     window.setAuthMode('login');
