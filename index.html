@@ -467,15 +467,6 @@
 </div>
 </section>
 
-<section id="view-pending" style="display:none; min-height:100vh; align-items:center; justify-content:center; padding:32px; background:var(--bg-page,#F8F6EE); text-align:center;">
-  <div style="max-width:440px; background:var(--bg-panel,#fff); border:1px solid var(--line,#e5e0cf); border-radius:var(--radius-lg,18px); padding:40px 32px; box-shadow:0 2px 14px rgba(20,59,42,.06);">
-    <div style="font-size:2rem; margin-bottom:14px;">⏳</div>
-    <h2 style="font-family:var(--font-display,serif); color:var(--forest,#184F36); font-weight:600; margin:0 0 12px;">Cuenta creada, esperando aprobación</h2>
-    <p style="color:var(--text-muted,#6b7563); font-size:.94rem; line-height:1.5; margin:0 0 24px;">Tu cuenta ya está registrada. Un administrador de C.A.E.R. tiene que habilitar tu acceso y asignarte un paquete antes de que puedas ver el contenido de la plataforma. Te vamos a avisar apenas esté listo.</p>
-    <button class="admin-btn secondary" onclick="doLogout()">Cerrar sesión</button>
-  </div>
-</section>
-
 <div id="app-shell" style="display:none">
   <div class="topbar">
     <div class="brand">
@@ -584,6 +575,19 @@
 </div>
 
 
+<div id="unit-intro-modal" style="display:none;position:fixed;inset:0;background:rgba(20,30,25,.82);z-index:999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg-panel,#fff);border-radius:16px;padding:24px;max-width:640px;width:100%;max-height:80vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px">
+      <div>
+        <span class="eyebrow">Introducción</span>
+        <strong id="unit-intro-modal-title" style="display:block;font-family:var(--font-display);font-size:1.25rem;margin-top:4px"></strong>
+      </div>
+      <button class="admin-btn secondary small" onclick="closeUnitIntroModal()">Cerrar ✕</button>
+    </div>
+    <div id="unit-intro-modal-body" style="overflow:auto;line-height:1.6;white-space:pre-wrap"></div>
+  </div>
+</div>
+
 <!-- ================= ADMIN PANEL ================= -->
 <div id="video-modal" style="display:none;position:fixed;inset:0;background:rgba(20,30,25,.82);z-index:999;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--bg-panel,#fff);border-radius:16px;padding:20px;max-width:820px;width:100%">
@@ -689,18 +693,46 @@
 
     <section id="admin-subjects" class="admin-view">
       <div class="admin-card">
-        <h3>Crear materia</h3>
+        <h3>Materias por unidad (las que ve el alumno)</h3>
+        <p class="admin-mini" style="margin-bottom:12px">Elegí una unidad para renombrar sus materias, agregar una nueva o quitar alguna. Esto es lo que el alumno realmente ve al entrar a cada unidad.</p>
+        <div class="admin-form">
+          <label class="full">Unidad<select id="unit-subjects-select" onchange="renderUnitSubjectsEditor()"></select></label>
+        </div>
+        <div id="unit-subjects-editor-list" style="margin-top:14px"></div>
+        <form class="admin-form" onsubmit="addUnitSubject(event)" style="margin-top:16px;border-top:1px solid var(--line);padding-top:16px">
+          <label class="full">Agregar materia nueva a esta unidad<input id="new-unit-subject-name" placeholder="Ej.: Genética" required></label>
+          <div class="full"><button class="admin-btn" type="submit">Agregar materia a la unidad</button></div>
+        </form>
+      </div>
+      <div class="admin-card">
+        <h3>Introducción de la unidad</h3>
+        <p class="admin-mini" style="margin-bottom:12px">Escribí acá el texto de introducción de cada unidad. Los alumnos lo van a poder leer tocando el botón "Introducción" dentro de esa unidad.</p>
+        <div class="admin-form">
+          <label class="full">Unidad<select id="intro-unit-select" onchange="loadUnitIntroEditor()"></select></label>
+          <label class="full">Texto de la introducción<textarea id="intro-unit-text" rows="8" style="padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-md);font-family:var(--font-body);font-size:.9rem;background:var(--bg-panel);color:var(--text-primary);outline:none;resize:vertical" placeholder="Escribí acá la introducción de la unidad..."></textarea></label>
+          <div class="full" style="display:flex;gap:10px">
+            <button class="admin-btn" type="button" onclick="saveUnitIntro()">Guardar introducción</button>
+            <button class="admin-btn danger" type="button" onclick="clearUnitIntro()">Borrar introducción</button>
+          </div>
+          <p class="admin-mini full" id="intro-unit-status" style="margin-top:4px"></p>
+        </div>
+      </div>
+      <div class="admin-card">
+        <h3 id="subject-form-title">Crear materia</h3>
+        <p class="admin-mini" style="margin-bottom:12px">Esto agrega una materia a este listado de referencia (se usa para el acceso por paquete), no a una unidad específica. Para las materias que ve el alumno dentro de cada unidad, usá "Materias por unidad" arriba.</p>
         <form class="admin-form" onsubmit="addSubject(event)">
+          <input type="hidden" id="editing-subject-id" value="">
           <label>Nombre de la materia<input id="new-subject-name" required></label>
           <label>Cantidad de clases<input id="new-subject-lessons" type="number" min="1" value="10" required></label>
-          <div class="full"><button class="admin-btn" type="submit">Agregar materia</button></div>
+          <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="subject-submit-btn">Agregar materia</button><button class="admin-btn secondary" type="button" id="subject-cancel-btn" style="display:none" onclick="cancelEditSubject()">Cancelar edición</button></div>
         </form>
       </div>
       <div class="admin-card">
         <h3>Materias y contenidos</h3>
+        <p class="admin-mini" style="margin-bottom:12px">Usá "Editar materias" para modificar el nombre o la cantidad de clases de una materia ya cargada.</p>
         <div style="overflow:auto">
           <table class="admin-table">
-            <thead><tr><th>Materia</th><th>Clases</th><th>Evaluación</th><th>Acceso por paquete</th></tr></thead>
+            <thead><tr><th>Materia</th><th>Clases</th><th>Evaluación</th><th>Acceso por paquete</th><th>Editar materias</th></tr></thead>
             <tbody id="subjects-table"></tbody>
           </table>
         </div>
@@ -874,11 +906,43 @@ function showTab(name){
 }
 const curriculumData = {"modules": [{"id": "mod-crecimiento-desarrollo", "name": "Crecimiento y Desarrollo", "units": [{"id": "u1", "number": 1, "name": "Unidad 1", "subjects": [{"id": "s1-histologia", "name": "Histología", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1aNpT0t2f1RHsdVWeZOLRpPxDLTxMH7kk/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1SSlomkZE0RaruJ_uRG2LXwBF4rOcFzuU/view"}], "quizTotal": 30}, {"id": "s2-quimica-biologica", "name": "Química Biológica", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química", "type": "pdf", "url": "https://drive.google.com/file/d/1oCCbNrwrDq6ZMFGerTX7M1KwvmVzUNtt/view"}, {"name": "Química Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/19A6iRkicIkJ4cckVmJUe51EWRlvQWRhc/view"}], "quizTotal": 30}, {"id": "s3-fisiologia", "name": "Fisiología", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1Z2gP-qGq7EmBT0MQkBw2xMxibwoLBE3O/view"}], "quizTotal": 30}, {"id": "s33-medicina-sociedad", "name": "Medicina y Sociedad", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1ougXykHgoyhdz5x1g-7-IaYZLL5e4Z88/view"}], "quizTotal": 30}, {"id": "s34-biologia", "name": "Biología", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Biología", "type": "pdf", "url": "https://drive.google.com/file/d/1e5Yv8bfnx7p-M9cvPCnMRximklTXO0kN/view"}, {"name": "Biología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/10TeFPprvIvcWIsbL256LQ4-foUS-2WwC/view"}], "quizTotal": 30}, {"id": "s35-anatomia-generalidades", "name": "Anatomía Generalidades", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía Generalidades", "type": "pdf", "url": "https://drive.google.com/file/d/12KK27jLKyyc6p79V6-RIfMu7xFR2Hnyn/view"}, {"name": "Anatomía Generalidades Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1rNkZdTVgcUOToH53ggnV_7-gwFDvDpMy/view"}], "quizTotal": 30}, {"id": "s36-anatomia-craneo-columna", "name": "Anatomía Cráneo y Columna", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía Cráneo y Columna", "type": "pdf", "url": "https://drive.google.com/file/d/1R5shVRnZgUFzdJ9dzs0Z7sT-4E_P4Q0C/view"}, {"name": "Anatomía Cráneo y Columna Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1gc8tKODnzaSYMv-Qb47yt5DLaXfcizeO/view"}], "quizTotal": 30}]}, {"id": "u2", "number": 2, "name": "Unidad 2", "subjects": [{"id": "s37-quimica-u2", "name": "Química", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química", "type": "pdf", "url": "https://drive.google.com/file/d/1UfscbrZse5sVoJdXChs1AZdc8msnhiwv/view"}, {"name": "Química Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1heVrwhE1LvxGc9-DFST20el1y6mQfGI1/view"}], "quizTotal": 30}, {"id": "s38-biologia-u2", "name": "Biología", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Biología", "type": "pdf", "url": "https://drive.google.com/file/d/16qFqR1i-tI1q6-1O0nsODO-FNnDL_AUu/view"}, {"name": "Biología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1zmVL5T_K4EFUKCFPbK1Mv1B7FY1RTM2q/view"}], "quizTotal": 30}, {"id": "s39-histologia-u2", "name": "Histología", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1XO_Z1R62k9DHbrvLfLzz0LHjE8KMw5Gt/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1nV0gZMQ7wNkr0UGXPBtMoyUeqQQfoOzV/view"}], "quizTotal": 30}, {"id": "s40-medicina-sociedad-u2", "name": "Medicina y Sociedad", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1clF4LnhPpNZ8LOaJp0Wo5VuCHFTZCgfq/view"}], "quizTotal": 30}]}, {"id": "u3", "number": 3, "name": "Unidad 3", "subjects": [{"id": "s41-histologia-u3", "name": "Histología", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1CO2UqxSa6VvgVQW4B57vhUPppc61ojKN/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1r1pvKXWARKh1s1fmjOat92tKO2r80TMZ/view"}], "quizTotal": 30}, {"id": "s42-quimica-u3", "name": "Química", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química", "type": "pdf", "url": "https://drive.google.com/file/d/1FLxnD9sCcwih04gI2yu420-z0u9RxmKa/view"}, {"name": "Química Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1m7qSarF0zxb5REVAxTQ5ZAXRuNTuFofF/view"}], "quizTotal": 30}, {"id": "s43-fisiologia-u3", "name": "Fisiología", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1-MGmLRcumEtkN6bD0zLrrkoqtcpRBKRP/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1c9KuP-xvLf4ia-zN81mEb3iOCUIUs6jR/view"}], "quizTotal": 30}, {"id": "s44-fisica-biologica-u3", "name": "Física Biológica", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Física Biológica", "type": "pdf", "url": "https://drive.google.com/file/d/1NXIDOr6Kq-78-xNBIWC4sGEn6HS25UmB/view"}, {"name": "Física Biológica Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/13ePGhNs8O6bMLMhzRlNCUl9I_PuMFFqj/view"}], "quizTotal": 30}, {"id": "s45-medicina-sociedad-u3", "name": "Medicina y Sociedad", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1J1pDquRSqtpn4CL8teKS1j_z8feVmvfZ/view"}], "quizTotal": 30}]}, {"id": "u4", "number": 4, "name": "Unidad 4", "subjects": [{"id": "s46-histologia-u4", "name": "Histología", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1hsSRllqjTcr7JbB-hqC3kig-MzKkmEt3/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1tBj6AKk2cviNARfXH3WUCDin6_8zP2_8/view"}], "quizTotal": 30}, {"id": "s47-fisiologia-u4", "name": "Fisiología", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1zKQD19UDyX5X4Jxi7zjtpsd3G7AhFn4z/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1qJz37dCqGXAPFBntOrZmRjdUXZLGI30l/view"}], "quizTotal": 30}, {"id": "s48-fisica-biologica-u4", "name": "Física Biológica", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Física Biológica", "type": "pdf", "url": "https://drive.google.com/file/d/1syqgdcSFqivnU5xxes2JhPQUc7qF5znZ/view"}, {"name": "Física Biológica Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1BXcfdZqK8Yf5XEpDksNbffZaYrXbfG2B/view"}], "quizTotal": 30}, {"id": "s49-embriologia-u4", "name": "Embriología", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1UEH3VZ20_0zA8lH4Qh23U_ovalBK-7MS/view"}, {"name": "Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/15o12iDzTmpU7iEWBrfRAT9Z17AuwIEOq/view"}], "quizTotal": 30}, {"id": "s50-medicina-sociedad-u4", "name": "Medicina y Sociedad", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1CzDWzWSzrkOfmXe-13DuYYwj8KBq7E38/view"}, {"name": "Control preconcepcional, prenatal y puerperal (comunidades)", "type": "pdf", "url": "https://drive.google.com/file/d/15mIW1lfTDbTd_wwsnbrlA_hYc-RZql4U/view"}], "quizTotal": 30}]}, {"id": "u5", "number": 5, "name": "Unidad 5", "subjects": [{"id": "s51-fisiologia-u5", "name": "Fisiología", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1f5hVs0u2o2hn6PPdsRu6c804GmGMl4bM/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1sSCI6e6_2eF18rJxGp_kCu6FfssQxa3B/view"}], "quizTotal": 30}, {"id": "s52-histologia-u5", "name": "Histología", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1RUk2tWJmdA0d8fcLKcx_xqoWmpT26iu_/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1X4kpGN7jZbWz-N6GI0guUbBX2GKvodDj/view"}], "quizTotal": 30}, {"id": "s53-pediatria-u5", "name": "Pediatría", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Pediatría Parte 1", "type": "pdf", "url": "https://drive.google.com/file/d/1yTGMOTAaCZh7bKB0RLbaTe_rJGkpvwKd/view"}, {"name": "Pediatría Parte 1 Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/14O6XH_8f63FiTTJO8qSQct8WFJyXu56j/view"}, {"name": "Pediatría Parte 2", "type": "pdf", "url": "https://drive.google.com/file/d/11JOZVxtL9ee-5VEVXXsMRHbPnnNLvodJ/view"}, {"name": "Pediatría Parte 2 Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1lYd1u1fsc8ICg2cIto8frXVUJWv2O5-X/view"}], "quizTotal": 30}, {"id": "s54-paidopsiquiatria-u5", "name": "Paidopsiquiatría", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Paidopsiquiatría", "type": "pdf", "url": "https://drive.google.com/file/d/177wOF4wK9SYLg8s8m9U6190BbWKJ_rtx/view"}, {"name": "Paidopsiquiatría Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1GpszkvjDon8udr5KekdpdyoE4rM-dp_a/view"}], "quizTotal": 30}]}, {"id": "u6", "number": 6, "name": "Unidad 6", "subjects": [{"id": "s55-histologia-embriologia-u6", "name": "Histología y Embriología", "unit": 6, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1V2uBWRm5i87li0vs7Z0Ez2YEICfkKNPY/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1zJ5-A08Tt72CVb8wcukFsD64NshSlPy6/view"}], "quizTotal": 30}, {"id": "s56-pediatria-u6", "name": "Pediatría", "unit": 6, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Pediatría", "type": "pdf", "url": "https://drive.google.com/file/d/1a5ah3b0HKtpHg7jPSdnSQxHYYzNlGCtm/view"}, {"name": "Pediatría Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1xTuQkqMvcrBGfJE-hAudgQcVP0M6gyLo/view"}], "quizTotal": 30}, {"id": "s57-medicina-sociedad-u6", "name": "Medicina y Sociedad", "unit": 6, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1b-q-6zKthgMW-yR7HadMQVveYN0SGSGm/view"}], "quizTotal": 30}]}, {"id": "u7", "number": 7, "name": "Unidad 7", "subjects": [{"id": "s58-anatomia-u7", "name": "Anatomía", "unit": 7, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía", "type": "pdf", "url": "https://drive.google.com/file/d/1m9RoXisdlugv2REHD4R8K_oosz84x9de/view"}, {"name": "Anatomía Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1oPjk14SY722Z1cVpIuDgm2_TqQG0zcRX/view"}], "quizTotal": 30}, {"id": "s59-fisiologia-u7", "name": "Fisiología", "unit": 7, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1c0VsbCyQvKLw12to-ME6KWA0cwXPpD3C/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1m6gV7M2XXaRMvgZpxeTzI8DA28LKelXn/view"}], "quizTotal": 30}]}, {"id": "u8", "number": 8, "name": "Unidad 8", "subjects": [{"id": "s60-histologia-embriologia-u8", "name": "Histología y Embriología", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1M0CdqJFghj15f_LNipX55oq0FAgePK39/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1czH419WpjGWrGOtgaNQVUCHvHkknsv37/view"}], "quizTotal": 30}, {"id": "s61-crecimiento-desarrollo-u8", "name": "Crecimiento y Desarrollo", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Crecimiento y Desarrollo", "type": "pdf", "url": "https://drive.google.com/file/d/11arZDfuSLc0OpJxmrqswbNjMVw6p_OEF/view"}, {"name": "Crecimiento y Desarrollo Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1wS34ME_dZP_H5VQPGEV1PMifWKqp_bfF/view"}], "quizTotal": 30}, {"id": "s62-biologia-u8", "name": "Biología", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Biología", "type": "pdf", "url": "https://drive.google.com/file/d/11QwcwbT2W_Mr9j00UWQrx0L1xu318zT6/view"}, {"name": "Biología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1Vp1YYIWIErtZ7gawxNpN0stjUi3FJW9B/view"}], "quizTotal": 30}, {"id": "s63-anatomia-u8", "name": "Anatomía", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía", "type": "pdf", "url": "https://drive.google.com/file/d/1P4T-xydnIWqG7SKiCqyuAY-xila873xO/view"}, {"name": "Anatomía Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1VC9liRnkTsHT_uMyD2JYY_PlndInG-Q4/view"}], "quizTotal": 30}, {"id": "s64-fisiologia-u8", "name": "Fisiología", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/15_pMgRI52lDzr9PihhU6QTfvWJUSFNxO/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1qjNTgNP_L96pNBeQDAxL6aAkp454-xT3/view"}], "quizTotal": 30}]}, {"id": "u9", "number": 9, "name": "Unidad 9", "subjects": [{"id": "s65-histologia-embriologia-u9", "name": "Histología y Embriología", "unit": 9, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1w2m5ZjF4whd18mIps-pWggY4DipDJAq0/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1YNLuw-e5rUN97CmdSAvcCDIxq8cNGeo6/view"}], "quizTotal": 30}, {"id": "s66-inmunologia-u9", "name": "Inmunología", "unit": 9, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Inmunología", "type": "pdf", "url": "https://drive.google.com/file/d/1BGAl1mdzUhApn03SD7eW78I1W0xB0V5V/view"}, {"name": "Inmunología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1b9E4wu-L9mmM8hPRFB-7HX-jslj1Fx1d/view"}], "quizTotal": 30}, {"id": "s67-quimica-biologica-u9", "name": "Química Biológica", "unit": 9, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química Biológica", "type": "pdf", "url": "https://drive.google.com/file/d/13ILitZRh_4HksxVvFpobmsrVg3Lu-XOd/view"}, {"name": "Química Biológica Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/17gQ3RUDWmIXiXiafNRpdcRlmkwQ_Dp6s/view"}], "quizTotal": 30}]}, {"id": "u10", "number": 10, "name": "Unidad 10", "subjects": [{"id": "s68-anatomia-u10", "name": "Anatomía", "unit": 10, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía", "type": "pdf", "url": "https://drive.google.com/file/d/1YSJm9QiXmodMLmv02urUnw-9aALgXfSF/view"}, {"name": "Anatomía Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1FYUtRfpcKwZHjbY_9s3tyCGN5k8d4uwi/view"}], "quizTotal": 30}, {"id": "s69-fisiologia-u10", "name": "Fisiología", "unit": 10, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1EQpB7ffbZ85zPTEoNQpwbOpyuBJB0LAH/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/18HTUW2UXBt6MxWd296fb45IE1pCC3pd6/view"}], "quizTotal": 30}, {"id": "s70-histologia-u10", "name": "Histología", "unit": 10, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1UzHg_YEM4nJ6j_LwZ927olKmICj_OBoy/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/13Qh3F_2lVCy9Ak9VVTy_SmVkjRgPUjdy/view"}], "quizTotal": 30}]}, {"id": "u11", "number": 11, "name": "Unidad 11", "subjects": [{"id": "s71-histologia-embriologia-u11", "name": "Histología y Embriología", "unit": 11, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1HeYUGMttSkvc4UnOC6QdVaognIuMJCBg/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1_hgOThQJV1bwgTFZDw7O6sfWDGg5GI62/view"}], "quizTotal": 30}]}, {"id": "u12", "number": 12, "name": "Unidad 12", "subjects": []}]}]};
 const currentModule = curriculumData.modules[0];
+const seedUnits = JSON.parse(JSON.stringify(curriculumData.modules[0].units));
 let currentUnitId = null;
 let currentSubjectId = null;
 let quizSession = null;
 
 const flatSubjects = currentModule.units.flatMap(u=>u.subjects.map(s=>({id:s.id, name:s.name, unitId:u.id, unitName:u.name})));
+
+// Reconstruye currentModule.units a partir de la semilla original (seedUnits) más los cambios
+// que el administrador haya guardado en Firestore (adminData.unitSubjects): renombres, materias
+// nuevas agregadas a una unidad, y materias marcadas como eliminadas. Se puede llamar las veces
+// que haga falta: siempre arranca desde la semilla, así que nunca se acumulan cambios duplicados.
+function rebuildCurriculumUnits(){
+  const overrides = (window.adminData && window.adminData.unitSubjects) || {};
+  const newUnits = seedUnits.map(su=>{
+    let subjects = su.subjects
+      .filter(s=>!(overrides[s.id] && overrides[s.id].deleted))
+      .map(s=>{
+        const ov = overrides[s.id];
+        return (ov && ov.name) ? {...s, name: ov.name} : {...s};
+      });
+    Object.keys(overrides).forEach(id=>{
+      const ov = overrides[id];
+      if(ov && ov.custom && ov.unitId===su.id && !ov.deleted && !subjects.some(s=>s.id===id)){
+        subjects.push({
+          id, name: ov.name || 'Materia sin nombre', unit: su.number,
+          professor: 'Equipo docente C.A.E.R.', lessonsTotal: 0, lessonsWatched: 0, pct: 0,
+          videos: [], materials: [], quizTotal: 30
+        });
+      }
+    });
+    return {...su, subjects};
+  });
+  currentModule.units = newUnits;
+  flatSubjects.length = 0;
+  flatSubjects.push(...currentModule.units.flatMap(u=>u.subjects.map(s=>({id:s.id, name:s.name, unitId:u.id, unitName:u.name}))));
+}
+window.rebuildCurriculumUnits = rebuildCurriculumUnits;
 
 function extractYoutubeId(url){
   const m = String(url||'').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
@@ -945,26 +1009,28 @@ function renderUnits(){
     u.subjects.forEach(s=>{ const st = realSubjectProgress(s); total += st.total; watched += st.watched; });
     const pct = total ? Math.round(watched/total*100) : 0;
     const t = tierOf(pct);
+    const hasIntro = !!(adminData.unitIntros && adminData.unitIntros[u.id] && adminData.unitIntros[u.id].text && adminData.unitIntros[u.id].text.trim());
     return `<div class="subject-card" onclick="openUnit('${u.id}')">
       <div class="sc-top"><h3>${escapeHtml(u.name)}</h3><span class="sc-pct pct-${t}">${pct}%</span></div>
       <div class="sc-nudge nudge-${t}">${nudges[t][0]}</div>
       <div class="pulse-mini"><div class="pulse-fill" style="width:${pct}%;background:var(${tierColorVar(t)})"></div></div>
       <div class="sc-meta"><span>${u.subjects.length} materias</span><span>${watched}/${total} clases</span></div>
-      <span class="sc-cta">Ver materias →</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px">
+        <span class="sc-cta">Ver materias →</span>
+        <button type="button" class="admin-btn secondary small" style="${hasIntro?'':'opacity:.65'}" onclick="openUnitIntro(event,'${u.id}')">Introducción</button>
+      </div>
     </div>`;
   }).join('');
 }
 
-function openUnit(unitId){
+function renderUnitSubjectsGrid(unitId){
   const unit = currentModule.units.find(u=>u.id===unitId);
   if(!unit) return;
-  currentUnitId = unitId;
-  document.getElementById('unit-eyebrow').textContent = currentModule.name;
   document.getElementById('unit-title').textContent = unit.name;
   const grid = document.getElementById('unit-subjects-grid');
+  if(!grid) return;
   if(!unit.subjects.length){
     grid.innerHTML = '<p class="admin-mini">Tu profesor todavía no cargó materias para esta unidad. En cuanto las suba, las vas a ver acá.</p>';
-    showTab('unit');
     return;
   }
   grid.innerHTML = unit.subjects.map(s=>{
@@ -978,8 +1044,60 @@ function openUnit(unitId){
       <span class="sc-cta">Continuar →</span>
     </div>`;
   }).join('');
+}
+function openUnit(unitId){
+  const unit = currentModule.units.find(u=>u.id===unitId);
+  if(!unit) return;
+  currentUnitId = unitId;
+  document.getElementById('unit-eyebrow').textContent = currentModule.name;
+  renderUnitSubjectsGrid(unitId);
   showTab('unit');
 }
+window.refreshOpenUnitAfterEdit = function(){
+  const unitTab = document.getElementById('tab-unit');
+  if(currentUnitId && unitTab && unitTab.classList.contains('active')){
+    renderUnitSubjectsGrid(currentUnitId);
+  }
+  const subjectTab = document.getElementById('tab-subject');
+  if(currentSubjectId && subjectTab && subjectTab.classList.contains('active')){
+    const subject = findSubjectById(currentSubjectId);
+    if(subject){
+      document.getElementById('subject-name').textContent = subject.name;
+      if(typeof renderSubjectContent==='function') renderSubjectContent();
+    }
+  }
+};
+
+let currentIntroUnitId = null;
+function openUnitIntro(e, unitId){
+  if(e && e.stopPropagation) e.stopPropagation();
+  const unit = currentModule.units.find(u=>u.id===unitId);
+  if(!unit) return;
+  currentIntroUnitId = unitId;
+  const data = adminData.unitIntros && adminData.unitIntros[unitId];
+  const text = data && data.text ? data.text.trim() : '';
+  document.getElementById('unit-intro-modal-title').textContent = unit.name;
+  document.getElementById('unit-intro-modal-body').innerHTML = text
+    ? escapeHtml(text)
+    : '<span style="opacity:.7">Tu profesor todavía no cargó una introducción para esta unidad.</span>';
+  document.getElementById('unit-intro-modal').style.display = 'flex';
+}
+function closeUnitIntroModal(){
+  document.getElementById('unit-intro-modal').style.display = 'none';
+  currentIntroUnitId = null;
+}
+window.refreshOpenUnitIntroModal = function(){
+  if(!currentIntroUnitId) return;
+  const modal = document.getElementById('unit-intro-modal');
+  if(!modal || modal.style.display==='none') return;
+  const data = adminData.unitIntros && adminData.unitIntros[currentIntroUnitId];
+  const text = data && data.text ? data.text.trim() : '';
+  document.getElementById('unit-intro-modal-body').innerHTML = text
+    ? escapeHtml(text)
+    : '<span style="opacity:.7">Tu profesor todavía no cargó una introducción para esta unidad.</span>';
+};
+window.openUnitIntro = openUnitIntro;
+window.closeUnitIntroModal = closeUnitIntroModal;
 
 function openSubjectDetail(subjectId){
   const subject = findSubjectById(subjectId);
@@ -1027,7 +1145,7 @@ function renderSubjectContent(){
     matList.innerHTML = subject.materials.map((m,idx)=>{
       const matId = `${subject.id}-mat-${idx}`;
       const count = getViewCount(matId);
-      return `<div class="video-item"><div class="vi-thumb">${m.type==='pdf'?'PDF':'PPT'}</div><div class="vi-info"><div class="vi-title">${escapeHtml(m.name)}</div><div class="vi-sub">Material de lectura</div></div>${renderDots(count)}<span class="vi-status pending" style="cursor:pointer" onclick="event.stopPropagation();openMaterial('${matId}','${escapeHtml(m.name)}','${m.url||''}')">${m.url?'Ver':'Descargar'}</span></div>`;
+      return `<div class="video-item"><div class="vi-thumb">${m.type==='pdf'?'PDF':'PPT'}</div><div class="vi-info"><div class="vi-title">${escapeHtml(m.name)}</div><div class="vi-sub">Material descargable</div></div>${renderDots(count)}<span class="vi-status pending" style="cursor:pointer" onclick="event.stopPropagation();openMaterial('${matId}','${escapeHtml(m.name)}','${m.url||''}')">${m.url?'Ver':'Descargar'}</span></div>`;
     }).join('');
   }
 
@@ -1040,17 +1158,8 @@ window.renderSubjectContent = renderSubjectContent;
 
 function openMaterial(matId, name, url){
   markItemViewed(matId, 'material');
-  if(!url){ alert('Se descargaría: ' + name); return; }
-  // Convertimos el link de Drive (.../view) a su versión de vista embebida (.../preview)
-  // y lo mostramos adentro de la plataforma en vez de mandar al alumno a la pestaña de Drive,
-  // así no ve el botón de descarga propio de Drive ni puede guardarse el archivo tan fácil.
-  const embedUrl = url.replace(/\/view(\?.*)?$/, '/preview');
-  document.getElementById('video-modal-title').textContent = name;
-  const player = document.getElementById('video-modal-player');
-  player.style.aspectRatio = '';
-  player.style.height = '80vh';
-  player.innerHTML = `<iframe src="${embedUrl.replace(/"/g,'&quot;')}" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="autoplay"></iframe>`;
-  document.getElementById('video-modal').style.display = 'flex';
+  if(url){ window.open(url, '_blank'); }
+  else { alert('Se descargaría: ' + name); }
 }
 
 let ytPlayer = null, ytApiReady = false, pendingLessonId = null;
@@ -1067,9 +1176,6 @@ function playLesson(lessonId){
   const lesson = adminData.lessons.find(l=>l.id===lessonId);
   if(!lesson) return;
   document.getElementById('video-modal-title').textContent = lesson.title;
-  const player = document.getElementById('video-modal-player');
-  player.style.aspectRatio = '16/9';
-  player.style.height = '';
   document.getElementById('video-modal').style.display = 'flex';
   pendingLessonId = lessonId;
   loadYoutubeApi();
@@ -1262,6 +1368,8 @@ const adminData = {
   updates: [],
   quizQuestions: [],
   quizAttempts: [],
+  unitIntros: {},
+  unitSubjects: {},
   recent: []
 };
 window.adminData = adminData;
@@ -1368,18 +1476,22 @@ function renderAdmin(){
   renderAdminUpdates();
   const pkgSelect=document.getElementById('new-student-package');if(pkgSelect)pkgSelect.innerHTML=adminData.packages.map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
   const st=document.getElementById('students-table');
-  if(st)st.innerHTML=adminData.students.map((s,i)=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s);return `<tr><td><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${p?p.classes:0} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td><button class="admin-btn small" onclick="openStudentProfile(${i})">Ver perfil</button> <button class="admin-btn small" onclick="editStudent(${i})">Editar</button> <button class="admin-btn small" onclick="renewStudent(${i})">Renovar</button> <button class="admin-btn small secondary" onclick="sendStudentPasswordReset('${escapeHtml(s.email)}', this)">Restablecer contraseña</button> <button class="admin-btn danger small" onclick="removeStudent(${i})">Eliminar</button></td></tr>`}).join('');
+  if(st)st.innerHTML=adminData.students.map((s,i)=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s);return `<tr><td><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${p?p.classes:0} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td><button class="admin-btn small" onclick="openStudentProfile(${i})">Ver perfil</button> <button class="admin-btn small" onclick="editStudent(${i})">Editar</button> <button class="admin-btn small" onclick="renewStudent(${i})">Renovar</button> <button class="admin-btn danger small" onclick="removeStudent(${i})">Eliminar</button></td></tr>`}).join('');
   const pl=document.getElementById('packages-list');if(pl)pl.innerHTML=adminData.packages.map((p,i)=>`<div class="package-card"><strong>${escapeHtml(p.name)}</strong><div class="package-meta"><span class="admin-badge">${p.days} días de acceso</span><span class="admin-badge" style="${p.mentoria?'':'opacity:.6'}">${p.mentoria?`✓ Mentoría · ${p.classes} clases privadas`:'Sin mentoría'}</span></div>${p.description?`<div style="opacity:.75;margin-bottom:6px">${escapeHtml(p.description)}</div>`:''}<div style="opacity:.75">Materias: ${escapeHtml(p.subjects.join(', '))}</div><div class="admin-actions" style="margin-top:10px"><button class="admin-btn small" onclick="editPackage(${i})">Editar</button> <button class="admin-btn danger" onclick="removePackage(${i})">Eliminar</button></div></div>`).join('');
-  const su=document.getElementById('subjects-table');if(su)su.innerHTML=adminData.subjects.map(s=>{const access=adminData.packages.filter(p=>p.subjects.includes('Todas las materias')||p.subjects.includes(s.name)).map(p=>p.name).join(', ')||'Sin acceso';return `<tr><td><strong>${escapeHtml(s.name)}</strong></td><td>${s.lessons}</td><td>${s.quiz} preguntas</td><td>${escapeHtml(access)}</td></tr>`}).join('');
+  const su=document.getElementById('subjects-table');if(su)su.innerHTML=adminData.subjects.map((s,i)=>{const access=adminData.packages.filter(p=>p.subjects.includes('Todas las materias')||p.subjects.includes(s.name)).map(p=>p.name).join(', ')||'Sin acceso';return `<tr><td><strong>${escapeHtml(s.name)}</strong></td><td>${s.lessons}</td><td>${s.quiz} preguntas</td><td>${escapeHtml(access)}</td><td><button class="admin-btn small" onclick="editSubject(${i})">Editar</button> <button class="admin-btn danger small" onclick="removeSubject(${i})">Eliminar</button></td></tr>`}).join('');
+  renderUnitIntroSelect();
+  renderUnitSubjectsSelect();
   const lessonSelect=document.getElementById('new-lesson-subject');
-  if(lessonSelect && !lessonSelect.dataset.filled){
+  if(lessonSelect){
+    const prevLessonSubj=lessonSelect.value;
     lessonSelect.innerHTML=flatSubjects.map(s=>`<option value="${s.id}">${escapeHtml(s.unitName)} · ${escapeHtml(s.name)}</option>`).join('');
-    lessonSelect.dataset.filled='1';
+    if(prevLessonSubj && flatSubjects.some(s=>s.id===prevLessonSubj)) lessonSelect.value=prevLessonSubj;
   }
   const quizSubjectSelect=document.getElementById('new-quiz-subject');
-  if(quizSubjectSelect && !quizSubjectSelect.dataset.filled){
+  if(quizSubjectSelect){
+    const prevQuizSubj=quizSubjectSelect.value;
     quizSubjectSelect.innerHTML=flatSubjects.map(s=>`<option value="${s.id}">${escapeHtml(s.unitName)} · ${escapeHtml(s.name)}</option>`).join('');
-    quizSubjectSelect.dataset.filled='1';
+    if(prevQuizSubj && flatSubjects.some(s=>s.id===prevQuizSubj)) quizSubjectSelect.value=prevQuizSubj;
   }
   renderAdminQuizzes();
   const ll=document.getElementById('lessons-list');
@@ -1683,9 +1795,156 @@ function cancelEditLesson(){
 }
 function removeLesson(id){if(!confirm('¿Eliminar esta clase?'))return;window.fsDelete('lessons',id).catch(err=>alert('Error: '+err.message))}
 
-function addSubject(e){e.preventDefault();const name=document.getElementById('new-subject-name').value.trim();if(!name){alert('Ponele un nombre a la materia.');return}
-  window.fsAdd('subjects',{name,lessons:Number(document.getElementById('new-subject-lessons').value)||0,quiz:30}).then(()=>{adminData.recent.unshift(`Se agregó la materia ${name}.`);renderAdmin()}).catch(err=>alert('Error: '+err.message));
+function addSubject(e){e.preventDefault();const editingId=document.getElementById('editing-subject-id').value;const name=document.getElementById('new-subject-name').value.trim();if(!name){alert('Ponele un nombre a la materia.');return}
+  const data={name,lessons:Number(document.getElementById('new-subject-lessons').value)||0,quiz:30};
+  if(editingId){
+    window.fsUpdate('subjects',editingId,data).then(()=>{adminData.recent.unshift(`Se editó la materia ${name}.`);cancelEditSubject();renderAdmin()}).catch(err=>alert('Error: '+err.message));
+    return;
+  }
+  window.fsAdd('subjects',data).then(()=>{adminData.recent.unshift(`Se agregó la materia ${name}.`);renderAdmin()}).catch(err=>alert('Error: '+err.message));
   e.target.reset();
+}
+function editSubject(i){
+  const s=adminData.subjects[i];
+  showAdminTab('subjects', document.querySelectorAll('.admin-nav button')[3]);
+  document.getElementById('editing-subject-id').value=s.id;
+  document.getElementById('new-subject-name').value=s.name;
+  document.getElementById('new-subject-lessons').value=s.lessons;
+  document.getElementById('subject-form-title').textContent='Editar materia';
+  document.getElementById('subject-submit-btn').textContent='Guardar cambios';
+  document.getElementById('subject-cancel-btn').style.display='';
+  document.getElementById('subject-form-title').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function cancelEditSubject(){
+  document.getElementById('editing-subject-id').value='';
+  document.getElementById('subject-form-title').textContent='Crear materia';
+  document.getElementById('subject-submit-btn').textContent='Agregar materia';
+  document.getElementById('subject-cancel-btn').style.display='none';
+  document.getElementById('new-subject-name').closest('form').reset();
+}
+function removeSubject(i){const s=adminData.subjects[i];if(!confirm(`¿Eliminar la materia ${s.name}?`))return;window.fsDelete('subjects',s.id).catch(err=>alert('Error: '+err.message))}
+
+/* ---------- introducción de cada unidad ---------- */
+function renderUnitIntroSelect(){
+  const sel=document.getElementById('intro-unit-select');
+  const ta=document.getElementById('intro-unit-text');
+  if(!sel) return;
+  const editing = document.activeElement===ta; // no pisar lo que el admin está escribiendo
+  const prevValue = sel.value;
+  sel.innerHTML = currentModule.units.map(u=>{
+    const has = !!(adminData.unitIntros && adminData.unitIntros[u.id] && adminData.unitIntros[u.id].text && adminData.unitIntros[u.id].text.trim());
+    return `<option value="${u.id}">${escapeHtml(u.name)} ${has?'✓ Tiene introducción':'— Sin introducción'}</option>`;
+  }).join('');
+  if(prevValue && currentModule.units.some(u=>u.id===prevValue)) sel.value = prevValue;
+  if(!editing) loadUnitIntroEditor();
+}
+function loadUnitIntroEditor(){
+  const sel=document.getElementById('intro-unit-select');
+  const ta=document.getElementById('intro-unit-text');
+  const status=document.getElementById('intro-unit-status');
+  if(!sel||!ta) return;
+  const unitId=sel.value;
+  const data = adminData.unitIntros && adminData.unitIntros[unitId];
+  ta.value = data && data.text ? data.text : '';
+  if(status) status.textContent = data && data.text && data.text.trim() ? 'Esta unidad ya tiene una introducción cargada.' : 'Todavía no hay introducción para esta unidad.';
+}
+function saveUnitIntro(){
+  const sel=document.getElementById('intro-unit-select');
+  const ta=document.getElementById('intro-unit-text');
+  const status=document.getElementById('intro-unit-status');
+  if(!sel||!ta) return;
+  const unitId=sel.value;
+  const unit=currentModule.units.find(u=>u.id===unitId);
+  const text=ta.value.trim();
+  window.fsSet('unitIntros', unitId, {text}).then(()=>{
+    adminData.recent.unshift(`Se actualizó la introducción de ${unit?unit.name:unitId}.`);
+    if(status) status.textContent='Introducción guardada.';
+    renderAdmin();
+  }).catch(err=>alert('Error: '+err.message));
+}
+function clearUnitIntro(){
+  const sel=document.getElementById('intro-unit-select');
+  const ta=document.getElementById('intro-unit-text');
+  const status=document.getElementById('intro-unit-status');
+  if(!sel) return;
+  const unitId=sel.value;
+  const unit=currentModule.units.find(u=>u.id===unitId);
+  if(!confirm(`¿Borrar la introducción de ${unit?unit.name:unitId}?`)) return;
+  window.fsSet('unitIntros', unitId, {text:''}).then(()=>{
+    adminData.recent.unshift(`Se borró la introducción de ${unit?unit.name:unitId}.`);
+    if(ta) ta.value='';
+    if(status) status.textContent='Todavía no hay introducción para esta unidad.';
+    renderAdmin();
+  }).catch(err=>alert('Error: '+err.message));
+}
+
+/* ---------- materias reales dentro de cada unidad (las que ve el alumno) ---------- */
+function renderUnitSubjectsSelect(){
+  const sel=document.getElementById('unit-subjects-select');
+  if(!sel) return;
+  const prevValue = sel.value;
+  sel.innerHTML = currentModule.units.map(u=>`<option value="${u.id}">${escapeHtml(u.name)} (${u.subjects.length} materias)</option>`).join('');
+  if(prevValue && currentModule.units.some(u=>u.id===prevValue)) sel.value = prevValue;
+  renderUnitSubjectsEditor();
+}
+function renderUnitSubjectsEditor(){
+  const sel=document.getElementById('unit-subjects-select');
+  const list=document.getElementById('unit-subjects-editor-list');
+  if(!sel||!list) return;
+  const active=document.activeElement;
+  if(active && active.id && active.id.indexOf('unit-subj-name-')===0) return; // no pisar mientras el admin escribe
+  const unitId=sel.value;
+  const unit=currentModule.units.find(u=>u.id===unitId);
+  if(!unit){ list.innerHTML=''; return; }
+  if(!unit.subjects.length){
+    list.innerHTML='<p class="admin-mini">Todavía no hay materias en esta unidad. Agregá la primera con el formulario de abajo.</p>';
+    return;
+  }
+  list.innerHTML = unit.subjects.map(s=>{
+    const lessonsCount = adminData.lessons.filter(l=>l.subjectId===s.id).length;
+    const quizCount = adminData.quizQuestions.filter(q=>q.subjectId===s.id).length;
+    return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--line)">
+      <input type="text" value="${escapeHtml(s.name)}" id="unit-subj-name-${s.id}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-family:var(--font-body)">
+      <button class="admin-btn small" type="button" onclick="renameUnitSubject('${unit.id}','${s.id}')">Guardar</button>
+      <button class="admin-btn danger small" type="button" onclick="removeUnitSubject('${unit.id}','${s.id}')">Eliminar</button>
+      <span class="admin-mini">${lessonsCount} clases · ${quizCount} preguntas cargadas</span>
+    </div>`;
+  }).join('');
+}
+function renameUnitSubject(unitId, subjectId){
+  const input=document.getElementById(`unit-subj-name-${subjectId}`);
+  if(!input) return;
+  const name=input.value.trim();
+  if(!name){ alert('Ponele un nombre a la materia.'); return; }
+  window.fsSet('unitSubjects', subjectId, {name, unitId}).then(()=>{
+    adminData.recent.unshift(`Se renombró una materia a "${name}".`);
+  }).catch(err=>alert('Error: '+err.message));
+}
+function addUnitSubject(e){
+  e.preventDefault();
+  const sel=document.getElementById('unit-subjects-select');
+  const nameInput=document.getElementById('new-unit-subject-name');
+  if(!sel||!nameInput) return;
+  const unitId=sel.value;
+  const unit=currentModule.units.find(u=>u.id===unitId);
+  const name=nameInput.value.trim();
+  if(!unit||!name){ alert('Elegí una unidad y ponele un nombre a la materia.'); return; }
+  const newId = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+  window.fsSet('unitSubjects', newId, {name, unitId, custom:true}).then(()=>{
+    adminData.recent.unshift(`Se agregó la materia "${name}" a ${unit.name}.`);
+    nameInput.value='';
+  }).catch(err=>alert('Error: '+err.message));
+}
+function removeUnitSubject(unitId, subjectId){
+  const lessonsCount = adminData.lessons.filter(l=>l.subjectId===subjectId).length;
+  const quizCount = adminData.quizQuestions.filter(q=>q.subjectId===subjectId).length;
+  const msg = (lessonsCount||quizCount)
+    ? `Esta materia tiene ${lessonsCount} clase(s) y ${quizCount} pregunta(s) cargadas. Si la quitás, esos contenidos van a dejar de mostrarse al alumno (no se borran, pero quedan sin materia visible). ¿Querés continuar igual?`
+    : '¿Quitar esta materia de la unidad?';
+  if(!confirm(msg)) return;
+  window.fsSet('unitSubjects', subjectId, {deleted:true}).then(()=>{
+    adminData.recent.unshift('Se quitó una materia de una unidad.');
+  }).catch(err=>alert('Error: '+err.message));
 }
 function addQuizQuestion(e){
   e.preventDefault();
@@ -1913,7 +2172,7 @@ renderAdmin();
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut, updateProfile, sendPasswordResetEmail
+  onAuthStateChanged, signOut, updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, onSnapshot, increment
@@ -1954,22 +2213,6 @@ function friendlyAuthError(err){
   };
   return map[err.code] || ('Ocurrió un error (' + (err.code||'desconocido') + ').');
 }
-
-/* ---------- restablecer contraseña de un alumno (le manda un mail con el link, el admin nunca ve la contraseña) ---------- */
-window.sendStudentPasswordReset = async function(email, btnEl){
-  if(!email){ alert('Este alumno no tiene un email cargado.'); return; }
-  if(!confirm(`Se le va a enviar a ${email} un mail para que elija una contraseña nueva. ¿Continuar?`)) return;
-  const original = btnEl ? btnEl.textContent : null;
-  if(btnEl){ btnEl.disabled = true; btnEl.textContent = 'Enviando...'; }
-  try{
-    await sendPasswordResetEmail(auth, email);
-    alert(`Listo, le enviamos un mail a ${email} con el link para restablecer la contraseña.`);
-  }catch(err){
-    alert('No se pudo enviar el mail: ' + friendlyAuthError(err));
-  }finally{
-    if(btnEl){ btnEl.disabled = false; btnEl.textContent = original; }
-  }
-};
 
 /* ---------- LOGIN ---------- */
 window.handleLogin = async function(){
@@ -2034,11 +2277,9 @@ window.doLogout = async function(){
   stopCollectionListeners();
   await signOut(auth);
   window.__currentUid = null;
-  window.__isAdminSession = false;
   setCurrentStudentId(null);
   document.getElementById('admin-shell')?.style.setProperty('display','none');
   document.getElementById('app-shell')?.style.setProperty('display','none');
-  document.getElementById('view-pending')?.style.setProperty('display','none');
   const authView = document.getElementById('view-auth');
   if(authView){ authView.style.display=''; authView.classList.add('active'); }
   window.setAuthMode('login');
@@ -2088,13 +2329,13 @@ window.seedInitialData = async function(){
 };
 
 /* ---------- listeners en tiempo real de las colecciones compartidas ---------- */
-let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubAvailability=null, unsubBookings=null, unsubLessons=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null;
+let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubAvailability=null, unsubBookings=null, unsubLessons=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null;
 
 function startCollectionListeners(){
   stopCollectionListeners();
   unsubStudents = onSnapshot(collection(db,'students'), snap=>{
     window.adminData.students = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    safeRenderAdmin(); safeRenderStudentDashboard(); updateUserChip(); applyAccessGate();
+    safeRenderAdmin(); safeRenderStudentDashboard(); updateUserChip();
   });
   unsubPackages = onSnapshot(collection(db,'packages'), snap=>{
     window.adminData.packages = snap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -2134,26 +2375,29 @@ function startCollectionListeners(){
     window.adminData.quizAttempts = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
   });
+  unsubUnitIntros = onSnapshot(collection(db,'unitIntros'), snap=>{
+    const map={};
+    snap.docs.forEach(d=>{ map[d.id]=d.data(); });
+    window.adminData.unitIntros = map;
+    safeRenderAdmin(); safeRenderUnits();
+    if(typeof window.refreshOpenUnitIntroModal==='function') window.refreshOpenUnitIntroModal();
+  });
+  unsubUnitSubjects = onSnapshot(collection(db,'unitSubjects'), snap=>{
+    const map={};
+    snap.docs.forEach(d=>{ map[d.id]=d.data(); });
+    window.adminData.unitSubjects = map;
+    if(typeof window.rebuildCurriculumUnits==='function') window.rebuildCurriculumUnits();
+    safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
+    if(typeof window.refreshOpenUnitAfterEdit==='function') window.refreshOpenUnitAfterEdit();
+  });
 }
 function stopCollectionListeners(){
-  [unsubStudents,unsubPackages,unsubSubjects,unsubAvailability,unsubBookings,unsubLessons,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts].forEach(u=>{ if(u) u(); });
-  unsubStudents=unsubPackages=unsubSubjects=unsubAvailability=unsubBookings=unsubLessons=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=null;
+  [unsubStudents,unsubPackages,unsubSubjects,unsubAvailability,unsubBookings,unsubLessons,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects].forEach(u=>{ if(u) u(); });
+  unsubStudents=unsubPackages=unsubSubjects=unsubAvailability=unsubBookings=unsubLessons=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=null;
 }
 function safeRenderAdmin(){ if(typeof window.renderAdmin==='function') window.renderAdmin(); }
 function safeRenderStudentDashboard(){ if(window.__currentUid && typeof window.renderStudentDashboard==='function') window.renderStudentDashboard(); }
 function safeRenderUnits(){ if(typeof renderUnits==='function') renderUnits(); }
-
-/* ---------- control de acceso: mientras el administrador no habilite al alumno (status Activo + paquete asignado), no se muestra nada de la plataforma ---------- */
-function applyAccessGate(){
-  if(!window.__currentUid || window.__isAdminSession) return;
-  const appShell = document.getElementById('app-shell');
-  const pendingView = document.getElementById('view-pending');
-  const s = window.adminData.students.find(x=>x.id===window.__currentUid);
-  const allowed = !!(s && isStudentActive(s));
-  if(pendingView) pendingView.style.display = allowed ? 'none' : 'flex';
-  if(appShell) appShell.style.display = allowed ? 'block' : 'none';
-}
-window.applyAccessGate = applyAccessGate;
 
 function updateUserChip(){
   const chip = document.getElementById('user-chip');
@@ -2191,23 +2435,15 @@ async function routeUser(user){
     const adminSnap = await getDoc(doc(db,'admins',user.uid));
     startCollectionListeners();
     if(adminSnap.exists()){
-      window.__isAdminSession = true;
       setCurrentStudentId(null);
-      document.getElementById('view-pending').style.display='none';
       window.openAdmin();
     }else{
-      window.__isAdminSession = false;
       setCurrentStudentId(user.uid);
       const authView = document.getElementById('view-auth');
       authView.classList.remove('active');
       authView.style.display='none';
-      // Por defecto se muestra la pantalla de "esperando aprobación" hasta confirmar
-      // que el administrador ya activó al alumno (applyAccessGate decide si corresponde
-      // mostrar el contenido real, una vez que llegue la ficha desde Firestore).
-      document.getElementById('app-shell').style.display='none';
-      document.getElementById('view-pending').style.display='flex';
+      document.getElementById('app-shell').style.display='block';
       window.showTab('dashboard');
-      applyAccessGate();
     }
   }catch(err){
     alert('Error al cargar tu cuenta: ' + err.message + '\n\nProbá recargar la página e iniciar sesión de nuevo.');
@@ -2224,12 +2460,10 @@ onAuthStateChanged(auth, async (user) => {
     await routeUser(user);
   }else{
     window.__currentUid = null;
-    window.__isAdminSession = false;
     setCurrentStudentId(null);
     stopCollectionListeners();
     document.getElementById('admin-shell')?.style.setProperty('display','none');
     document.getElementById('app-shell')?.style.setProperty('display','none');
-    document.getElementById('view-pending')?.style.setProperty('display','none');
     const authView = document.getElementById('view-auth');
     if(authView){ authView.style.display=''; authView.classList.add('active'); }
     window.setAuthMode('login');
