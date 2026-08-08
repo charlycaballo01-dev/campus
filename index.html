@@ -615,6 +615,7 @@
       <button onclick="showAdminTab('students',this)">Alumnos</button>
       <button onclick="showAdminTab('packages',this)">Paquetes</button>
       <button onclick="showAdminTab('subjects',this)">Materias</button>
+      <button onclick="showAdminTab('intros',this)">Introducciones</button>
       <button onclick="showAdminTab('videos',this)">Videos</button>
       <button onclick="showAdminTab('quizzes',this)">Evaluaciones</button>
       <button onclick="showAdminTab('classes',this)">Clases y reservas</button>
@@ -705,11 +706,24 @@
         </form>
       </div>
       <div class="admin-card">
+        <h3>Materias y contenidos</h3>
+        <p class="admin-mini" style="margin-bottom:12px">Esta es la lista real, la misma que administrás en "Materias por unidad" arriba. Para cambiar un nombre, agregar o quitar una materia, hacelo ahí.</p>
+        <div style="overflow:auto">
+          <table class="admin-table">
+            <thead><tr><th>Materia</th><th>Unidad</th><th>Clases cargadas</th><th>Preguntas cargadas</th><th>Acceso por paquete</th></tr></thead>
+            <tbody id="subjects-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="admin-intros" class="admin-view">
+      <div class="admin-card">
         <h3>Introducción de la unidad</h3>
-        <p class="admin-mini" style="margin-bottom:12px">Escribí acá el texto de introducción de cada unidad. Los alumnos lo van a poder leer tocando el botón "Introducción" dentro de esa unidad.</p>
+        <p class="admin-mini" style="margin-bottom:12px">Escribí acá el texto de introducción de cada unidad. Los alumnos lo van a poder leer tocando el botón "Introducción" dentro de esa unidad. Elegí la unidad, mirá si ya tiene texto cargado y editalo, y guardá los cambios.</p>
         <div class="admin-form">
           <label class="full">Unidad<select id="intro-unit-select" onchange="loadUnitIntroEditor()"></select></label>
-          <label class="full">Texto de la introducción<textarea id="intro-unit-text" rows="8" style="padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-md);font-family:var(--font-body);font-size:.9rem;background:var(--bg-panel);color:var(--text-primary);outline:none;resize:vertical" placeholder="Escribí acá la introducción de la unidad..."></textarea></label>
+          <label class="full">Texto de la introducción<textarea id="intro-unit-text" rows="10" style="padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-md);font-family:var(--font-body);font-size:.9rem;background:var(--bg-panel);color:var(--text-primary);outline:none;resize:vertical" placeholder="Escribí acá la introducción de la unidad..."></textarea></label>
           <div class="full" style="display:flex;gap:10px">
             <button class="admin-btn" type="button" onclick="saveUnitIntro()">Guardar introducción</button>
             <button class="admin-btn danger" type="button" onclick="clearUnitIntro()">Borrar introducción</button>
@@ -718,24 +732,9 @@
         </div>
       </div>
       <div class="admin-card">
-        <h3 id="subject-form-title">Crear materia</h3>
-        <p class="admin-mini" style="margin-bottom:12px">Esto agrega una materia a este listado de referencia (se usa para el acceso por paquete), no a una unidad específica. Para las materias que ve el alumno dentro de cada unidad, usá "Materias por unidad" arriba.</p>
-        <form class="admin-form" onsubmit="addSubject(event)">
-          <input type="hidden" id="editing-subject-id" value="">
-          <label>Nombre de la materia<input id="new-subject-name" required></label>
-          <label>Cantidad de clases<input id="new-subject-lessons" type="number" min="1" value="10" required></label>
-          <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="subject-submit-btn">Agregar materia</button><button class="admin-btn secondary" type="button" id="subject-cancel-btn" style="display:none" onclick="cancelEditSubject()">Cancelar edición</button></div>
-        </form>
-      </div>
-      <div class="admin-card">
-        <h3>Materias y contenidos</h3>
-        <p class="admin-mini" style="margin-bottom:12px">Usá "Editar materias" para modificar el nombre o la cantidad de clases de una materia ya cargada.</p>
-        <div style="overflow:auto">
-          <table class="admin-table">
-            <thead><tr><th>Materia</th><th>Clases</th><th>Evaluación</th><th>Acceso por paquete</th><th>Editar materias</th></tr></thead>
-            <tbody id="subjects-table"></tbody>
-          </table>
-        </div>
+        <h3>Introducciones cargadas</h3>
+        <p class="admin-mini" style="margin-bottom:12px">Acá vas a ver el texto completo de cada unidad a medida que las vayas guardando.</p>
+        <div id="unit-intros-list"></div>
       </div>
     </section>
 
@@ -1014,7 +1013,7 @@ function renderUnits(){
       <div class="sc-top"><h3>${escapeHtml(u.name)}</h3><span class="sc-pct pct-${t}">${pct}%</span></div>
       <div class="sc-nudge nudge-${t}">${nudges[t][0]}</div>
       <div class="pulse-mini"><div class="pulse-fill" style="width:${pct}%;background:var(${tierColorVar(t)})"></div></div>
-      <div class="sc-meta"><span>${u.subjects.length} materias</span><span>${watched}/${total} clases</span></div>
+      <div class="sc-meta"><span>${u.subjects.length} materias</span><span>${fmtCredit(watched)}/${total} clases</span></div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px">
         <span class="sc-cta">Ver materias →</span>
         <button type="button" class="admin-btn secondary small" style="${hasIntro?'':'opacity:.65'}" onclick="openUnitIntro(event,'${u.id}')">Introducción</button>
@@ -1040,7 +1039,7 @@ function renderUnitSubjectsGrid(unitId){
       <div class="sc-top"><h3>${escapeHtml(s.name)}</h3><span class="sc-pct pct-${t}">${st.pct}%</span></div>
       <div class="sc-nudge nudge-${t}">${nudges[t][0]}</div>
       <div class="pulse-mini"><div class="pulse-fill" style="width:${st.pct}%;background:var(${tierColorVar(t)})"></div></div>
-      <div class="sc-meta"><span>${st.watched}/${st.total} completados</span><span>${st.lessonsWatched}/${st.lessonsTotal} clases · ${st.materialsViewed}/${st.materialsTotal} material · ${st.quizDone}/${st.quizItem||0} evaluación</span></div>
+      <div class="sc-meta"><span>${fmtCredit(st.watched)}/${st.total} completados</span><span>${st.lessonsWatched}/${st.lessonsTotal} clases · ${st.materialsViewed}/${st.materialsTotal} material · ${st.quizDone}/${st.quizItem||0} evaluación</span></div>
       <span class="sc-cta">Continuar →</span>
     </div>`;
   }).join('');
@@ -1418,6 +1417,7 @@ function hasSubjectAccess(student,subject){const p=getPackage(student);if(!isStu
 function hasMentoria(student){const p=getPackage(student);return !!(p && p.mentoria);}
 function daysRemaining(student){const exp=getStudentExpiry(student);if(!exp)return 0;return Math.max(0,Math.ceil((new Date(exp+'T23:59:59')-new Date())/86400000))}
 function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function fmtCredit(n){ const r=Math.round((n||0)*10)/10; return Number.isInteger(r) ? String(r) : r.toFixed(1); }
 function getViewCount(itemId){
   return getViewCountFor(DEMO_STUDENT_ID, itemId);
 }
@@ -1470,15 +1470,29 @@ function logoutAdmin(){document.getElementById('admin-shell')?.style.setProperty
 
 function renderAdmin(){
   const set=(id,val)=>{const e=document.getElementById(id);if(e)e.textContent=val};
-  set('stat-students',adminData.students.filter(s=>isStudentActive(s)).length);set('stat-packages',adminData.packages.length);set('stat-subjects',adminData.subjects.length);set('stat-bookings',adminData.bookings.filter(b=>b.status!=='Cancelada').length);
-  const seedCard=document.getElementById('seed-card');if(seedCard)seedCard.style.display=(adminData.packages.length===0&&adminData.subjects.length===0)?'block':'none';
+  set('stat-students',adminData.students.filter(s=>isStudentActive(s)).length);set('stat-packages',adminData.packages.length);set('stat-subjects',flatSubjects.length);set('stat-bookings',adminData.bookings.filter(b=>b.status!=='Cancelada').length);
+  const seedCard=document.getElementById('seed-card');if(seedCard)seedCard.style.display=(adminData.packages.length===0&&flatSubjects.length===0)?'block':'none';
   const recent=document.getElementById('admin-recent');if(recent)recent.innerHTML=adminData.recent.slice(0,10).map(x=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)">• ${escapeHtml(x)}</div>`).join('');
   renderAdminUpdates();
   const pkgSelect=document.getElementById('new-student-package');if(pkgSelect)pkgSelect.innerHTML=adminData.packages.map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
   const st=document.getElementById('students-table');
   if(st)st.innerHTML=adminData.students.map((s,i)=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s);return `<tr><td><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${p?p.classes:0} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td><button class="admin-btn small" onclick="openStudentProfile(${i})">Ver perfil</button> <button class="admin-btn small" onclick="editStudent(${i})">Editar</button> <button class="admin-btn small" onclick="renewStudent(${i})">Renovar</button> <button class="admin-btn danger small" onclick="removeStudent(${i})">Eliminar</button></td></tr>`}).join('');
   const pl=document.getElementById('packages-list');if(pl)pl.innerHTML=adminData.packages.map((p,i)=>`<div class="package-card"><strong>${escapeHtml(p.name)}</strong><div class="package-meta"><span class="admin-badge">${p.days} días de acceso</span><span class="admin-badge" style="${p.mentoria?'':'opacity:.6'}">${p.mentoria?`✓ Mentoría · ${p.classes} clases privadas`:'Sin mentoría'}</span></div>${p.description?`<div style="opacity:.75;margin-bottom:6px">${escapeHtml(p.description)}</div>`:''}<div style="opacity:.75">Materias: ${escapeHtml(p.subjects.join(', '))}</div><div class="admin-actions" style="margin-top:10px"><button class="admin-btn small" onclick="editPackage(${i})">Editar</button> <button class="admin-btn danger" onclick="removePackage(${i})">Eliminar</button></div></div>`).join('');
-  const su=document.getElementById('subjects-table');if(su)su.innerHTML=adminData.subjects.map((s,i)=>{const access=adminData.packages.filter(p=>p.subjects.includes('Todas las materias')||p.subjects.includes(s.name)).map(p=>p.name).join(', ')||'Sin acceso';return `<tr><td><strong>${escapeHtml(s.name)}</strong></td><td>${s.lessons}</td><td>${s.quiz} preguntas</td><td>${escapeHtml(access)}</td><td><button class="admin-btn small" onclick="editSubject(${i})">Editar</button> <button class="admin-btn danger small" onclick="removeSubject(${i})">Eliminar</button></td></tr>`}).join('');
+  const su=document.getElementById('subjects-table');
+  if(su){
+    let prevUnit=null;
+    su.innerHTML=flatSubjects.map(s=>{
+      const lessonsCount = adminData.lessons.filter(l=>l.subjectId===s.id).length;
+      const quizCount = adminData.quizQuestions.filter(q=>q.subjectId===s.id).length;
+      const access = adminData.packages.filter(p=>p.subjects.includes('Todas las materias')||p.subjects.includes(s.name)).map(p=>p.name).join(', ')||'Sin acceso';
+      let header='';
+      if(s.unitId!==prevUnit){
+        header = `<tr class="unit-gap-row"><td colspan="5" style="padding:${prevUnit?'22px':'6px'} 0 8px;border-bottom:1px solid var(--line)"><strong style="color:var(--forest)">${escapeHtml(s.unitName)}</strong></td></tr>`;
+        prevUnit = s.unitId;
+      }
+      return header + `<tr><td><strong>${escapeHtml(s.name)}</strong></td><td>${escapeHtml(s.unitName)}</td><td>${lessonsCount}</td><td>${quizCount}</td><td>${escapeHtml(access)}</td></tr>`;
+    }).join('');
+  }
   renderUnitIntroSelect();
   renderUnitSubjectsSelect();
   const lessonSelect=document.getElementById('new-lesson-subject');
@@ -1774,7 +1788,7 @@ function addLesson(e){e.preventDefault();const editingId=document.getElementById
   window.fsAdd('lessons',{subjectId,unitId:sub?.unitId||'',title,youtubeId,order}).then(()=>{e.target.reset();document.getElementById('new-lesson-order').value=1;}).catch(err=>alert('Error al guardar: '+err.message))}
 function editLesson(id){
   const l=adminData.lessons.find(x=>x.id===id); if(!l) return;
-  showAdminTab('videos', document.querySelectorAll('.admin-nav button')[4]);
+  showAdminTab('videos', document.querySelectorAll('.admin-nav button')[5]);
   document.getElementById('editing-lesson-id').value=l.id;
   document.getElementById('new-lesson-subject').value=l.subjectId;
   document.getElementById('new-lesson-title').value=l.title;
@@ -1795,34 +1809,6 @@ function cancelEditLesson(){
 }
 function removeLesson(id){if(!confirm('¿Eliminar esta clase?'))return;window.fsDelete('lessons',id).catch(err=>alert('Error: '+err.message))}
 
-function addSubject(e){e.preventDefault();const editingId=document.getElementById('editing-subject-id').value;const name=document.getElementById('new-subject-name').value.trim();if(!name){alert('Ponele un nombre a la materia.');return}
-  const data={name,lessons:Number(document.getElementById('new-subject-lessons').value)||0,quiz:30};
-  if(editingId){
-    window.fsUpdate('subjects',editingId,data).then(()=>{adminData.recent.unshift(`Se editó la materia ${name}.`);cancelEditSubject();renderAdmin()}).catch(err=>alert('Error: '+err.message));
-    return;
-  }
-  window.fsAdd('subjects',data).then(()=>{adminData.recent.unshift(`Se agregó la materia ${name}.`);renderAdmin()}).catch(err=>alert('Error: '+err.message));
-  e.target.reset();
-}
-function editSubject(i){
-  const s=adminData.subjects[i];
-  showAdminTab('subjects', document.querySelectorAll('.admin-nav button')[3]);
-  document.getElementById('editing-subject-id').value=s.id;
-  document.getElementById('new-subject-name').value=s.name;
-  document.getElementById('new-subject-lessons').value=s.lessons;
-  document.getElementById('subject-form-title').textContent='Editar materia';
-  document.getElementById('subject-submit-btn').textContent='Guardar cambios';
-  document.getElementById('subject-cancel-btn').style.display='';
-  document.getElementById('subject-form-title').scrollIntoView({behavior:'smooth',block:'start'});
-}
-function cancelEditSubject(){
-  document.getElementById('editing-subject-id').value='';
-  document.getElementById('subject-form-title').textContent='Crear materia';
-  document.getElementById('subject-submit-btn').textContent='Agregar materia';
-  document.getElementById('subject-cancel-btn').style.display='none';
-  document.getElementById('new-subject-name').closest('form').reset();
-}
-function removeSubject(i){const s=adminData.subjects[i];if(!confirm(`¿Eliminar la materia ${s.name}?`))return;window.fsDelete('subjects',s.id).catch(err=>alert('Error: '+err.message))}
 
 /* ---------- introducción de cada unidad ---------- */
 function renderUnitIntroSelect(){
@@ -1837,6 +1823,35 @@ function renderUnitIntroSelect(){
   }).join('');
   if(prevValue && currentModule.units.some(u=>u.id===prevValue)) sel.value = prevValue;
   if(!editing) loadUnitIntroEditor();
+  renderUnitIntrosList();
+}
+function renderUnitIntrosList(){
+  const list=document.getElementById('unit-intros-list');
+  if(!list) return;
+  const loaded = currentModule.units.filter(u=>{
+    const data = adminData.unitIntros && adminData.unitIntros[u.id];
+    return data && data.text && data.text.trim();
+  });
+  if(!loaded.length){
+    list.innerHTML = '<p class="admin-mini">Todavía no cargaste ninguna introducción.</p>';
+    return;
+  }
+  list.innerHTML = loaded.map(u=>{
+    const text = adminData.unitIntros[u.id].text.trim();
+    return `<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
+        <strong style="color:var(--forest)">${escapeHtml(u.name)}</strong>
+        <button class="admin-btn small" type="button" onclick="editUnitIntroFromList('${u.id}')">Editar</button>
+      </div>
+      <div style="white-space:pre-wrap;line-height:1.55;font-size:.88rem">${escapeHtml(text)}</div>
+    </div>`;
+  }).join('');
+}
+function editUnitIntroFromList(unitId){
+  const sel=document.getElementById('intro-unit-select');
+  if(sel) sel.value = unitId;
+  loadUnitIntroEditor();
+  document.getElementById('intro-unit-text')?.scrollIntoView({behavior:'smooth',block:'center'});
 }
 function loadUnitIntroEditor(){
   const sel=document.getElementById('intro-unit-select');
@@ -1965,7 +1980,7 @@ function addQuizQuestion(e){
 }
 function editQuizQuestion(id){
   const q=adminData.quizQuestions.find(x=>x.id===id); if(!q) return;
-  showAdminTab('quizzes', document.querySelectorAll('.admin-nav button')[5]);
+  showAdminTab('quizzes', document.querySelectorAll('.admin-nav button')[6]);
   document.getElementById('editing-quiz-id').value=q.id;
   document.getElementById('new-quiz-subject').value=q.subjectId;
   document.getElementById('new-quiz-question').value=q.question;
@@ -2093,7 +2108,7 @@ function addUpdate(e){e.preventDefault();const editingId=document.getElementById
   window.fsAdd('updates',{title,message,pinned,date:new Date().toISOString()}).then(()=>{adminData.recent.unshift(`Se publicó la novedad "${title}".`);e.target.reset();renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message))}
 function editUpdate(i){
   const u=sortedUpdates()[i]; if(!u) return;
-  showAdminTab('updates', document.querySelectorAll('.admin-nav button')[7]);
+  showAdminTab('updates', document.querySelectorAll('.admin-nav button')[8]);
   document.getElementById('editing-update-id').value=u.id;
   document.getElementById('new-update-title').value=u.title;
   document.getElementById('new-update-message').value=u.message;
