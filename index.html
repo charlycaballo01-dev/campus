@@ -1032,15 +1032,17 @@ function renderUnitSubjectsGrid(unitId){
     grid.innerHTML = '<p class="admin-mini">Tu profesor todavía no cargó materias para esta unidad. En cuanto las suba, las vas a ver acá.</p>';
     return;
   }
+  const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
   grid.innerHTML = unit.subjects.map(s=>{
     const st = realSubjectProgress(s);
     const t = tierOf(st.pct);
-    return `<div class="subject-card" onclick="openSubjectDetail('${s.id}')">
+    const access = !!(student && isStudentActive(student) && hasSubjectAccess(student, s.name));
+    return `<div class="subject-card ${access?'':'subject-locked'}" onclick="openSubjectDetail('${s.id}')">
       <div class="sc-top"><h3>${escapeHtml(s.name)}</h3><span class="sc-pct pct-${t}">${st.pct}%</span></div>
-      <div class="sc-nudge nudge-${t}">${nudges[t][0]}</div>
+      <div class="sc-nudge nudge-${t}">${access?nudges[t][0]:'Sin acceso con tu paquete actual'}</div>
       <div class="pulse-mini"><div class="pulse-fill" style="width:${st.pct}%;background:var(${tierColorVar(t)})"></div></div>
       <div class="sc-meta"><span>${fmtCredit(st.watched)}/${st.total} completados</span><span>${st.lessonsWatched}/${st.lessonsTotal} clases · ${st.materialsViewed}/${st.materialsTotal} material · ${st.quizDone}/${st.quizItem||0} evaluación</span></div>
-      <span class="sc-cta">Continuar →</span>
+      <span class="sc-cta">${access?'Continuar →':'Ver detalle →'}</span>
     </div>`;
   }).join('');
 }
@@ -1113,6 +1115,9 @@ function renderSubjectContent(){
   const subject = findSubjectById(currentSubjectId);
   if(!subject) return;
 
+  const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
+  const access = !!(student && isStudentActive(student) && hasSubjectAccess(student, subject.name));
+
   const stats = realSubjectProgress(subject);
   const t = tierOf(stats.pct);
   const pctEl = document.getElementById('subject-pct');
@@ -1120,13 +1125,21 @@ function renderSubjectContent(){
   pctEl.style.color = t==='green' ? 'var(--forest)' : (t==='gold' ? 'var(--gold-soft)' : 'var(--rust-text)');
   document.getElementById('subject-nudge').textContent = stats.total ? nudges[t][0] : 'Todavía no hay contenido cargado';
 
+  const lockedMsg = !student
+    ? 'Tu cuenta todavía no tiene un paquete asignado. Escribinos a C.A.E.R. para activar tu acceso.'
+    : (!isStudentActive(student)
+        ? 'Tu acceso está vencido o inactivo. Renová tu paquete para ver el contenido de esta materia.'
+        : 'Esta materia no está incluida en tu paquete actual.');
+
   /* ---- videos ---- */
   const lessons = adminData.lessons.filter(l=>l.subjectId===currentSubjectId).sort((a,b)=>(a.order||0)-(b.order||0));
   const lessonsTotal = lessons.length;
   const lessonsWatched = lessons.filter(l=>getViewCount(l.id)>=1).length;
   document.getElementById('subject-lessons-label').textContent = `Clases (${lessonsWatched}/${lessonsTotal} vistas)`;
   const list = document.getElementById('subject-video-list');
-  if(!lessonsTotal){
+  if(!access){
+    list.innerHTML = `<div class="access-panel"><strong>Contenido bloqueado</strong><div class="admin-mini" style="margin-top:8px">${lockedMsg}</div></div>`;
+  }else if(!lessonsTotal){
     list.innerHTML = '<p class="admin-mini">Tu profesor todavía no cargó clases para esta materia. En cuanto las suba, las vas a ver acá.</p>';
   }else{
     list.innerHTML = lessons.map(l=>{
@@ -1138,7 +1151,9 @@ function renderSubjectContent(){
 
   /* ---- materiales de lectura / powerpoint ---- */
   const matList = document.getElementById('subject-materials-list');
-  if(!subject.materials.length){
+  if(!access){
+    matList.innerHTML = '';
+  }else if(!subject.materials.length){
     matList.innerHTML = '<p class="admin-mini">Tu profesor todavía no cargó material de lectura para esta materia.</p>';
   }else{
     matList.innerHTML = subject.materials.map((m,idx)=>{
@@ -1151,11 +1166,19 @@ function renderSubjectContent(){
   /* ---- quiz (30 preguntas) ---- */
   const quizId = `${subject.id}-quiz`;
   const quizDotsEl = document.getElementById('subject-quiz-dots');
-  if(quizDotsEl) quizDotsEl.innerHTML = renderDots(getViewCount(quizId));
+  if(quizDotsEl) quizDotsEl.innerHTML = access ? renderDots(getViewCount(quizId)) : '';
+  const quizBtn = document.getElementById('subject-quiz-btn');
+  if(quizBtn){ quizBtn.disabled = !access; quizBtn.style.opacity = access ? '' : '.5'; quizBtn.style.cursor = access ? '' : 'not-allowed'; }
 }
 window.renderSubjectContent = renderSubjectContent;
 
 function openMaterial(matId, name, url){
+  const subject = findSubjectById(currentSubjectId);
+  const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
+  if(!subject || !student || !isStudentActive(student) || !hasSubjectAccess(student, subject.name)){
+    alert('No tenés acceso a esta materia con tu paquete actual.');
+    return;
+  }
   markItemViewed(matId, 'material');
   if(url){ window.open(url, '_blank'); }
   else { alert('Se descargaría: ' + name); }
@@ -1174,6 +1197,12 @@ function loadYoutubeApi(){
 function playLesson(lessonId){
   const lesson = adminData.lessons.find(l=>l.id===lessonId);
   if(!lesson) return;
+  const subject = findSubjectById(lesson.subjectId);
+  const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
+  if(!subject || !student || !isStudentActive(student) || !hasSubjectAccess(student, subject.name)){
+    alert('No tenés acceso a esta materia con tu paquete actual.');
+    return;
+  }
   document.getElementById('video-modal-title').textContent = lesson.title;
   document.getElementById('video-modal').style.display = 'flex';
   pendingLessonId = lessonId;
@@ -1206,6 +1235,12 @@ function markWatched(lessonId){
 }
 
 function startSubjectQuiz(){
+  const subject = findSubjectById(currentSubjectId);
+  const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
+  if(!subject || !student || !isStudentActive(student) || !hasSubjectAccess(student, subject.name)){
+    alert('No tenés acceso a esta materia con tu paquete actual.');
+    return;
+  }
   const questions = adminData.quizQuestions.filter(q=>q.subjectId===currentSubjectId).sort((a,b)=>(a.order||0)-(b.order||0));
   quizSession = {subjectId: currentSubjectId, questions, index: 0, correct: 0};
   showTab('quiz');
@@ -1232,10 +1267,11 @@ function renderQuizSubjectPicker(){
   const picker = document.getElementById('quiz-subject-picker');
   picker.style.display='';
   const list = document.getElementById('quiz-subject-list');
+  const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
   const subjectIdsWithQuiz = new Set(adminData.quizQuestions.map(q=>q.subjectId));
-  const subjects = flatSubjects.filter(s=>subjectIdsWithQuiz.has(s.id));
+  const subjects = flatSubjects.filter(s=>subjectIdsWithQuiz.has(s.id) && student && isStudentActive(student) && hasSubjectAccess(student, s.name));
   if(!subjects.length){
-    list.innerHTML = '<p class="admin-mini">Tu profesor todavía no cargó preguntas para ninguna materia.</p>';
+    list.innerHTML = '<p class="admin-mini">Todavía no tenés materias habilitadas con evaluaciones cargadas. Si creés que es un error, consultá con C.A.E.R.</p>';
     return;
   }
   list.innerHTML = subjects.map(s=>`<div class="video-item" style="cursor:pointer" onclick="selectQuizSubject('${s.id}')"><div class="vi-info"><div class="vi-title">${escapeHtml(s.unitName)} · ${escapeHtml(s.name)}</div></div><span class="vi-status pending">Practicar →</span></div>`).join('');
@@ -1704,6 +1740,13 @@ function addStudent(e){e.preventDefault();const editingId=document.getElementByI
     window.fsUpdate('students',editingId,{name,email,package:pkg,status,bookingException,bookingExceptionClasses}).then(()=>{adminData.recent.unshift(`Se editó el alumno ${name}.`);cancelEditStudent();renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
     return;
   }
+  const existing = adminData.students.find(x=>(x.email||'').trim().toLowerCase()===email.toLowerCase());
+  if(existing){
+    if(!confirm(`Ya existe un alumno con el email ${email} (${existing.name}), probablemente porque se registró solo desde la pantalla de login. En vez de crear una ficha duplicada, se va a actualizar esa cuenta con el paquete y estado que elegiste acá. ¿Continuar?`)) return;
+    window.fsUpdate('students',existing.id,{name,package:pkg,status,bookingException,bookingExceptionClasses}).then(()=>{adminData.recent.unshift(`Se vinculó y actualizó la cuenta existente de ${name} (sin crear ficha duplicada).`);renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
+    e.target.reset();
+    return;
+  }
   window.fsAdd('students',{name,email,package:pkg,status,startDate:todayISO(),classesUsed:0,bookingException,bookingExceptionClasses}).then(()=>{adminData.recent.unshift(`Se agregó el alumno ${name} con el paquete ${pkg}.`);renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
   e.target.reset();
 }
@@ -2144,7 +2187,7 @@ function bookSlot(i){const s=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
   const a=adminData.availability[i];
   if(a.group && a.group!==studentBookingGroup(s)){ alert('Ese horario no está disponible para tu tipo de paquete.'); return; }
   const occupied=adminData.bookings.some(b=>(a.date?b.date===a.date:(b.day===a.day&&!b.date))&&b.time===a.time&&['Reservada','Confirmada'].includes(b.status));if(occupied){alert('Ese horario ya está reservado.');return}window.fsAdd('bookings',{studentId:s.id,day:a.day,time:a.time,date:a.date||null,status:'Reservada',week,monthKey:mKey}).then(()=>{adminData.recent.unshift(`${s.name} reservó ${a.date?formatShortDate(a.date):a.day} ${a.time}.`);renderStudentBooking();renderAdmin()}).catch(err=>alert('Error: '+err.message))}
-function renderStudentAccess(){const s=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);const el=document.getElementById('student-access-panel');if(!el||!s)return;const p=getPackage(s),active=isStudentActive(s),rem=remainingClasses(s),days=daysRemaining(s);const cycleTxt=p?cycleLabel(p.bookingCycle):'';el.innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap"><div><span class="eyebrow">Mi paquete</span><h3 style="margin:5px 0">${escapeHtml(s.package)}</h3><div class="admin-mini">${active?`Acceso activo · vence el ${getStudentExpiry(s)}`:`Acceso vencido o suspendido`}</div></div><div class="${active?'expiry-ok':'expiry-bad'}"><strong>${active?days+' días restantes':'Acceso bloqueado'}</strong></div></div><div class="access-grid"><div class="access-stat">Clases permitidas ${cycleTxt}<strong>${p?.classes||0}</strong></div><div class="access-stat">Clases restantes ${cycleTxt}<strong>${rem}</strong></div><div class="access-stat">Materias habilitadas<strong>${p?.subjects.includes('Todas las materias')?'Todas':p?.subjects.length||0}</strong></div></div><div style="margin-top:14px"><strong>Materias disponibles</strong><div class="admin-mini">${p?.subjects.includes('Todas las materias')?'Tenés acceso a todas las materias.':(p?.subjects||[]).join(' · ')}</div></div>`}
+function renderStudentAccess(){const s=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);const el=document.getElementById('student-access-panel');if(!el||!s)return;const p=getPackage(s),active=isStudentActive(s),rem=remainingClasses(s),days=daysRemaining(s);const cycleTxt=p?cycleLabel(p.bookingCycle):'';let statusMsg=active?`Acceso activo · vence el ${getStudentExpiry(s)}`:'Acceso vencido o suspendido';if(!active && s.status==='Pendiente' && !p){statusMsg='Tu cuenta está creada pero todavía no tiene un paquete asignado. Escribinos a C.A.E.R. para activar tu acceso y ver el contenido.';}el.innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap"><div><span class="eyebrow">Mi paquete</span><h3 style="margin:5px 0">${escapeHtml(s.package)}</h3><div class="admin-mini">${statusMsg}</div></div><div class="${active?'expiry-ok':'expiry-bad'}"><strong>${active?days+' días restantes':'Acceso bloqueado'}</strong></div></div><div class="access-grid"><div class="access-stat">Clases permitidas ${cycleTxt}<strong>${p?.classes||0}</strong></div><div class="access-stat">Clases restantes ${cycleTxt}<strong>${rem}</strong></div><div class="access-stat">Materias habilitadas<strong>${p?.subjects.includes('Todas las materias')?'Todas':p?.subjects.length||0}</strong></div></div><div style="margin-top:14px"><strong>Materias disponibles</strong><div class="admin-mini">${p?.subjects.includes('Todas las materias')?'Tenés acceso a todas las materias.':(p?.subjects||[]).join(' · ')}</div></div>`}
 // A qué grupo de reservas pertenece un alumno según el ciclo de su paquete.
 function studentBookingGroup(student){
   const p=getPackage(student);
