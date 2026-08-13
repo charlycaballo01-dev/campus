@@ -1,0 +1,13 @@
+{
+  "name": "caer-notificaciones",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Chequeo de Firestore y envío de notificaciones push (FCM) para C.A.E.R., corre gratis vía GitHub Actions.",
+  "scripts": {
+    "notify:frequent": "node scripts/notify.js frequent",
+    "notify:daily": "node scripts/notify.js daily"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}
