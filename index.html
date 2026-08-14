@@ -2643,7 +2643,10 @@ if ('serviceWorker' in navigator) {
 }
 let deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
+  // No hacemos e.preventDefault(): dejamos que Chrome muestre su propio
+  // cartel automático de instalación apenas cumple sus condiciones.
+  // Igual guardamos el evento para que el botón "Instalar app" también
+  // funcione después, por si el alumno cierra ese cartel sin instalar.
   deferredInstallPrompt = e;
   const btn = document.getElementById('btn-instalar-app');
   if (btn) btn.style.display = 'inline-block';
