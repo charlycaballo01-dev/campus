@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f3a1a">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mi Campus Virtual">
 <title>C.A.E.R. · Plataforma de alumnos</title>
 <style>
   :root{
@@ -2628,5 +2634,32 @@ onAuthStateChanged(auth, async (user) => {
 });
 </script>
 
+<button id="btn-instalar-app" onclick="instalarApp()" style="display:none;position:fixed;bottom:18px;right:18px;z-index:999;background:#C79A33;color:#21322A;border:none;padding:12px 18px;border-radius:8px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);font-size:0.95rem;">⬇ Instalar app</button>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW error:', err));
+  });
+}
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const btn = document.getElementById('btn-instalar-app');
+  if (btn) btn.style.display = 'inline-block';
+});
+async function instalarApp() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  const btn = document.getElementById('btn-instalar-app');
+  if (btn) btn.style.display = 'none';
+}
+window.addEventListener('appinstalled', () => {
+  const btn = document.getElementById('btn-instalar-app');
+  if (btn) btn.style.display = 'none';
+});
+</script>
 </body>
 </html>
