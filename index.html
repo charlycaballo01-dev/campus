@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C.A.E.R. · Plataforma de alumnos</title>
+
+<!-- Mi Campus Virtual - PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f3a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mi Campus Virtual">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png" type="image/png">
 <style>
   :root{
     --bg-page:#F8F6EE;
@@ -407,8 +416,55 @@
 
 </head>
 <body>
-<div id="boot-loading" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg-page,#F8F6EE);">
-  <span style="font-family:var(--font-display,serif);font-weight:600;color:var(--forest,#184F36);font-size:1.1rem;letter-spacing:.03em;">C.A.E.R.</span>
+<div id="boot-loading" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(ellipse at center, #164a28 0%, #0d2f18 100%);">
+  <style>
+    #boot-loading .mcv-logo-wrap{
+      position:relative;
+      width:180px;height:180px;
+      opacity:0;
+      transform:scale(0.35) rotate(-20deg);
+      animation: mcv-entrance 1s cubic-bezier(.34,1.56,.64,1) forwards;
+    }
+    #boot-loading .mcv-logo-wrap img{
+      width:100%;height:100%;
+      display:block;
+      animation: mcv-livepulse 3s ease-in-out 1s infinite;
+      filter: drop-shadow(0 6px 18px rgba(0,0,0,0.45));
+    }
+    #boot-loading .mcv-shine{
+      position:absolute;
+      top:0;left:0;width:100%;height:100%;
+      border-radius:50%;
+      overflow:hidden;
+      pointer-events:none;
+      opacity:0;
+      animation: mcv-showshine 0.1s linear 1s forwards;
+    }
+    #boot-loading .mcv-shine::before{
+      content:'';
+      position:absolute;
+      top:-50%;left:-150%;
+      width:60%;height:200%;
+      background:linear-gradient(75deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0) 60%, rgba(255,255,255,0) 100%);
+      animation: mcv-sweep 2.8s ease-in-out 1.1s infinite;
+    }
+    @keyframes mcv-showshine{ to{opacity:1;} }
+    @keyframes mcv-sweep{ 0%{left:-150%;} 35%{left:150%;} 100%{left:150%;} }
+    @keyframes mcv-entrance{
+      0%{opacity:0; transform:scale(0.3) rotate(-20deg);}
+      60%{opacity:1; transform:scale(1.1) rotate(5deg);}
+      100%{opacity:1; transform:scale(1) rotate(0deg);}
+    }
+    @keyframes mcv-livepulse{
+      0%{ transform:rotate(0deg) scale(1); filter:drop-shadow(0 6px 18px rgba(0,0,0,0.45)) drop-shadow(0 0 0px rgba(240,192,64,0));}
+      50%{ transform:rotate(2.5deg) scale(1.04); filter:drop-shadow(0 6px 18px rgba(0,0,0,0.45)) drop-shadow(0 0 20px rgba(240,192,64,0.55));}
+      100%{ transform:rotate(0deg) scale(1); filter:drop-shadow(0 6px 18px rgba(0,0,0,0.45)) drop-shadow(0 0 0px rgba(240,192,64,0));}
+    }
+  </style>
+  <div class="mcv-logo-wrap">
+    <img src="icons/icon-512.png" alt="Mi Campus Virtual"/>
+    <div class="mcv-shine"></div>
+  </div>
 </div>
 
 <svg class="brand-defs" aria-hidden="true">
@@ -2626,6 +2682,16 @@ onAuthStateChanged(auth, async (user) => {
     window.fitAuthScale();
   }
 });
+
+// Registro del Service Worker de "Mi Campus Virtual" (PWA - caché/offline).
+// Es independiente del de notificaciones push (firebase-messaging-sw.js) y convive con él.
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch((err) => {
+      console.warn('No se pudo registrar el service worker de la PWA:', err);
+    });
+  });
+}
 </script>
 
 </body>
