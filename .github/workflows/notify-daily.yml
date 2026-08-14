@@ -1,0 +1,19 @@
+name: Notificaciones diarias (inactividad y ritmo)
+
+on:
+  schedule:
+    - cron: '0 21 * * *'   # 18:00 hora Argentina (UTC-3) todos los días
+  workflow_dispatch: {}     # permite tocar "Run workflow" a mano desde GitHub para probar
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: node scripts/notify.js daily
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
