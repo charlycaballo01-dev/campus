@@ -1352,7 +1352,20 @@ function finishQuiz(){
     // del puntaje falla (ej: permisos de Firestore), igual quede registrado que la rindió.
     markItemViewed(`${subjectId}-quiz`, 'quiz');
     window.fsSet('quizAttempts', `${DEMO_STUDENT_ID}_${subjectId}`, {studentId:DEMO_STUDENT_ID, subjectId, score, total, date:new Date().toISOString()})
-      .then(()=>saveStudentOverallPct(DEMO_STUDENT_ID))
+      .then(()=>{
+        saveStudentOverallPct(DEMO_STUDENT_ID);
+        // Felicitación: si aprobó, y más todavía si con esto completó toda la materia.
+        const subj = findSubjectById(subjectId);
+        const passed = total ? (score/total) >= 0.6 : false;
+        if(subj && passed && typeof window.queuePush==='function'){
+          const subjStats = realSubjectProgressFor(DEMO_STUDENT_ID, subj);
+          if(subjStats.pct >= 100){
+            window.queuePush(DEMO_STUDENT_ID, '🏆 ¡Completaste la materia!', `Terminaste ${subj.name} al 100%. ¡Gran laburo!`);
+          }else{
+            window.queuePush(DEMO_STUDENT_ID, '🎉 ¡Aprobaste!', `Sacaste ${score}/${total} en la evaluación de ${subj.name}.`);
+          }
+        }
+      })
       .catch(warnSaveError);
   }
   const subject = findSubjectById(subjectId);
@@ -2235,6 +2248,9 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, onSnapshot, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getMessaging, getToken, onMessage, isSupported as isMessagingSupported
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBQgPyTugCCDfTU2QnYJLiOeJyNszXz4NE",
@@ -2244,6 +2260,12 @@ const firebaseConfig = {
   messagingSenderId: "862576745883",
   appId: "1:862576745883:web:ba0ada497918325654153e"
 };
+
+// Pegá acá la clave VAPID que generás en Firebase Console → Configuración del proyecto
+// → pestaña "Cloud Messaging" → "Certificados push web" → "Generar par de claves".
+// Sin esto, las notificaciones push NO van a funcionar (todo el resto del código sigue
+// andando normal, simplemente nunca se activa el permiso de notificaciones).
+const VAPID_KEY = "BPsCPKxSr3Y5M1eIRqQtiV5lvp3g1rDdUOLcuimWZZBk9zp5YhhU6whhFA4BPD6GOdjxqZg5XITjldql1D1p858";
 
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
@@ -2256,7 +2278,81 @@ window.fsDelete = (col, id) => deleteDoc(doc(db, col, id));
 window.fsSet = (col, id, data) => setDoc(doc(db, col, id), data, { merge: true });
 window.fsIncrement = (col, id, baseData) => setDoc(doc(db, col, id), {...baseData, count: increment(1)}, { merge: true });
 
-/* ---------- mensajes de error ---------- */
+/* ---------- notificaciones push (estilo Duolingo) ---------- */
+const messaging = (() => { try{ return getMessaging(fbApp); }catch(e){ return null; } })();
+
+// Cartelito flotante para cuando llega un push CON la web abierta (foreground).
+// Si la web está cerrada, la que se encarga de mostrar la notificación es firebase-messaging-sw.js.
+function showInAppToast(title, body){
+  let box = document.getElementById('push-toast-box');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'push-toast-box';
+    box.style.cssText = 'position:fixed;top:16px;right:16px;z-index:99999;display:flex;flex-direction:column;gap:10px;max-width:320px';
+    document.body.appendChild(box);
+  }
+  const card = document.createElement('div');
+  card.style.cssText = 'background:var(--forest,#184F36);color:#fff;padding:14px 16px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-family:var(--font-body,sans-serif);cursor:pointer;animation:pushToastIn .25s ease';
+  card.innerHTML = `<strong style="display:block;font-size:.88rem;margin-bottom:3px">${escapeHtml(title)}</strong><span style="font-size:.82rem;opacity:.9">${escapeHtml(body)}</span>`;
+  card.onclick = () => card.remove();
+  box.appendChild(card);
+  setTimeout(()=>card.remove(), 7000);
+}
+if(!document.getElementById('push-toast-style')){
+  const st = document.createElement('style');
+  st.id = 'push-toast-style';
+  st.textContent = '@keyframes pushToastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}';
+  document.head.appendChild(st);
+}
+
+// Pide permiso de notificaciones, saca el token FCM del dispositivo y lo guarda en la ficha
+// del alumno. Se llama una sola vez, después de loguearse. Si el alumno ya lo había
+// rechazado antes, el navegador no vuelve a preguntar (eso lo maneja el propio browser).
+async function setupPushNotifications(uid){
+  try{
+    if(VAPID_KEY.includes('PEGA_ACA')) { console.warn('Notificaciones push: falta configurar VAPID_KEY.'); return; }
+    if(!messaging || !('serviceWorker' in navigator)) return;
+    const supported = await isMessagingSupported().catch(()=>false);
+    if(!supported) return; // ej: Safari de iPhone sin agregar la web a la pantalla de inicio
+
+    const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted') return;
+
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    if(token){
+      await setDoc(doc(db,'students',uid), { fcmToken: token }, { merge: true });
+    }
+  }catch(err){
+    console.warn('No se pudo activar notificaciones push:', err.message);
+  }
+}
+
+// Marca "estuvo activo hoy" — lo usa el Cloud Function de inactividad para saber
+// cuántos días hace que el alumno no entra.
+function markStudentActiveNow(uid){
+  setDoc(doc(db,'students',uid), { lastActiveAt: new Date().toISOString() }, { merge: true }).catch(()=>{});
+}
+
+// Cola de push instantáneo: cualquier parte de la app escribe acá un "pedido" de
+// notificación y el Cloud Function onPushQueued (lado servidor) la manda y borra el pedido.
+function queuePush(studentId, title, body){
+  if(!studentId) return;
+  addDoc(collection(db,'pushQueue'), { studentId, title, body, createdAt: new Date().toISOString() }).catch(()=>{});
+}
+window.queuePush = queuePush;
+
+// Mientras la pestaña está abierta, si llega un push lo mostramos como cartelito
+// en vez de dejar que el navegador lo maneje como notificación del sistema.
+if(messaging){
+  onMessage(messaging, (payload) => {
+    const title = (payload.notification && payload.notification.title) || 'C.A.E.R.';
+    const body = (payload.notification && payload.notification.body) || '';
+    showInAppToast(title, body);
+  });
+}
+
+
 function setError(elId, msg){ const el = document.getElementById(elId); if(el) el.textContent = msg; }
 function friendlyAuthError(err){
   const map = {
@@ -2502,6 +2598,8 @@ async function routeUser(user){
       authView.style.display='none';
       document.getElementById('app-shell').style.display='block';
       window.showTab('dashboard');
+      markStudentActiveNow(user.uid);
+      setupPushNotifications(user.uid);
     }
   }catch(err){
     alert('Error al cargar tu cuenta: ' + err.message + '\n\nProbá recargar la página e iniciar sesión de nuevo.');
