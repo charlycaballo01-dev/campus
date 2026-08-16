@@ -389,6 +389,8 @@
 .admin-btn.danger{background:var(--bg-panel);color:var(--rust-text);border:1px solid var(--rust-dim)}
 .admin-btn.danger:hover{background:var(--rust-dim);transform:none}
 .sound-preset-btn.active{background:var(--forest);color:#fff}
+@keyframes pomodoroPulse{0%{transform:scale(1);box-shadow:0 6px 20px rgba(20,59,42,.25)}50%{transform:scale(1.12);box-shadow:0 8px 26px rgba(212,160,23,.45)}100%{transform:scale(1);box-shadow:0 6px 20px rgba(20,59,42,.25)}}
+#pomodoro-float-btn.pulsing{animation:pomodoroPulse 1s ease-in-out infinite}
 .admin-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .admin-form label{display:flex;flex-direction:column;gap:7px;font-size:.82rem;color:var(--text-muted);font-weight:600}
 .admin-form input,.admin-form select{padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-md);font-family:var(--font-body);font-size:.9rem;background:var(--bg-panel);color:var(--text-primary);outline:none;transition:border-color var(--ease), box-shadow var(--ease)}
@@ -485,9 +487,50 @@
       <button class="tab-btn" data-tab="quiz" onclick="openQuizPicker()">Preguntas</button>
       <button class="tab-btn" data-tab="booking" id="nav-booking-btn" onclick="showTab('booking')">Reservas</button>
     </div>
+    <button type="button" class="admin-btn secondary small" id="pomodoro-topbar-btn" onclick="togglePomodoroPanel()" title="Temporizador de estudio" style="display:flex;align-items:center;gap:6px;margin-right:8px">⏱ <span id="pomodoro-topbar-label">Tiempo</span></button>
     <button type="button" class="admin-btn secondary small" id="sound-topbar-btn" onclick="toggleSoundPanel()" title="Sonido para estudiar" style="display:flex;align-items:center;gap:6px">🎧 <span id="sound-topbar-label">Sonido</span></button>
     <div class="user-chip" id="user-chip"><span class="avatar">--</span> Cargando…</div>
   </div>
+
+  <div id="pomodoro-panel" style="display:none;position:fixed;top:70px;right:16px;z-index:998;background:var(--bg-panel,#fff);border:1px solid var(--line);border-radius:16px;padding:20px;width:280px;max-width:90vw;box-shadow:0 10px 30px rgba(20,59,42,.18)">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
+      <strong>⏱ Pomodoro</strong>
+      <button type="button" class="admin-btn secondary small" onclick="togglePomodoroPanel()">✕</button>
+    </div>
+    <div style="text-align:center;margin-bottom:14px">
+      <div id="pomodoro-phase-label" class="eyebrow">Enfoque</div>
+      <div id="pomodoro-clock" style="font-family:var(--font-display);font-size:2.6rem;font-weight:700;line-height:1.1;margin:4px 0">25:00</div>
+      <div id="pomodoro-cycle-label" class="admin-mini">Pomodoro 1 de 4</div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-bottom:14px">
+      <button type="button" class="admin-btn" id="pomodoro-toggle-btn" onclick="togglePomodoro()">▶ Empezar</button>
+      <button type="button" class="admin-btn secondary" onclick="resetPomodoro()">Reiniciar</button>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <label style="flex:1;min-width:100px;font-size:.8rem;color:var(--text-muted);font-weight:600">Enfoque (min)
+        <input id="pomodoro-work-min" type="number" min="1" max="90" value="25" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md)" onchange="applyPomodoroSettings()">
+      </label>
+      <label style="flex:1;min-width:100px;font-size:.8rem;color:var(--text-muted);font-weight:600">Descanso corto (min)
+        <input id="pomodoro-short-min" type="number" min="1" max="60" value="5" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md)" onchange="applyPomodoroSettings()">
+      </label>
+      <label style="flex:1;min-width:100px;font-size:.8rem;color:var(--text-muted);font-weight:600">Descanso largo (min)
+        <input id="pomodoro-long-min" type="number" min="1" max="90" value="15" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md)" onchange="applyPomodoroSettings()">
+      </label>
+    </div>
+    <p class="admin-mini" style="margin-top:10px">Método Pomodoro: 25 min de estudio, 5 min de descanso, y cada 4 ciclos un descanso largo de 15 min. Podés ajustar los tiempos. Un sonido te avisa cuando cambia la fase.</p>
+  </div>
+
+  <div id="pomodoro-float-btn" style="display:none;position:fixed;bottom:22px;right:96px;z-index:997;width:58px;height:58px;border-radius:50%;background:var(--bg-panel,#fff);border:2px solid var(--gold,#d4a017);box-shadow:0 6px 20px rgba(20,59,42,.25);cursor:pointer;align-items:center;justify-content:center;flex-direction:column" onclick="togglePomodoroPanel()">
+    <svg viewBox="0 0 64 64" width="34" height="34" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 14 C 20 10, 28 12, 32 18 C 36 12, 44 10, 56 14 L 56 44 C 44 40, 36 42, 32 46 C 28 42, 20 40, 8 44 Z" fill="none" stroke="var(--forest,#1a5c2a)" stroke-width="2.5" stroke-linejoin="round"/>
+      <line x1="32" y1="18" x2="32" y2="46" stroke="var(--forest,#1a5c2a)" stroke-width="2"/>
+      <path d="M23 8 L41 8 L41 12 L34 20 L34 22 L41 30 L41 34 L23 34 L23 30 L30 22 L30 20 L23 12 Z" fill="none" stroke="var(--gold,#d4a017)" stroke-width="2"/>
+      <line x1="21" y1="8" x2="43" y2="8" stroke="var(--gold,#d4a017)" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="21" y1="34" x2="43" y2="34" stroke="var(--gold,#d4a017)" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <span id="pomodoro-float-clock" style="font-size:.62rem;font-weight:700;color:var(--forest,#1a5c2a);line-height:1">25:00</span>
+  </div>
+
 
   <div id="sound-panel" style="display:none;position:fixed;top:70px;right:16px;z-index:998;background:var(--bg-panel,#fff);border:1px solid var(--line);border-radius:16px;padding:20px;width:280px;max-width:90vw;box-shadow:0 10px 30px rgba(20,59,42,.18)">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
@@ -510,7 +553,7 @@
         <input id="sound-volume" type="range" min="0" max="100" value="35" oninput="setSoundVolume(this.value)" style="width:110px">
       </label>
     </div>
-    <p class="admin-mini" style="margin-top:10px">Sonidos generados en tu navegador. Al reproducir, queda flotando el ícono para que sigas escuchando mientras navegás.</p>
+    <p class="admin-mini" style="margin-top:10px">Usá los ruidos y la melodía para acompañar tus bloques de estudio, y sonidos como lluvia, olas, pájaros o grillos para relajarte en los descansos.</p>
   </div>
 
   <div id="sound-float-btn" style="display:none;position:fixed;bottom:22px;right:22px;z-index:997;width:58px;height:58px;border-radius:50%;background:var(--bg-panel,#fff);border:2px solid var(--gold,#d4a017);box-shadow:0 6px 20px rgba(20,59,42,.25);cursor:pointer;align-items:center;justify-content:center" onclick="toggleSoundPanel()">
@@ -2506,8 +2549,156 @@ function setSoundVolume(val){ if(soundGain) soundGain.gain.value=Number(val)/100
 function toggleSoundPanel(){
   const panel=document.getElementById('sound-panel');
   if(!panel) return;
+  const pomo=document.getElementById('pomodoro-panel'); if(pomo) pomo.style.display='none';
   panel.style.display = panel.style.display==='none' ? 'block' : 'none';
 }
+
+/* ---------- temporizador Pomodoro ---------- */
+const pomodoroSettings={ work:25, short:5, long:15, cyclesBeforeLong:4 };
+const pomodoroState={ phase:'work', remaining:25*60, running:false, cycleCount:1, intervalId:null };
+let pomodoroPulseTimeoutId=null;
+function pomodoroPhaseLabel(phase){ return phase==='work' ? 'Enfoque' : (phase==='long' ? 'Descanso largo' : 'Descanso corto'); }
+function pomodoroPhaseSeconds(phase){
+  if(phase==='work') return pomodoroSettings.work*60;
+  if(phase==='long') return pomodoroSettings.long*60;
+  return pomodoroSettings.short*60;
+}
+function formatClock(totalSeconds){
+  const m=Math.floor(totalSeconds/60), s=totalSeconds%60;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function playPomodoroChime(){
+  const ctx=ensureSoundCtx();
+  if(ctx.state==='suspended') ctx.resume();
+  const t=ctx.currentTime;
+  // Timbre de timbre escolar: 3 repiques de campana con armónico metálico.
+  for(let i=0;i<3;i++){
+    const start=t+i*0.32;
+    [880, 880*2.4].forEach((freq,h)=>{
+      const osc=ctx.createOscillator(); osc.type=h===0?'square':'sine'; osc.frequency.value=freq;
+      const g=ctx.createGain(); g.gain.value=0;
+      const peak=h===0?0.32:0.1;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(peak, start+0.015);
+      g.gain.exponentialRampToValueAtTime(0.001, start+0.28);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(start); osc.stop(start+0.3);
+    });
+  }
+}
+function pulsePomodoroFloatBtn(){
+  const btn=document.getElementById('pomodoro-float-btn');
+  if(!btn) return;
+  btn.classList.add('pulsing');
+  clearTimeout(pomodoroPulseTimeoutId);
+  pomodoroPulseTimeoutId=setTimeout(()=>{ btn.classList.remove('pulsing'); }, 6000);
+}
+function renderPomodoroDisplays(){
+  const clockTxt=formatClock(pomodoroState.remaining);
+  const clockEl=document.getElementById('pomodoro-clock'); if(clockEl) clockEl.textContent=clockTxt;
+  const floatClockEl=document.getElementById('pomodoro-float-clock'); if(floatClockEl) floatClockEl.textContent=clockTxt;
+  const phaseEl=document.getElementById('pomodoro-phase-label'); if(phaseEl) phaseEl.textContent=pomodoroPhaseLabel(pomodoroState.phase);
+  const cycleEl=document.getElementById('pomodoro-cycle-label'); if(cycleEl) cycleEl.textContent = pomodoroState.phase==='work' ? `Pomodoro ${pomodoroState.cycleCount} de ${pomodoroSettings.cyclesBeforeLong}` : (pomodoroState.phase==='long' ? 'Descanso largo — te lo ganaste' : `Después de este descanso: Pomodoro ${pomodoroState.cycleCount} de ${pomodoroSettings.cyclesBeforeLong}`);
+  const btn=document.getElementById('pomodoro-toggle-btn'); if(btn) btn.textContent = pomodoroState.running ? '⏸ Pausar' : '▶ Empezar';
+}
+function pomodoroAdvancePhase(){
+  playPomodoroChime();
+  pulsePomodoroFloatBtn();
+  if(pomodoroState.phase==='work'){
+    if(pomodoroState.cycleCount>=pomodoroSettings.cyclesBeforeLong){
+      pomodoroState.phase='long'; pomodoroState.cycleCount=1;
+    }else{
+      pomodoroState.phase='short';
+    }
+  }else if(pomodoroState.phase==='short'){
+    pomodoroState.cycleCount++; pomodoroState.phase='work';
+  }else{ // long
+    pomodoroState.phase='work';
+  }
+  pomodoroState.remaining=pomodoroPhaseSeconds(pomodoroState.phase);
+  renderPomodoroDisplays();
+}
+function pomodoroTick(){
+  pomodoroState.remaining--;
+  if(pomodoroState.remaining<=0){ pomodoroAdvancePhase(); }
+  else{ renderPomodoroDisplays(); }
+}
+function togglePomodoro(){
+  if(pomodoroState.running){
+    clearInterval(pomodoroState.intervalId); pomodoroState.intervalId=null; pomodoroState.running=false;
+  }else{
+    pomodoroState.running=true;
+    pomodoroState.intervalId=setInterval(pomodoroTick, 1000);
+    const floatBtn=document.getElementById('pomodoro-float-btn'); if(floatBtn) floatBtn.style.display='flex';
+  }
+  renderPomodoroDisplays();
+}
+function resetPomodoro(){
+  clearInterval(pomodoroState.intervalId); pomodoroState.intervalId=null;
+  pomodoroState.running=false; pomodoroState.phase='work'; pomodoroState.cycleCount=1;
+  pomodoroState.remaining=pomodoroPhaseSeconds('work');
+  const floatBtn=document.getElementById('pomodoro-float-btn'); if(floatBtn){ floatBtn.style.display='none'; floatBtn.classList.remove('pulsing'); }
+  clearTimeout(pomodoroPulseTimeoutId);
+  renderPomodoroDisplays();
+}
+function applyPomodoroSettings(){
+  pomodoroSettings.work=Math.max(1, Number(document.getElementById('pomodoro-work-min').value)||25);
+  pomodoroSettings.short=Math.max(1, Number(document.getElementById('pomodoro-short-min').value)||5);
+  pomodoroSettings.long=Math.max(1, Number(document.getElementById('pomodoro-long-min').value)||15);
+  if(!pomodoroState.running){ pomodoroState.remaining=pomodoroPhaseSeconds(pomodoroState.phase); renderPomodoroDisplays(); }
+}
+function togglePomodoroPanel(){
+  const panel=document.getElementById('pomodoro-panel');
+  if(!panel) return;
+  const sound=document.getElementById('sound-panel'); if(sound) sound.style.display='none';
+  panel.style.display = panel.style.display==='none' ? 'block' : 'none';
+  const floatBtn=document.getElementById('pomodoro-float-btn'); if(floatBtn) floatBtn.classList.remove('pulsing');
+  clearTimeout(pomodoroPulseTimeoutId);
+}
+renderPomodoroDisplays();
+
+/* ---------- arrastrar las burbujas flotantes (sonido y tiempo) ---------- */
+function setupFloatDrag(id){
+  const el=document.getElementById(id);
+  if(!el || el.dataset.dragSetup) return;
+  el.dataset.dragSetup='1';
+  el.style.touchAction='none';
+  el.style.cursor='grab';
+  let dragging=false, moved=false, startX=0, startY=0, startLeft=0, startTop=0;
+  el.addEventListener('pointerdown', e=>{
+    dragging=true; moved=false; el.style.cursor='grabbing';
+    const rect=el.getBoundingClientRect();
+    startLeft=rect.left; startTop=rect.top;
+    startX=e.clientX; startY=e.clientY;
+    try{ el.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  el.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const dx=e.clientX-startX, dy=e.clientY-startY;
+    if(Math.abs(dx)>4 || Math.abs(dy)>4) moved=true;
+    if(!moved) return;
+    const maxLeft=window.innerWidth-el.offsetWidth-4;
+    const maxTop=window.innerHeight-el.offsetHeight-4;
+    const newLeft=Math.min(Math.max(4, startLeft+dx), maxLeft);
+    const newTop=Math.min(Math.max(4, startTop+dy), maxTop);
+    el.style.left=newLeft+'px';
+    el.style.top=newTop+'px';
+    el.style.right='auto';
+    el.style.bottom='auto';
+  });
+  const endDrag=e=>{
+    if(!dragging) return;
+    dragging=false; el.style.cursor='grab';
+    try{ el.releasePointerCapture(e.pointerId); }catch(err){}
+  };
+  el.addEventListener('pointerup', endDrag);
+  el.addEventListener('pointercancel', endDrag);
+  el.addEventListener('click', e=>{
+    if(moved){ e.stopImmediatePropagation(); e.preventDefault(); moved=false; }
+  }, true);
+}
+setupFloatDrag('sound-float-btn');
+setupFloatDrag('pomodoro-float-btn');
 
 renderStudentDashboard();renderUnits();
 
