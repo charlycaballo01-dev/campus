@@ -388,6 +388,7 @@
 .admin-btn.secondary:hover{background:var(--line);transform:none}
 .admin-btn.danger{background:var(--bg-panel);color:var(--rust-text);border:1px solid var(--rust-dim)}
 .admin-btn.danger:hover{background:var(--rust-dim);transform:none}
+.sound-preset-btn.active{background:var(--forest);color:#fff}
 .admin-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .admin-form label{display:flex;flex-direction:column;gap:7px;font-size:.82rem;color:var(--text-muted);font-weight:600}
 .admin-form input,.admin-form select{padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-md);font-family:var(--font-body);font-size:.9rem;background:var(--bg-panel);color:var(--text-primary);outline:none;transition:border-color var(--ease), box-shadow var(--ease)}
@@ -484,7 +485,44 @@
       <button class="tab-btn" data-tab="quiz" onclick="openQuizPicker()">Preguntas</button>
       <button class="tab-btn" data-tab="booking" id="nav-booking-btn" onclick="showTab('booking')">Reservas</button>
     </div>
+    <button type="button" class="admin-btn secondary small" id="sound-topbar-btn" onclick="toggleSoundPanel()" title="Sonido para estudiar" style="display:flex;align-items:center;gap:6px">🎧 <span id="sound-topbar-label">Sonido</span></button>
     <div class="user-chip" id="user-chip"><span class="avatar">--</span> Cargando…</div>
+  </div>
+
+  <div id="sound-panel" style="display:none;position:fixed;top:70px;right:16px;z-index:998;background:var(--bg-panel,#fff);border:1px solid var(--line);border-radius:16px;padding:20px;width:280px;max-width:90vw;box-shadow:0 10px 30px rgba(20,59,42,.18)">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
+      <strong>🎧 Sonido para estudiar</strong>
+      <button type="button" class="admin-btn secondary small" onclick="toggleSoundPanel()">✕</button>
+    </div>
+    <div id="sound-presets" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+      <button type="button" class="admin-btn secondary small sound-preset-btn active" data-sound="white" onclick="setSoundPreset('white')">Ruido blanco</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="pink" onclick="setSoundPreset('pink')">Ruido rosa</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="brown" onclick="setSoundPreset('brown')">Ruido marrón</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="rain" onclick="setSoundPreset('rain')">Lluvia</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="waves" onclick="setSoundPreset('waves')">Olas del mar</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="forest" onclick="setSoundPreset('forest')">Pájaros</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="crickets" onclick="setSoundPreset('crickets')">Grillos</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="melody" onclick="setSoundPreset('melody')">Melodía para estudiar</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <button type="button" class="admin-btn" id="sound-toggle-btn" onclick="toggleSound()">▶ Reproducir</button>
+      <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--text-muted);font-weight:600">Volumen
+        <input id="sound-volume" type="range" min="0" max="100" value="35" oninput="setSoundVolume(this.value)" style="width:110px">
+      </label>
+    </div>
+    <p class="admin-mini" style="margin-top:10px">Sonidos generados en tu navegador. Al reproducir, queda flotando el ícono para que sigas escuchando mientras navegás.</p>
+  </div>
+
+  <div id="sound-float-btn" style="display:none;position:fixed;bottom:22px;right:22px;z-index:997;width:58px;height:58px;border-radius:50%;background:var(--bg-panel,#fff);border:2px solid var(--gold,#d4a017);box-shadow:0 6px 20px rgba(20,59,42,.25);cursor:pointer;align-items:center;justify-content:center" onclick="toggleSoundPanel()">
+    <svg viewBox="0 0 64 64" width="38" height="38" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 14 C 20 10, 28 12, 32 18 C 36 12, 44 10, 56 14 L 56 44 C 44 40, 36 42, 32 46 C 28 42, 20 40, 8 44 Z" fill="none" stroke="var(--forest,#1a5c2a)" stroke-width="2.5" stroke-linejoin="round"/>
+      <line x1="32" y1="18" x2="32" y2="46" stroke="var(--forest,#1a5c2a)" stroke-width="2"/>
+      <circle cx="19" cy="26" r="7" fill="none" stroke="var(--gold,#d4a017)" stroke-width="2.5"/>
+      <circle cx="45" cy="26" r="7" fill="none" stroke="var(--gold,#d4a017)" stroke-width="2.5"/>
+      <line x1="26" y1="24" x2="38" y2="24" stroke="var(--gold,#d4a017)" stroke-width="2.5"/>
+      <line x1="12" y1="23" x2="8" y2="21" stroke="var(--gold,#d4a017)" stroke-width="2.5"/>
+      <line x1="52" y1="23" x2="56" y2="21" stroke="var(--gold,#d4a017)" stroke-width="2.5"/>
+    </svg>
   </div>
 
   <div id="tab-dashboard" class="view active">
@@ -670,7 +708,7 @@
         </form>
       </div>
       <div class="admin-card">
-        <h3>Alumnos y acceso</h3>
+        <h3 style="display:flex;align-items:center;justify-content:space-between;gap:10px">Alumnos y acceso <span class="admin-badge" id="stat-students-inline" style="font-size:.85rem">0 activos</span></h3>
         <div style="overflow:auto">
           <table class="admin-table">
             <thead><tr><th>Alumno</th><th>Paquete</th><th>Acceso / vencimiento</th><th>Materias</th><th>Avance</th><th>Clases disponibles</th><th>Restantes</th><th>Acciones</th></tr></thead>
@@ -1531,6 +1569,7 @@ function logoutAdmin(){document.getElementById('admin-shell')?.style.setProperty
 function renderAdmin(){
   const set=(id,val)=>{const e=document.getElementById(id);if(e)e.textContent=val};
   set('stat-students',adminData.students.filter(s=>isStudentActive(s)).length);set('stat-packages',adminData.packages.length);set('stat-subjects',flatSubjects.length);set('stat-bookings',adminData.bookings.filter(b=>b.status!=='Cancelada').length);
+  const inlineCount=document.getElementById('stat-students-inline');if(inlineCount){const activeCount=adminData.students.filter(s=>isStudentActive(s)).length;inlineCount.textContent=`${activeCount} activo${activeCount===1?'':'s'} · ${adminData.students.length} en total`;}
   const seedCard=document.getElementById('seed-card');if(seedCard)seedCard.style.display=(adminData.packages.length===0&&flatSubjects.length===0)?'block':'none';
   const recent=document.getElementById('admin-recent');if(recent)recent.innerHTML=adminData.recent.slice(0,10).map(x=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)">• ${escapeHtml(x)}</div>`).join('');
   renderAdminUpdates();
@@ -2274,7 +2313,203 @@ function renderStudentBooking(){
   ${otherMonths.length?`<div class="access-panel"><strong>Reservas de otros meses</strong>${otherMonths.map(renderBookingCard).join('')}</div>`:''}`
 }
 function renderStudentDashboard(){renderStudentAccess();renderStudentBooking();renderStudentUpdates()}
-renderAdmin();renderStudentDashboard();renderUnits();
+renderAdmin();
+
+/* ---------- reproductor de sonido relajante / ruido blanco / naturaleza (100% generado en el navegador) ---------- */
+let soundCtx=null, soundSource=null, soundGain=null, soundFilters=[], soundLFO=null, soundLFOGain=null, soundScheduleId=null;
+let currentSoundPreset='white', soundPlaying=false;
+function ensureSoundCtx(){ if(!soundCtx){ soundCtx = new (window.AudioContext||window.webkitAudioContext)(); } return soundCtx; }
+function buildNoiseBuffer(ctx, type){
+  const seconds=6, rate=ctx.sampleRate, len=seconds*rate;
+  const buffer=ctx.createBuffer(1, len, rate);
+  const data=buffer.getChannelData(0);
+  if(type==='pink'){
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for(let i=0;i<len;i++){
+      const white=Math.random()*2-1;
+      b0=0.99886*b0+white*0.0555179; b1=0.99332*b1+white*0.0750759; b2=0.96900*b2+white*0.1538520;
+      b3=0.86650*b3+white*0.3104856; b4=0.55000*b4+white*0.5329522; b5=-0.7616*b5-white*0.0168980;
+      const pink=b0+b1+b2+b3+b4+b5+b6+white*0.5362;
+      b6=white*0.115926;
+      data[i]=pink*0.11;
+    }
+  }else if(type==='brown'){
+    let last=0;
+    for(let i=0;i<len;i++){ const white=Math.random()*2-1; last=(last+0.02*white)/1.02; data[i]=last*3.5; }
+  }else{
+    for(let i=0;i<len;i++){ data[i]=Math.random()*2-1; }
+  }
+  return buffer;
+}
+// Un "pio" corto de pájaro: un tono que sube y baja rápido de frecuencia.
+function playBirdChirp(ctx){
+  const t=ctx.currentTime;
+  const osc=ctx.createOscillator(); osc.type='sine';
+  const g=ctx.createGain(); g.gain.value=0;
+  const baseFreq=1800+Math.random()*1400;
+  osc.frequency.setValueAtTime(baseFreq, t);
+  osc.frequency.exponentialRampToValueAtTime(baseFreq*1.4, t+0.06);
+  osc.frequency.exponentialRampToValueAtTime(baseFreq*0.8, t+0.14);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.05, t+0.02);
+  g.gain.linearRampToValueAtTime(0, t+0.16);
+  osc.connect(g); g.connect(soundGain);
+  osc.start(t); osc.stop(t+0.2);
+}
+// Un chirrido de grillo: ráfaga rápida de pulsos agudos.
+function playCricketChirp(ctx){
+  const t=ctx.currentTime;
+  const pulses=3+Math.floor(Math.random()*3);
+  for(let i=0;i<pulses;i++){
+    const pt=t+i*0.045;
+    const osc=ctx.createOscillator(); osc.type='sawtooth'; osc.frequency.value=4200+Math.random()*300;
+    const g=ctx.createGain(); g.gain.value=0;
+    g.gain.setValueAtTime(0, pt);
+    g.gain.linearRampToValueAtTime(0.035, pt+0.008);
+    g.gain.linearRampToValueAtTime(0, pt+0.03);
+    osc.connect(g); g.connect(soundGain);
+    osc.start(pt); osc.stop(pt+0.04);
+  }
+}
+function scheduleAmbientEvents(ctx, kind){
+  clearAmbientSchedule();
+  const fn = kind==='forest' ? playBirdChirp : playCricketChirp;
+  const tick=()=>{
+    if(!soundPlaying) return;
+    fn(ctx);
+    const delay = kind==='forest' ? (700+Math.random()*1800) : (250+Math.random()*900);
+    soundScheduleId = setTimeout(tick, delay);
+  };
+  soundScheduleId = setTimeout(tick, 300);
+}
+function clearAmbientSchedule(){ if(soundScheduleId){ clearTimeout(soundScheduleId); soundScheduleId=null; } }
+
+/* ---------- melodía relajante generativa para estudiar ---------- */
+const MELODY_CHORDS = [[130.81,164.81,196.00],[110.00,130.81,164.81],[87.31,110.00,130.81],[98.00,123.47,146.83]]; // C - Am - F - G
+const MELODY_PATTERN = [261.63,null,329.63,null,392.00,329.63,null,293.66,220.00,null,261.63,null,329.63,293.66,null,246.94];
+let melodyStep=0, melodyPadOscs=[], melodyPadGain=null;
+function playMelodyNote(ctx, freq){
+  if(freq==null) return;
+  const t=ctx.currentTime;
+  const osc=ctx.createOscillator(); osc.type='triangle'; osc.frequency.value=freq;
+  const filt=ctx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=1800;
+  const g=ctx.createGain(); g.gain.value=0;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.07, t+0.05);
+  g.gain.linearRampToValueAtTime(0.03, t+0.3);
+  g.gain.linearRampToValueAtTime(0, t+0.85);
+  osc.connect(filt); filt.connect(g); g.connect(soundGain);
+  osc.start(t); osc.stop(t+0.9);
+}
+function setMelodyPad(ctx, chordFreqs){
+  const oldOscs=melodyPadOscs, oldGain=melodyPadGain;
+  if(oldGain){
+    const t=ctx.currentTime;
+    oldGain.gain.cancelScheduledValues(t);
+    oldGain.gain.setValueAtTime(oldGain.gain.value, t);
+    oldGain.gain.linearRampToValueAtTime(0, t+0.5);
+    setTimeout(()=>{ oldOscs.forEach(o=>{ try{o.stop();}catch(e){} o.disconnect(); }); oldGain.disconnect(); }, 600);
+  }
+  const g=ctx.createGain(); g.gain.value=0; g.connect(soundGain);
+  const t=ctx.currentTime;
+  g.gain.linearRampToValueAtTime(0.025, t+0.6);
+  const oscs=chordFreqs.map(freq=>{
+    const osc=ctx.createOscillator(); osc.type='sine'; osc.frequency.value=freq;
+    osc.connect(g); osc.start(t);
+    return osc;
+  });
+  melodyPadOscs=oscs; melodyPadGain=g;
+}
+function scheduleMelody(ctx){
+  clearAmbientSchedule();
+  melodyStep=0;
+  const tick=()=>{
+    if(!soundPlaying || currentSoundPreset!=='melody') return;
+    if(melodyStep % 4 === 0){ setMelodyPad(ctx, MELODY_CHORDS[(melodyStep/4)%MELODY_CHORDS.length]); }
+    playMelodyNote(ctx, MELODY_PATTERN[melodyStep % MELODY_PATTERN.length]);
+    melodyStep++;
+    soundScheduleId = setTimeout(tick, 480);
+  };
+  tick();
+}
+function clearMelodyPad(){
+  if(melodyPadGain){
+    try{ melodyPadOscs.forEach(o=>{ try{o.stop();}catch(e){} o.disconnect(); }); melodyPadGain.disconnect(); }catch(e){}
+  }
+  melodyPadOscs=[]; melodyPadGain=null;
+}
+
+function stopSoundGraph(){
+  clearAmbientSchedule();
+  clearMelodyPad();
+  if(soundSource){ try{soundSource.stop();}catch(e){} soundSource.disconnect(); soundSource=null; }
+  if(soundLFO){ try{soundLFO.stop();}catch(e){} soundLFO.disconnect(); soundLFO=null; }
+  if(soundLFOGain){ soundLFOGain.disconnect(); soundLFOGain=null; }
+  soundFilters.forEach(f=>f.disconnect()); soundFilters=[];
+}
+function buildSoundGraph(ctx, preset){
+  stopSoundGraph();
+  if(preset==='forest'||preset==='crickets'){
+    // Solo pájaros o solo grillos, sin cama de ruido debajo.
+    scheduleAmbientEvents(ctx, preset);
+    return;
+  }
+  if(preset==='melody'){
+    scheduleMelody(ctx);
+    return;
+  }
+  const baseType = (preset==='rain') ? 'white' : (preset==='waves' ? 'brown' : preset);
+  soundSource = ctx.createBufferSource();
+  soundSource.buffer = buildNoiseBuffer(ctx, baseType);
+  soundSource.loop = true;
+  let node = soundSource;
+  if(preset==='rain'){
+    const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=900;
+    const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=6000;
+    node.connect(hp); hp.connect(lp); node=lp; soundFilters.push(hp,lp);
+  }
+  if(preset==='waves'){
+    const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=700;
+    node.connect(lp); node=lp; soundFilters.push(lp);
+    soundLFO=ctx.createOscillator(); soundLFO.frequency.value=0.12;
+    soundLFOGain=ctx.createGain(); soundLFOGain.gain.value=0.12;
+    soundLFO.connect(soundLFOGain); soundLFOGain.connect(soundGain.gain); soundLFO.start();
+  }
+  node.connect(soundGain);
+  soundSource.start();
+}
+function setSoundPreset(preset){
+  currentSoundPreset=preset;
+  document.querySelectorAll('.sound-preset-btn').forEach(b=>b.classList.toggle('active', b.dataset.sound===preset));
+  if(soundPlaying){ buildSoundGraph(ensureSoundCtx(), preset); }
+}
+function toggleSound(){
+  const ctx=ensureSoundCtx();
+  if(!soundGain){ soundGain=ctx.createGain(); soundGain.gain.value=Number(document.getElementById('sound-volume').value)/100; soundGain.connect(ctx.destination); }
+  const btn=document.getElementById('sound-toggle-btn');
+  const floatBtn=document.getElementById('sound-float-btn');
+  const topbarLabel=document.getElementById('sound-topbar-label');
+  if(!soundPlaying){
+    if(ctx.state==='suspended') ctx.resume();
+    buildSoundGraph(ctx, currentSoundPreset);
+    soundPlaying=true; btn.textContent='⏸ Pausar';
+    if(topbarLabel) topbarLabel.textContent='Sonando';
+    if(floatBtn) floatBtn.style.display='flex';
+  }else{
+    stopSoundGraph();
+    soundPlaying=false; btn.textContent='▶ Reproducir';
+    if(topbarLabel) topbarLabel.textContent='Sonido';
+    if(floatBtn) floatBtn.style.display='none';
+  }
+}
+function setSoundVolume(val){ if(soundGain) soundGain.gain.value=Number(val)/100; }
+function toggleSoundPanel(){
+  const panel=document.getElementById('sound-panel');
+  if(!panel) return;
+  panel.style.display = panel.style.display==='none' ? 'block' : 'none';
+}
+
+renderStudentDashboard();renderUnits();
 
 renderAdmin();
 
