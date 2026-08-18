@@ -1095,6 +1095,11 @@ function renderUnits(){
   const grid = document.getElementById('units-grid');
   if(!grid) return;
   document.getElementById('module-title').textContent = currentModule.name;
+  const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
+  if(!student || !isStudentActive(student)){
+    grid.innerHTML = '<p class="admin-mini">Tu cuenta está creada pero todavía no tiene un paquete asignado. Cuando C.A.E.R. active tu acceso vas a ver acá tus unidades y materias.</p>';
+    return;
+  }
   grid.innerHTML = currentModule.units.map(u=>{
     let total = 0, watched = 0;
     u.subjects.forEach(s=>{ const st = realSubjectProgress(s); total += st.total; watched += st.watched; });
@@ -2304,7 +2309,7 @@ function sortedUpdates(){return [...adminData.updates].sort((a,b)=>(b.pinned?1:0
 function formatUpdateDate(iso){if(!iso)return '';const d=new Date(iso);return d.toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'})}
 function renderUpdateCard(u,actionsHtml){return `<div class="update-card ${u.pinned?'pinned':''}"><div class="update-card-top"><h4>${u.pinned?'<span class="update-pin-tag">Fijado</span>':''}${escapeHtml(u.title)}</h4><span class="update-date">${formatUpdateDate(u.date)}</span></div><p>${escapeHtml(u.message)}</p>${actionsHtml||''}</div>`}
 function renderAdminUpdates(){const el=document.getElementById('admin-updates-list');if(!el)return;const list=sortedUpdates();el.innerHTML=list.length?list.map((u,i)=>renderUpdateCard(u,`<div class="admin-actions" style="margin-top:10px"><button class="admin-btn small" onclick="editUpdate(${i})">Editar</button> <button class="admin-btn danger small" onclick="removeUpdate(${i})">Eliminar</button></div>`)).join(''):'<p class="updates-feed-empty">Todavía no publicaste ninguna novedad.</p>'}
-function renderStudentUpdates(){const panel=document.getElementById('student-updates-panel');const el=document.getElementById('student-updates-list');if(!panel||!el)return;const list=sortedUpdates();if(!list.length){panel.style.display='none';return}panel.style.display='block';el.innerHTML=list.map(u=>renderUpdateCard(u)).join('')}
+function renderStudentUpdates(){const panel=document.getElementById('student-updates-panel');const el=document.getElementById('student-updates-list');if(!panel||!el)return;const student=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);if(!student||!isStudentActive(student)){panel.style.display='none';return}const list=sortedUpdates();if(!list.length){panel.style.display='none';return}panel.style.display='block';el.innerHTML=list.map(u=>renderUpdateCard(u)).join('')}
 // Semana del mes en bloques simples de 7 días (1-7=Semana 1, 8-14=Semana 2, 15-21=Semana 3, 22-31=Semana 4).
 function weekOfMonth(d){ return Math.min(4, Math.ceil(d.getDate()/7)); }
 function monthKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
