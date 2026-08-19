@@ -2360,7 +2360,20 @@ function renderStudentBooking(){
   <div class="access-panel"><strong>Mis otras reservas de este mes</strong>${restOfMonth.length?restOfMonth.map(renderBookingCard).join(''):'<p class="admin-mini">No tenés otras reservas este mes.</p>'}</div>
   ${otherMonths.length?`<div class="access-panel"><strong>Reservas de otros meses</strong>${otherMonths.map(renderBookingCard).join('')}</div>`:''}`
 }
-function renderStudentDashboard(){renderStudentAccess();renderStudentBooking();renderStudentUpdates()}
+function renderStudyToolsAccess(){
+  const student=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
+  const active=!!(student && isStudentActive(student));
+  const pomodoroBtn=document.getElementById('pomodoro-topbar-btn');
+  const soundBtn=document.getElementById('sound-topbar-btn');
+  if(pomodoroBtn) pomodoroBtn.style.display = active ? 'flex' : 'none';
+  if(soundBtn) soundBtn.style.display = active ? 'flex' : 'none';
+  if(!active){
+    document.getElementById('pomodoro-panel')?.style.setProperty('display','none');
+    document.getElementById('sound-panel')?.style.setProperty('display','none');
+    document.getElementById('sound-float-btn')?.style.setProperty('display','none');
+  }
+}
+function renderStudentDashboard(){renderStudentAccess();renderStudentBooking();renderStudentUpdates();renderStudyToolsAccess()}
 renderAdmin();
 
 /* ---------- reproductor de sonido relajante / ruido blanco / naturaleza (100% generado en el navegador) ---------- */
