@@ -2961,7 +2961,7 @@ function startCollectionListeners(){
   stopCollectionListeners();
   unsubStudents = onSnapshot(collection(db,'students'), snap=>{
     window.adminData.students = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    safeRenderAdmin(); safeRenderStudentDashboard(); updateUserChip();
+    safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits(); updateUserChip();
   });
   unsubPackages = onSnapshot(collection(db,'packages'), snap=>{
     window.adminData.packages = snap.docs.map(d=>({id:d.id, ...d.data()}));
