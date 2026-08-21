@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -763,9 +762,7 @@
           <label>Estado<select id="new-student-status"><option>Activo</option><option>Pendiente</option><option>Inactivo</option></select></label>
           <label style="flex-direction:row;align-items:center;gap:8px"><input id="new-student-exception" type="checkbox" style="width:auto"> Excepción: permitir varias clases en la misma semana</label>
           <label>Clases permitidas (excepción, dejar vacío = usar el paquete)<input id="new-student-exception-classes" type="number" min="0" placeholder="Ej: 5"></label>
-          <label style="flex-direction:row;align-items:center;gap:8px"><input id="new-student-fixed-enabled" type="checkbox" style="width:auto" onchange="toggleFixedScheduleFields()"> Horario fijo (el alumno no reserva, solo ve este horario)</label>
-          <label id="new-student-fixed-day-wrap" style="display:none">Día fijo<select id="new-student-fixed-day"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select></label>
-          <label id="new-student-fixed-time-wrap" style="display:none">Horario fijo<input id="new-student-fixed-time" type="time"></label>
+          <div class="full"><p class="admin-mini">¿Necesitás asignarle un horario fijo de clase? Hacelo desde la pestaña <strong>Clases y reservas</strong>.</p></div>
           <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="student-submit-btn">Crear alumno</button><button class="admin-btn secondary" type="button" id="student-cancel-btn" style="display:none" onclick="cancelEditStudent()">Cancelar edición</button></div>
         </form>
       </div>
@@ -899,6 +896,17 @@
     </section>
 
     <section id="admin-classes" class="admin-view">
+      <div class="admin-card">
+        <h3>Horario fijo por alumno</h3>
+        <p class="admin-mini" style="margin-bottom:12px">Asignale a un alumno un día y horario fijo de clase particular. No va a tener que reservar: va a ver siempre ese horario con la cuenta de días que faltan.</p>
+        <form class="admin-form" onsubmit="saveFixedSchedule(event)">
+          <label>Alumno<select id="fixed-schedule-student" required></select></label>
+          <label>Día fijo<select id="fixed-schedule-day"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select></label>
+          <label>Horario<input id="fixed-schedule-time" type="time" required></label>
+          <div class="full"><button class="admin-btn" type="submit">Guardar horario fijo</button></div>
+        </form>
+        <div id="fixed-schedules-list" style="margin-top:16px"></div>
+      </div>
       <div class="admin-card">
         <h3>Disponibilidad para clases particulares</h3>
         <form class="admin-form" onsubmit="addAvailability(event)">
@@ -1642,6 +1650,7 @@ function renderAdmin(){
   renderAdminUpdates();
   const pkgSelect=document.getElementById('new-student-package');if(pkgSelect)pkgSelect.innerHTML=adminData.packages.map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
   const avStudentSelect=document.getElementById('availability-student');if(avStudentSelect){const prev=avStudentSelect.value;avStudentSelect.innerHTML=adminData.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');if(prev)avStudentSelect.value=prev;}
+  renderFixedSchedules();
   const st=document.getElementById('students-table');
   if(st)st.innerHTML=adminData.students.map((s,i)=>({s,i})).sort((a,b)=>(typeof b.s.overallPct==='number'?b.s.overallPct:0)-(typeof a.s.overallPct==='number'?a.s.overallPct:0)).map(({s,i})=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s),allowedClasses=(s.bookingExceptionClasses!=null)?s.bookingExceptionClasses:(p?p.classes:0);return `<tr><td><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${allowedClasses} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td><button class="admin-btn small" onclick="openStudentProfile(${i})">Ver perfil</button> <button class="admin-btn small" onclick="editStudent(${i})">Editar</button> <button class="admin-btn small" onclick="renewStudent(${i})">Renovar</button> <button class="admin-btn danger small" onclick="removeStudent(${i})">Eliminar</button></td></tr>`}).join('');
   const pl=document.getElementById('packages-list');if(pl)pl.innerHTML=adminData.packages.map((p,i)=>`<div class="package-card"><strong>${escapeHtml(p.name)}</strong><div class="package-meta"><span class="admin-badge">${p.days} días de acceso</span><span class="admin-badge" style="${p.mentoria?'':'opacity:.6'}">${p.mentoria?`✓ Mentoría · ${p.classes} clases privadas`:'Sin mentoría'}</span></div>${p.description?`<div style="opacity:.75;margin-bottom:6px">${escapeHtml(p.description)}</div>`:''}<div style="opacity:.75">Materias: ${escapeHtml(p.subjects.join(', '))}</div><div class="admin-actions" style="margin-top:10px"><button class="admin-btn small" onclick="editPackage(${i})">Editar</button> <button class="admin-btn danger" onclick="removePackage(${i})">Eliminar</button></div></div>`).join('');
@@ -1867,29 +1876,19 @@ function openProfileSubject(subjectId){
   `;
 }
 
-function toggleFixedScheduleFields(){
-  const on=document.getElementById('new-student-fixed-enabled').checked;
-  document.getElementById('new-student-fixed-day-wrap').style.display = on ? '' : 'none';
-  document.getElementById('new-student-fixed-time-wrap').style.display = on ? '' : 'none';
-}
 function addStudent(e){e.preventDefault();const editingId=document.getElementById('editing-student-id').value;const pkg=document.getElementById('new-student-package').value;const name=document.getElementById('new-student-name').value.trim();const email=document.getElementById('new-student-email').value.trim();const status=document.getElementById('new-student-status').value;const bookingException=document.getElementById('new-student-exception').checked;const exClassesRaw=document.getElementById('new-student-exception-classes').value;const bookingExceptionClasses=exClassesRaw===''?null:Number(exClassesRaw);if(!name||!email){alert('Completá nombre y email.');return}
-  const fixedEnabled=document.getElementById('new-student-fixed-enabled').checked;
-  const fixedDay=document.getElementById('new-student-fixed-day').value;
-  const fixedTime=document.getElementById('new-student-fixed-time').value;
-  if(fixedEnabled && !fixedTime){alert('Elegí el horario fijo del alumno.');return}
-  const fixedSchedule = fixedEnabled ? {day:fixedDay,time:fixedTime} : null;
   if(editingId){
-    window.fsUpdate('students',editingId,{name,email,package:pkg,status,bookingException,bookingExceptionClasses,fixedSchedule}).then(()=>{adminData.recent.unshift(`Se editó el alumno ${name}.`);cancelEditStudent();renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
+    window.fsUpdate('students',editingId,{name,email,package:pkg,status,bookingException,bookingExceptionClasses}).then(()=>{adminData.recent.unshift(`Se editó el alumno ${name}.`);cancelEditStudent();renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
     return;
   }
   const existing = adminData.students.find(x=>(x.email||'').trim().toLowerCase()===email.toLowerCase());
   if(existing){
     if(!confirm(`Ya existe un alumno con el email ${email} (${existing.name}), probablemente porque se registró solo desde la pantalla de login. En vez de crear una ficha duplicada, se va a actualizar esa cuenta con el paquete y estado que elegiste acá. ¿Continuar?`)) return;
-    window.fsUpdate('students',existing.id,{name,package:pkg,status,bookingException,bookingExceptionClasses,fixedSchedule}).then(()=>{adminData.recent.unshift(`Se vinculó y actualizó la cuenta existente de ${name} (sin crear ficha duplicada).`);renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
+    window.fsUpdate('students',existing.id,{name,package:pkg,status,bookingException,bookingExceptionClasses}).then(()=>{adminData.recent.unshift(`Se vinculó y actualizó la cuenta existente de ${name} (sin crear ficha duplicada).`);renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
     e.target.reset();
     return;
   }
-  window.fsAdd('students',{name,email,package:pkg,status,startDate:todayISO(),classesUsed:0,bookingException,bookingExceptionClasses,fixedSchedule}).then(()=>{adminData.recent.unshift(`Se agregó el alumno ${name} con el paquete ${pkg}.`);renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
+  window.fsAdd('students',{name,email,package:pkg,status,startDate:todayISO(),classesUsed:0,bookingException,bookingExceptionClasses}).then(()=>{adminData.recent.unshift(`Se agregó el alumno ${name} con el paquete ${pkg}.`);renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
   e.target.reset();
 }
 function editStudent(i){
@@ -1902,14 +1901,45 @@ function editStudent(i){
   document.getElementById('new-student-status').value=s.status;
   document.getElementById('new-student-exception').checked=!!s.bookingException;
   document.getElementById('new-student-exception-classes').value=(s.bookingExceptionClasses??'');
-  document.getElementById('new-student-fixed-enabled').checked=!!s.fixedSchedule;
-  document.getElementById('new-student-fixed-day').value=s.fixedSchedule?s.fixedSchedule.day:'Lunes';
-  document.getElementById('new-student-fixed-time').value=s.fixedSchedule?s.fixedSchedule.time:'';
-  toggleFixedScheduleFields();
   document.getElementById('student-form-title').textContent='Editar alumno';
   document.getElementById('student-submit-btn').textContent='Guardar cambios';
   document.getElementById('student-cancel-btn').style.display='';
   document.getElementById('student-form-title').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function saveFixedSchedule(e){
+  e.preventDefault();
+  const studentId=document.getElementById('fixed-schedule-student').value;
+  const day=document.getElementById('fixed-schedule-day').value;
+  const time=document.getElementById('fixed-schedule-time').value;
+  if(!studentId){alert('Elegí un alumno.');return}
+  if(!time){alert('Elegí el horario.');return}
+  const s=adminData.students.find(x=>x.id===studentId);
+  window.fsUpdate('students',studentId,{fixedSchedule:{day,time}}).then(()=>{
+    adminData.recent.unshift(`Se asignó horario fijo a ${s?.name||'un alumno'}: ${day} ${time}.`);
+    document.getElementById('fixed-schedule-time').value='';
+    renderAdmin();
+  }).catch(err=>alert('Error al guardar: '+err.message));
+}
+function editFixedSchedule(studentId){
+  const s=adminData.students.find(x=>x.id===studentId);
+  if(!s||!s.fixedSchedule) return;
+  document.getElementById('fixed-schedule-student').value=studentId;
+  document.getElementById('fixed-schedule-day').value=s.fixedSchedule.day||'Lunes';
+  document.getElementById('fixed-schedule-time').value=s.fixedSchedule.time||'';
+  document.getElementById('fixed-schedule-student').closest('form').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function clearFixedSchedule(studentId){
+  const s=adminData.students.find(x=>x.id===studentId);
+  if(!confirm(`¿Quitar el horario fijo de ${s?.name||'este alumno'}? Va a poder reservar clases normalmente si su paquete lo permite.`)) return;
+  window.fsUpdate('students',studentId,{fixedSchedule:null}).then(()=>{adminData.recent.unshift(`Se quitó el horario fijo de ${s?.name||'un alumno'}.`);renderAdmin()}).catch(err=>alert('Error: '+err.message));
+}
+function renderFixedSchedules(){
+  const sel=document.getElementById('fixed-schedule-student');
+  if(sel){const prev=sel.value;sel.innerHTML=adminData.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');if(prev)sel.value=prev;}
+  const list=document.getElementById('fixed-schedules-list');
+  if(!list) return;
+  const withFixed=adminData.students.filter(s=>s.fixedSchedule&&s.fixedSchedule.day);
+  list.innerHTML=withFixed.length?withFixed.map(s=>`<div class="reserve-card" style="margin-bottom:8px"><div><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.day)} · ${escapeHtml(s.fixedSchedule.time)}</div></div><div style="display:flex;gap:8px"><button class="admin-btn small" onclick="editFixedSchedule('${s.id}')">Editar</button><button class="admin-btn danger small" onclick="clearFixedSchedule('${s.id}')">Quitar</button></div></div>`).join(''):'<p class="admin-mini">Todavía no asignaste horarios fijos.</p>';
 }
 function cancelEditStudent(){
   document.getElementById('editing-student-id').value='';
@@ -2385,6 +2415,17 @@ function studentBookingGroup(student){
   if(!p) return 'otros';
   return p.bookingCycle==='semanal' ? 'semanal' : (p.bookingCycle==='mensual' ? 'mensual' : 'otros');
 }
+// Calcula cuántos días faltan para la próxima clase de horario fijo (0 = hoy).
+function daysUntilFixedClass(fixedSchedule){
+  if(!fixedSchedule||!fixedSchedule.day) return null;
+  const dayIdx=DIAS_SEMANA.indexOf(fixedSchedule.day);
+  if(dayIdx<0) return null;
+  const now=new Date();
+  const todayIdx=now.getDay();
+  const diff=(dayIdx-todayIdx+7)%7;
+  const nextDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()+diff);
+  return {diff,nextDate};
+}
 function renderStudentBooking(){
   const el=document.getElementById('student-booking-panel');
   const s=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
@@ -2397,7 +2438,15 @@ function renderStudentBooking(){
     return;
   }
   if(s.fixedSchedule){
-    el.innerHTML=`<div class="access-panel"><strong>Tu horario de clase</strong><div class="admin-mini" style="margin-top:8px">C.A.E.R. te asignó un horario fijo para tus clases particulares. No hace falta que reserves: tu clase es siempre el mismo día y horario.</div><div class="reserve-card" style="margin-top:12px"><div><strong>${escapeHtml(s.fixedSchedule.day)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.time)}</div></div><span class="admin-badge">Horario fijo</span></div><div class="admin-mini" style="margin-top:10px">Si necesitás cambiar el día u horario, consultá con C.A.E.R.</div></div>`;
+    const info=daysUntilFixedClass(s.fixedSchedule);
+    let countdownTxt='';
+    if(info){
+      if(info.diff===0) countdownTxt='Hoy es tu clase 🎉';
+      else if(info.diff===1) countdownTxt='Tu clase es mañana';
+      else countdownTxt=`Faltan ${info.diff} días para tu clase`;
+      countdownTxt+=` · ${info.nextDate.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}`;
+    }
+    el.innerHTML=`<div class="access-panel"><strong>Tu horario de clase</strong><div class="admin-mini" style="margin-top:8px">C.A.E.R. te asignó un horario fijo para tus clases particulares. No hace falta que reserves: tu clase es siempre el mismo día y horario.</div><div class="reserve-card" style="margin-top:12px"><div><strong>${escapeHtml(s.fixedSchedule.day)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.time)}</div></div><span class="admin-badge">Horario fijo</span></div>${countdownTxt?`<div class="admin-mini" style="margin-top:10px;font-weight:600;color:var(--forest,#1a5c2a)">${countdownTxt}</div>`:''}<div class="admin-mini" style="margin-top:10px">Si necesitás cambiar el día u horario, consultá con C.A.E.R.</div></div>`;
     return;
   }
   const active=isStudentActive(s),rem=remainingClasses(s),pCycle=getPackage(s);
