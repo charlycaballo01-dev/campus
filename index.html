@@ -1946,13 +1946,30 @@ function clearFixedSchedule(studentId){
   if(!confirm(`¿Quitar el horario fijo de ${s?.name||'este alumno'}? Va a poder reservar clases normalmente si su paquete lo permite.`)) return;
   window.fsUpdate('students',studentId,{fixedSchedule:null}).then(()=>{adminData.recent.unshift(`Se quitó el horario fijo de ${s?.name||'un alumno'}.`);renderAdmin()}).catch(err=>alert('Error: '+err.message));
 }
+const ORDEN_SEMANA=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 function renderFixedSchedules(){
   const sel=document.getElementById('fixed-schedule-student');
   if(sel){const prev=sel.value;sel.innerHTML=adminData.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');if(prev)sel.value=prev;}
   const list=document.getElementById('fixed-schedules-list');
   if(!list) return;
-  const withFixed=adminData.students.filter(s=>s.fixedSchedule&&s.fixedSchedule.day);
-  list.innerHTML=withFixed.length?withFixed.map(s=>{const done=isFixedClassDoneThisWeek(s.fixedSchedule);return `<div class="reserve-card" style="margin-bottom:8px;flex-wrap:wrap;gap:10px"><div><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.day)} · ${escapeHtml(s.fixedSchedule.time)}</div>${done?'<div class="admin-mini" style="color:var(--forest,#1a5c2a);font-weight:600;margin-top:4px">✓ Clase de esta semana ya dada</div>':''}</div><div style="display:flex;gap:8px;flex-wrap:wrap">${done?`<button class="admin-btn secondary small" onclick="undoFixedClassDone('${s.id}')">Deshacer</button>`:`<button class="admin-btn small" onclick="markFixedClassDone('${s.id}')">Marcar clase dada</button>`}<button class="admin-btn secondary small" onclick="editFixedSchedule('${s.id}')">Editar</button><button class="admin-btn danger small" onclick="clearFixedSchedule('${s.id}')">Quitar</button></div></div>`}).join(''):'<p class="admin-mini">Todavía no asignaste horarios fijos.</p>';
+  const withFixed=adminData.students.filter(s=>s.fixedSchedule&&s.fixedSchedule.day)
+    .slice()
+    .sort((a,b)=>{
+      const da=ORDEN_SEMANA.indexOf(a.fixedSchedule.day),db=ORDEN_SEMANA.indexOf(b.fixedSchedule.day);
+      if(da!==db) return da-db;
+      return (a.fixedSchedule.time||'').localeCompare(b.fixedSchedule.time||'');
+    });
+  list.innerHTML=withFixed.length?withFixed.map(s=>{
+    const done=isFixedClassDoneThisWeek(s.fixedSchedule);
+    const info=daysUntilFixedClass(s.fixedSchedule);
+    let diasTxt='';
+    if(info){
+      if(info.diff===0) diasTxt='Hoy';
+      else if(info.diff===1) diasTxt='Mañana';
+      else diasTxt=`En ${info.diff} días`;
+    }
+    return `<div class="reserve-card" style="margin-bottom:8px;flex-wrap:wrap;gap:10px"><div><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.day)} · ${escapeHtml(s.fixedSchedule.time)}${diasTxt?` · <span style="font-weight:600;color:var(--forest,#1a5c2a)">${diasTxt}</span>`:''}</div>${done?'<div class="admin-mini" style="color:var(--forest,#1a5c2a);font-weight:600;margin-top:4px">✓ Clase de esta semana ya dada</div>':''}</div><div style="display:flex;gap:8px;flex-wrap:wrap">${done?`<button class="admin-btn secondary small" onclick="undoFixedClassDone('${s.id}')">Deshacer</button>`:`<button class="admin-btn small" onclick="markFixedClassDone('${s.id}')">Marcar clase dada</button>`}<button class="admin-btn secondary small" onclick="editFixedSchedule('${s.id}')">Editar</button><button class="admin-btn danger small" onclick="clearFixedSchedule('${s.id}')">Quitar</button></div></div>`;
+  }).join(''):'<p class="admin-mini">Todavía no asignaste horarios fijos.</p>';
 }
 function cancelEditStudent(){
   document.getElementById('editing-student-id').value='';
