@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -683,6 +684,24 @@
       <button class="admin-btn secondary small" onclick="closeVideoModal()">Cerrar ✕</button>
     </div>
     <div id="video-modal-player" style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden"></div>
+  </div>
+</div>
+
+<div id="edit-booking-modal" style="display:none;position:fixed;inset:0;background:rgba(20,30,25,.82);z-index:999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg-panel,#fff);border-radius:16px;padding:28px;max-width:420px;width:100%">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px">
+      <div>
+        <span class="eyebrow">Editar reserva</span>
+        <strong id="edit-booking-student" style="display:block;font-family:var(--font-display);font-size:1.25rem;margin-top:4px"></strong>
+      </div>
+      <button class="admin-btn secondary small" type="button" onclick="closeEditBookingModal()">Cerrar ✕</button>
+    </div>
+    <form class="admin-form" onsubmit="saveEditBooking(event)" style="display:flex;flex-direction:column;gap:12px">
+      <label>Fecha<input id="edit-booking-date" type="date"></label>
+      <label>Horario<input id="edit-booking-time" type="time" required></label>
+      <label>Estado<select id="edit-booking-status"><option value="Reservada">Reservada</option><option value="Confirmada">Confirmada</option><option value="Completada">Completada</option><option value="Cancelada">Cancelada</option></select></label>
+      <div style="display:flex;gap:10px;margin-top:6px"><button class="admin-btn" type="submit">Guardar cambios</button><button class="admin-btn secondary" type="button" onclick="closeEditBookingModal()">Cancelar</button></div>
+    </form>
   </div>
 </div>
 
@@ -1673,7 +1692,7 @@ function renderAdmin(){
   const groupTag=g=>g==='semanal'?' · Semanal':(g==='mensual'?' · Mensual':(g==='otros'?' · Otros':''));
   const studentNameById=id=>{const st=adminData.students.find(x=>x.id===id);return st?st.name:'alumno eliminado'};
   const av=document.getElementById('availability-list');if(av)av.innerHTML=adminData.availability.map((a,i)=>`<span class="admin-badge" style="margin:4px">${a.date?formatShortDate(a.date)+' ('+a.day+', Semana '+weekOfMonth(new Date(a.date+'T00:00:00'))+')':a.day} ${a.time}${groupTag(a.group)}${a.studentId?' · Individual: '+escapeHtml(studentNameById(a.studentId)):''} <button style="border:0;background:none;cursor:pointer" onclick="removeAvailability(${i})">×</button></span>`).join('');
-  const bookingRow=(b,i)=>{const s=adminData.students.find(x=>x.id===b.studentId);return `<tr><td>${escapeHtml(s?.name||'Alumno')}</td><td>${b.date?formatShortDate(b.date)+' ('+b.day+')':b.day}</td><td>${b.time}</td><td>${b.week?`Semana ${b.week}${b.monthKey?' ('+b.monthKey+')':''}`:'—'}</td><td><span class="admin-badge">${b.status}</span></td><td><div class="reserve-actions">${b.status==='Reservada'?`<button class="admin-btn small" onclick="confirmBooking(${i})">Confirmar</button>`:''}${b.status==='Confirmada'?`<button class="admin-btn small" onclick="completeBooking(${i})">Completar</button>`:''}${b.status!=='Cancelada'&&b.status!=='Completada'?`<button class="admin-btn danger small" onclick="cancelBooking(${i})">Cancelar</button>`:''}</div></td></tr>`};
+  const bookingRow=(b,i)=>{const s=adminData.students.find(x=>x.id===b.studentId);return `<tr><td>${escapeHtml(s?.name||'Alumno')}</td><td>${b.date?formatShortDate(b.date)+' ('+b.day+')':b.day}</td><td>${b.time}</td><td>${b.week?`Semana ${b.week}${b.monthKey?' ('+b.monthKey+')':''}`:'—'}</td><td><span class="admin-badge">${b.status}</span></td><td><div class="reserve-actions">${b.status==='Reservada'?`<button class="admin-btn small" onclick="confirmBooking(${i})">Confirmar</button>`:''}${b.status==='Confirmada'?`<button class="admin-btn small" onclick="completeBooking(${i})">Completar</button>`:''}${b.status!=='Cancelada'&&b.status!=='Completada'?`<button class="admin-btn danger small" onclick="cancelBooking(${i})">Cancelar</button>`:''}<button class="admin-btn secondary small" onclick="openEditBooking(${i})">Editar</button></div></td></tr>`};
   const bookingsWithIndex = adminData.bookings.map((b,i)=>({b,i}));
   const cycleOf=(b)=>{const s=adminData.students.find(x=>x.id===b.studentId);const p=s?getPackage(s):null;return p?p.bookingCycle:null;};
   const bkSemanal=document.getElementById('bookings-table-semanal');
@@ -2276,6 +2295,41 @@ function addAvailability(e){
   toggleAvailabilityVisibility();
 }
 function removeAvailability(i){window.fsDelete('availability',adminData.availability[i].id).catch(err=>alert('Error: '+err.message))}
+let editingBookingIndex=null;
+function openEditBooking(i){
+  const b=adminData.bookings[i];if(!b)return;
+  editingBookingIndex=i;
+  const s=adminData.students.find(x=>x.id===b.studentId);
+  document.getElementById('edit-booking-student').textContent=s?s.name:'Alumno';
+  document.getElementById('edit-booking-date').value=b.date||'';
+  document.getElementById('edit-booking-time').value=b.time||'';
+  document.getElementById('edit-booking-status').value=b.status||'Reservada';
+  const modal=document.getElementById('edit-booking-modal');modal.style.display='flex';
+}
+function closeEditBookingModal(){const modal=document.getElementById('edit-booking-modal');if(modal)modal.style.display='none';editingBookingIndex=null;}
+function saveEditBooking(e){
+  e.preventDefault();
+  if(editingBookingIndex==null)return;
+  const b=adminData.bookings[editingBookingIndex];if(!b){closeEditBookingModal();return;}
+  const dateVal=document.getElementById('edit-booking-date').value||null;
+  const time=document.getElementById('edit-booking-time').value;
+  const status=document.getElementById('edit-booking-status').value;
+  if(!time){alert('Ingresá un horario.');return;}
+  const updates={time,status};
+  if(dateVal){
+    const d=new Date(dateVal+'T00:00:00');
+    updates.date=dateVal;
+    updates.day=DIAS_SEMANA[d.getDay()];
+    updates.week=weekOfMonth(d);
+    updates.monthKey=monthKey(d);
+  }
+  if(status==='Completada'&&b.status!=='Completada'){updates.completedDate=todayISO();}
+  window.fsUpdate('bookings',b.id,updates).then(()=>{
+    adminData.recent.unshift('Se editó una reserva.');
+    closeEditBookingModal();
+    renderAdmin();renderStudentBooking();
+  }).catch(err=>alert('Error al guardar: '+err.message));
+}
 function confirmBooking(i){window.fsUpdate('bookings',adminData.bookings[i].id,{status:'Confirmada'}).then(()=>{adminData.recent.unshift('Se confirmó una reserva.');renderAdmin();renderStudentBooking()}).catch(err=>alert('Error: '+err.message))}
 function cancelBooking(i){window.fsUpdate('bookings',adminData.bookings[i].id,{status:'Cancelada'}).then(()=>{adminData.recent.unshift('Se canceló una reserva.');renderAdmin();renderStudentBooking()}).catch(err=>alert('Error: '+err.message))}
 function completeBooking(i){const b=adminData.bookings[i];if(b.status!=='Confirmada')return;const s=adminData.students.find(x=>x.id===b.studentId);const tasks=[window.fsUpdate('bookings',b.id,{status:'Completada',completedDate:todayISO()})];if(s&&remainingClasses(s)>0)tasks.push(window.fsUpdate('students',s.id,{classesUsed:(s.classesUsed||0)+1}));Promise.all(tasks).then(()=>{adminData.recent.unshift(`Se completó una clase de ${s?.name||'un alumno'} y se descontó 1 clase.`);renderAdmin();renderStudentAccess();renderStudentBooking()}).catch(err=>alert('Error: '+err.message))}
