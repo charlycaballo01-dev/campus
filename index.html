@@ -1914,7 +1914,8 @@ function saveFixedSchedule(e){
   if(!studentId){alert('Elegí un alumno.');return}
   if(!time){alert('Elegí el horario.');return}
   const s=adminData.students.find(x=>x.id===studentId);
-  window.fsUpdate('students',studentId,{fixedSchedule:{day,time}}).then(()=>{
+  const completedWeek=(s&&s.fixedSchedule)?s.fixedSchedule.completedWeek:null;
+  window.fsUpdate('students',studentId,{fixedSchedule:{day,time,completedWeek}}).then(()=>{
     adminData.recent.unshift(`Se asignó horario fijo a ${s?.name||'un alumno'}: ${day} ${time}.`);
     document.getElementById('fixed-schedule-time').value='';
     renderAdmin();
@@ -1928,6 +1929,18 @@ function editFixedSchedule(studentId){
   document.getElementById('fixed-schedule-time').value=s.fixedSchedule.time||'';
   document.getElementById('fixed-schedule-student').closest('form').scrollIntoView({behavior:'smooth',block:'start'});
 }
+function markFixedClassDone(studentId){
+  const s=adminData.students.find(x=>x.id===studentId);
+  if(!s||!s.fixedSchedule) return;
+  const updated={...s.fixedSchedule,completedWeek:fixedWeekKey(new Date())};
+  window.fsUpdate('students',studentId,{fixedSchedule:updated}).then(()=>{adminData.recent.unshift(`Se marcó la clase semanal de ${s.name} como dada.`);renderAdmin()}).catch(err=>alert('Error: '+err.message));
+}
+function undoFixedClassDone(studentId){
+  const s=adminData.students.find(x=>x.id===studentId);
+  if(!s||!s.fixedSchedule) return;
+  const updated={...s.fixedSchedule,completedWeek:null};
+  window.fsUpdate('students',studentId,{fixedSchedule:updated}).then(()=>{adminData.recent.unshift(`Se deshizo la marca de clase dada de ${s.name}.`);renderAdmin()}).catch(err=>alert('Error: '+err.message));
+}
 function clearFixedSchedule(studentId){
   const s=adminData.students.find(x=>x.id===studentId);
   if(!confirm(`¿Quitar el horario fijo de ${s?.name||'este alumno'}? Va a poder reservar clases normalmente si su paquete lo permite.`)) return;
@@ -1939,7 +1952,7 @@ function renderFixedSchedules(){
   const list=document.getElementById('fixed-schedules-list');
   if(!list) return;
   const withFixed=adminData.students.filter(s=>s.fixedSchedule&&s.fixedSchedule.day);
-  list.innerHTML=withFixed.length?withFixed.map(s=>`<div class="reserve-card" style="margin-bottom:8px"><div><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.day)} · ${escapeHtml(s.fixedSchedule.time)}</div></div><div style="display:flex;gap:8px"><button class="admin-btn small" onclick="editFixedSchedule('${s.id}')">Editar</button><button class="admin-btn danger small" onclick="clearFixedSchedule('${s.id}')">Quitar</button></div></div>`).join(''):'<p class="admin-mini">Todavía no asignaste horarios fijos.</p>';
+  list.innerHTML=withFixed.length?withFixed.map(s=>{const done=isFixedClassDoneThisWeek(s.fixedSchedule);return `<div class="reserve-card" style="margin-bottom:8px;flex-wrap:wrap;gap:10px"><div><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.day)} · ${escapeHtml(s.fixedSchedule.time)}</div>${done?'<div class="admin-mini" style="color:var(--forest,#1a5c2a);font-weight:600;margin-top:4px">✓ Clase de esta semana ya dada</div>':''}</div><div style="display:flex;gap:8px;flex-wrap:wrap">${done?`<button class="admin-btn secondary small" onclick="undoFixedClassDone('${s.id}')">Deshacer</button>`:`<button class="admin-btn small" onclick="markFixedClassDone('${s.id}')">Marcar clase dada</button>`}<button class="admin-btn secondary small" onclick="editFixedSchedule('${s.id}')">Editar</button><button class="admin-btn danger small" onclick="clearFixedSchedule('${s.id}')">Quitar</button></div></div>`}).join(''):'<p class="admin-mini">Todavía no asignaste horarios fijos.</p>';
 }
 function cancelEditStudent(){
   document.getElementById('editing-student-id').value='';
@@ -2426,6 +2439,17 @@ function daysUntilFixedClass(fixedSchedule){
   const nextDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()+diff);
   return {diff,nextDate};
 }
+// Clave única de la semana actual (lunes de esa semana, formato YYYY-MM-DD), para saber si la clase semanal ya se dio.
+function fixedWeekKey(d){
+  const date=new Date(d);date.setHours(0,0,0,0);
+  const day=date.getDay();
+  const diffToMonday=(day===0?-6:1)-day;
+  date.setDate(date.getDate()+diffToMonday);
+  return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
+}
+function isFixedClassDoneThisWeek(fixedSchedule){
+  return !!(fixedSchedule&&fixedSchedule.completedWeek===fixedWeekKey(new Date()));
+}
 function renderStudentBooking(){
   const el=document.getElementById('student-booking-panel');
   const s=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
@@ -2438,15 +2462,20 @@ function renderStudentBooking(){
     return;
   }
   if(s.fixedSchedule){
-    const info=daysUntilFixedClass(s.fixedSchedule);
-    let countdownTxt='';
-    if(info){
-      if(info.diff===0) countdownTxt='Hoy es tu clase 🎉';
-      else if(info.diff===1) countdownTxt='Tu clase es mañana';
-      else countdownTxt=`Faltan ${info.diff} días para tu clase`;
-      countdownTxt+=` · ${info.nextDate.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}`;
+    const doneThisWeek=isFixedClassDoneThisWeek(s.fixedSchedule);
+    let statusTxt='';
+    if(doneThisWeek){
+      statusTxt='✅ Ya tuviste tu clase de esta semana.';
+    }else{
+      const info=daysUntilFixedClass(s.fixedSchedule);
+      if(info){
+        if(info.diff===0) statusTxt='Hoy es tu clase 🎉';
+        else if(info.diff===1) statusTxt='Tu clase es mañana';
+        else statusTxt=`Faltan ${info.diff} días para tu clase`;
+        statusTxt+=` · ${info.nextDate.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}`;
+      }
     }
-    el.innerHTML=`<div class="access-panel"><strong>Tu horario de clase</strong><div class="admin-mini" style="margin-top:8px">C.A.E.R. te asignó un horario fijo para tus clases particulares. No hace falta que reserves: tu clase es siempre el mismo día y horario.</div><div class="reserve-card" style="margin-top:12px"><div><strong>${escapeHtml(s.fixedSchedule.day)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.time)}</div></div><span class="admin-badge">Horario fijo</span></div>${countdownTxt?`<div class="admin-mini" style="margin-top:10px;font-weight:600;color:var(--forest,#1a5c2a)">${countdownTxt}</div>`:''}<div class="admin-mini" style="margin-top:10px">Si necesitás cambiar el día u horario, consultá con C.A.E.R.</div></div>`;
+    el.innerHTML=`<div class="access-panel"><strong>Tu horario de clase</strong><div class="admin-mini" style="margin-top:8px">C.A.E.R. te asignó un horario fijo para tus clases particulares. No hace falta que reserves: tu clase es siempre el mismo día y horario.</div><div class="reserve-card" style="margin-top:12px"><div><strong>${escapeHtml(s.fixedSchedule.day)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.time)}</div></div><span class="admin-badge">Horario fijo</span></div>${statusTxt?`<div class="admin-mini" style="margin-top:10px;font-weight:600;color:var(--forest,#1a5c2a)">${statusTxt}</div>`:''}<div class="admin-mini" style="margin-top:10px">Si necesitás cambiar el día u horario, consultá con C.A.E.R.</div></div>`;
     return;
   }
   const active=isStudentActive(s),rem=remainingClasses(s),pCycle=getPackage(s);
