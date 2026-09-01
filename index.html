@@ -74,6 +74,7 @@
   }
   .nav-tabs button:hover{color:var(--forest); border-bottom-color:var(--gold);}
   .nav-tabs button.active{color:var(--forest); border-bottom-color:var(--gold);}
+  .nav-tabs{align-items:center;}
   .user-chip{
     font-family:var(--font-body); font-size:0.8rem; color:var(--text-muted); font-weight:600;
     display:flex; align-items:center; gap:9px;
@@ -389,6 +390,21 @@
 .admin-btn.danger{background:var(--bg-panel);color:var(--rust-text);border:1px solid var(--rust-dim)}
 .admin-btn.danger:hover{background:var(--rust-dim);transform:none}
 .sound-preset-btn.active{background:var(--forest);color:#fff}
+  .chime-preset-btn.active{background:var(--forest);color:#fff}
+  .report-view-btn.active{background:var(--forest);color:#fff}
+  .sound-group-label{font-family:var(--font-body);font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin:12px 0 6px}
+  .sound-group-label:first-of-type{margin-top:0}
+  .sound-presets-row{display:flex;flex-wrap:wrap;gap:8px}
+  .app-modal-overlay{position:fixed;inset:0;background:rgba(20,30,25,.5);z-index:1500;display:none;align-items:center;justify-content:center;padding:20px}
+  .app-modal-overlay.active{display:flex}
+  .app-modal{background:var(--bg-panel,#fff);border-radius:var(--radius-lg);padding:26px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .sleep-choice-btn{flex:1;min-width:84px;line-height:1.7;font-size:.9rem}
+  @media print{
+    body *{visibility:hidden}
+    #weekly-report-content, #weekly-report-content *{visibility:visible}
+    #weekly-report-content{position:absolute;top:0;left:0;width:100%}
+    .no-print{display:none !important}
+  }
 @keyframes pomodoroPulse{0%{transform:scale(1);box-shadow:0 6px 20px rgba(20,59,42,.25)}50%{transform:scale(1.12);box-shadow:0 8px 26px rgba(212,160,23,.45)}100%{transform:scale(1);box-shadow:0 6px 20px rgba(20,59,42,.25)}}
 #pomodoro-float-btn.pulsing{animation:pomodoroPulse 1s ease-in-out infinite}
 .admin-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
@@ -484,10 +500,12 @@
     </div>
     <div class="nav-tabs">
       <button class="tab-btn active" data-tab="dashboard" onclick="showTab('dashboard')">Mis materias</button>
+      <button class="tab-btn" id="package-topbar-btn" onclick="togglePackagePanel()">Mi paquete</button>
       <button class="tab-btn" data-tab="quiz" onclick="openQuizPicker()">Preguntas</button>
       <button class="tab-btn" data-tab="booking" id="nav-booking-btn" onclick="showTab('booking')">Reservas</button>
     </div>
     <button type="button" class="admin-btn secondary small" id="pomodoro-topbar-btn" onclick="togglePomodoroPanel()" title="Temporizador de estudio" style="display:flex;align-items:center;gap:6px;margin-right:8px">⏱ <span id="pomodoro-topbar-label">Tiempo</span></button>
+    <button type="button" class="admin-btn secondary small" id="wellness-topbar-btn" onclick="toggleWellnessPanel()" title="Mi ritmo de estudio" style="display:flex;align-items:center;gap:6px;margin-right:8px">🌱 <span id="wellness-topbar-label">Ritmo</span></button>
     <button type="button" class="admin-btn secondary small" id="sound-topbar-btn" onclick="toggleSoundPanel()" title="Sonido para estudiar" style="display:flex;align-items:center;gap:6px">🎧 <span id="sound-topbar-label">Sonido</span></button>
     <div class="user-chip" id="user-chip"><span class="avatar">--</span> Cargando…</div>
   </div>
@@ -517,7 +535,15 @@
         <input id="pomodoro-long-min" type="number" min="1" max="90" value="15" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md)" onchange="applyPomodoroSettings()">
       </label>
     </div>
-    <p class="admin-mini" style="margin-top:10px">Método Pomodoro: 25 min de estudio, 5 min de descanso, y cada 4 ciclos un descanso largo de 15 min. Podés ajustar los tiempos. Un sonido te avisa cuando cambia la fase.</p>
+    <div style="margin-top:14px">
+      <label style="font-size:.8rem;color:var(--text-muted);font-weight:600">Sonido de alarma</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button type="button" class="admin-btn secondary small chime-preset-btn" data-chime="classic" onclick="setPomodoroChime('classic')">Clásica</button>
+        <button type="button" class="admin-btn secondary small chime-preset-btn active" data-chime="medium" onclick="setPomodoroChime('medium')">Media</button>
+        <button type="button" class="admin-btn secondary small chime-preset-btn" data-chime="long" onclick="setPomodoroChime('long')">Larga</button>
+      </div>
+    </div>
+    <p class="admin-mini" style="margin-top:10px">Método Pomodoro: 25 min de estudio, 5 min de descanso, y cada 4 ciclos un descanso largo de 15 min. Podés ajustar los tiempos. Un sonido te avisa cuando cambia la fase; tocá una opción arriba para escucharla y elegirla.</p>
   </div>
 
   <div id="pomodoro-float-btn" style="display:none;position:fixed;bottom:22px;right:96px;z-index:997;width:58px;height:58px;border-radius:50%;background:var(--bg-panel,#fff);border:2px solid var(--gold,#d4a017);box-shadow:0 6px 20px rgba(20,59,42,.25);cursor:pointer;align-items:center;justify-content:center;flex-direction:column" onclick="togglePomodoroPanel()">
@@ -532,22 +558,44 @@
   </div>
 
 
-  <div id="sound-panel" style="display:none;position:fixed;top:70px;right:16px;z-index:998;background:var(--bg-panel,#fff);border:1px solid var(--line);border-radius:16px;padding:20px;width:280px;max-width:90vw;box-shadow:0 10px 30px rgba(20,59,42,.18)">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
+  <div id="sound-panel" style="display:none;position:fixed;top:70px;right:16px;z-index:998;background:var(--bg-panel,#fff);border:1px solid var(--line);border-radius:16px;padding:20px;width:310px;max-width:92vw;max-height:80vh;overflow-y:auto;box-shadow:0 10px 30px rgba(20,59,42,.18)">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px">
       <strong>🎧 Sonido para estudiar</strong>
       <button type="button" class="admin-btn secondary small" onclick="toggleSoundPanel()">✕</button>
     </div>
-    <div id="sound-presets" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+
+    <div class="sound-group-label">Ruido ambiente</div>
+    <div class="sound-presets-row">
       <button type="button" class="admin-btn secondary small sound-preset-btn active" data-sound="white" onclick="setSoundPreset('white')">Ruido blanco</button>
       <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="pink" onclick="setSoundPreset('pink')">Ruido rosa</button>
       <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="brown" onclick="setSoundPreset('brown')">Ruido marrón</button>
       <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="rain" onclick="setSoundPreset('rain')">Lluvia</button>
       <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="waves" onclick="setSoundPreset('waves')">Olas del mar</button>
+    </div>
+
+    <div class="sound-group-label">Sonidos naturales</div>
+    <div class="sound-presets-row">
       <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="forest" onclick="setSoundPreset('forest')">Pájaros</button>
       <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="crickets" onclick="setSoundPreset('crickets')">Grillos</button>
-      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="melody" onclick="setSoundPreset('melody')">Melodía para estudiar</button>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+
+    <div class="sound-group-label">Melodías para estudiar y leer</div>
+    <div class="sound-presets-row">
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="melody" onclick="setSoundPreset('melody')">Melodía para estudiar</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="baroque" onclick="setSoundPreset('baroque')">Concentración barroca</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="reading" onclick="setSoundPreset('reading')">Lectura activa</button>
+    </div>
+
+    <div class="sound-group-label">Ondas cerebrales (binaural)</div>
+    <div class="sound-presets-row">
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="theta" onclick="setSoundPreset('theta')">Theta · Memoria</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="alpha" onclick="setSoundPreset('alpha')">Alfa · Atención relajada</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="beta" onclick="setSoundPreset('beta')">Beta · Concentración activa</button>
+      <button type="button" class="admin-btn secondary small sound-preset-btn" data-sound="gamma" onclick="setSoundPreset('gamma')">Gamma · Retención</button>
+    </div>
+    <p class="admin-mini" id="sound-brainwave-hint" style="display:none;margin:2px 0 12px">Usá auriculares: cada oído recibe un tono levemente distinto y esa diferencia es lo que el cerebro percibe como pulso.</p>
+
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:6px;border-top:1px solid var(--line)">
       <button type="button" class="admin-btn" id="sound-toggle-btn" onclick="toggleSound()">▶ Reproducir</button>
       <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--text-muted);font-weight:600">Volumen
         <input id="sound-volume" type="range" min="0" max="100" value="35" oninput="setSoundVolume(this.value)" style="width:110px">
@@ -568,6 +616,18 @@
     </svg>
   </div>
 
+  <div id="wellness-panel" style="display:none;position:fixed;top:70px;right:16px;z-index:998;background:var(--bg-panel,#fff);border:1px solid var(--line);border-radius:16px;padding:20px;width:320px;max-width:92vw;max-height:80vh;overflow-y:auto;box-shadow:0 10px 30px rgba(20,59,42,.18)">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
+      <strong>🌱 Mi ritmo de estudio</strong>
+      <button type="button" class="admin-btn secondary small" onclick="toggleWellnessPanel()">✕</button>
+    </div>
+    <div id="student-wellness-panel"></div>
+  </div>
+
+  <div id="package-panel" style="display:none;position:fixed;z-index:998;width:900px;max-width:92vw;max-height:82vh;overflow-y:auto;">
+    <div id="student-access-panel" class="access-panel"></div>
+  </div>
+
   <div id="tab-dashboard" class="view active">
     <div class="page">
       <div class="page-head">
@@ -579,7 +639,6 @@
         <h3>Novedades</h3>
         <div id="student-updates-list" class="updates-feed"></div>
       </div>
-      <div id="student-access-panel" class="access-panel"></div>
       <div id="units-grid" class="subject-grid"></div>
     </div>
   </div>
@@ -686,24 +745,6 @@
   </div>
 </div>
 
-<div id="edit-booking-modal" style="display:none;position:fixed;inset:0;background:rgba(20,30,25,.82);z-index:999;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--bg-panel,#fff);border-radius:16px;padding:28px;max-width:420px;width:100%">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px">
-      <div>
-        <span class="eyebrow">Editar reserva</span>
-        <strong id="edit-booking-student" style="display:block;font-family:var(--font-display);font-size:1.25rem;margin-top:4px"></strong>
-      </div>
-      <button class="admin-btn secondary small" type="button" onclick="closeEditBookingModal()">Cerrar ✕</button>
-    </div>
-    <form class="admin-form" onsubmit="saveEditBooking(event)" style="display:flex;flex-direction:column;gap:12px">
-      <label>Fecha<input id="edit-booking-date" type="date"></label>
-      <label>Horario<input id="edit-booking-time" type="time" required></label>
-      <label>Estado<select id="edit-booking-status"><option value="Reservada">Reservada</option><option value="Confirmada">Confirmada</option><option value="Completada">Completada</option><option value="Cancelada">Cancelada</option></select></label>
-      <div style="display:flex;gap:10px;margin-top:6px"><button class="admin-btn" type="submit">Guardar cambios</button><button class="admin-btn secondary" type="button" onclick="closeEditBookingModal()">Cancelar</button></div>
-    </form>
-  </div>
-</div>
-
 <div id="admin-shell" style="display:none">
   <div class="admin-shell">
     <div class="admin-topbar">
@@ -730,6 +771,7 @@
     <section id="admin-student-profile" class="admin-view">
       <div class="back-link" onclick="closeStudentProfile()">← Volver a alumnos</div>
       <div class="admin-card" id="profile-header-card"></div>
+      <div class="admin-card" id="profile-attendance-card"></div>
       <div id="profile-body"></div>
     </section>
 
@@ -762,7 +804,9 @@
           <label>Estado<select id="new-student-status"><option>Activo</option><option>Pendiente</option><option>Inactivo</option></select></label>
           <label style="flex-direction:row;align-items:center;gap:8px"><input id="new-student-exception" type="checkbox" style="width:auto"> Excepción: permitir varias clases en la misma semana</label>
           <label>Clases permitidas (excepción, dejar vacío = usar el paquete)<input id="new-student-exception-classes" type="number" min="0" placeholder="Ej: 5"></label>
-          <div class="full"><p class="admin-mini">¿Necesitás asignarle un horario fijo de clase? Hacelo desde la pestaña <strong>Clases y reservas</strong>.</p></div>
+          <label style="flex-direction:row;align-items:center;gap:8px"><input id="new-student-fixed-enabled" type="checkbox" style="width:auto" onchange="toggleFixedScheduleFields()"> Horario fijo (el alumno no reserva, solo ve este horario)</label>
+          <label id="new-student-fixed-day-wrap" style="display:none">Día fijo<select id="new-student-fixed-day"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select></label>
+          <label id="new-student-fixed-time-wrap" style="display:none">Horario fijo<input id="new-student-fixed-time" type="time"></label>
           <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="student-submit-btn">Crear alumno</button><button class="admin-btn secondary" type="button" id="student-cancel-btn" style="display:none" onclick="cancelEditStudent()">Cancelar edición</button></div>
         </form>
       </div>
@@ -897,17 +941,6 @@
 
     <section id="admin-classes" class="admin-view">
       <div class="admin-card">
-        <h3>Horario fijo por alumno</h3>
-        <p class="admin-mini" style="margin-bottom:12px">Asignale a un alumno un día y horario fijo de clase particular. No va a tener que reservar: va a ver siempre ese horario con la cuenta de días que faltan.</p>
-        <form class="admin-form" onsubmit="saveFixedSchedule(event)">
-          <label>Alumno<select id="fixed-schedule-student" required></select></label>
-          <label>Día fijo<select id="fixed-schedule-day"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select></label>
-          <label>Horario<input id="fixed-schedule-time" type="time" required></label>
-          <div class="full"><button class="admin-btn" type="submit">Guardar horario fijo</button></div>
-        </form>
-        <div id="fixed-schedules-list" style="margin-top:16px"></div>
-      </div>
-      <div class="admin-card">
         <h3>Disponibilidad para clases particulares</h3>
         <form class="admin-form" onsubmit="addAvailability(event)">
           <label>Tipo de horario<select id="availability-mode" onchange="toggleAvailabilityMode()"><option value="recurrente">Recurrente (todas las semanas)</option><option value="fecha">Fecha específica (elegir del calendario)</option><option value="semana">Elegir semana del mes (1, 2, 3 o 4)</option></select></label>
@@ -973,6 +1006,39 @@
   </div>
 </div>
 
+<!-- ============ Check-in de sueño (alumno) ============ -->
+<div id="sleep-checkin-overlay" class="app-modal-overlay">
+  <div class="app-modal" style="text-align:center">
+    <span class="eyebrow">Antes de arrancar</span>
+    <h3 style="font-family:var(--font-display);font-weight:600;color:var(--forest);margin:8px 0 18px;font-size:1.4rem">¿Cómo dormiste esta noche?</h3>
+    <div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px;flex-wrap:wrap">
+      <button type="button" class="admin-btn secondary sleep-choice-btn" onclick="submitSleepCheckin('bien')">😊<br>Bien</button>
+      <button type="button" class="admin-btn secondary sleep-choice-btn" onclick="submitSleepCheckin('regular')">😐<br>Regular</button>
+      <button type="button" class="admin-btn secondary sleep-choice-btn" onclick="submitSleepCheckin('mal')">😔<br>Mal</button>
+    </div>
+    <button type="button" class="admin-btn secondary small" style="width:100%" onclick="closeSleepCheckin()">Ahora no</button>
+  </div>
+</div>
+
+<!-- ============ Informe (admin): semanal / mensual ============ -->
+<div id="weekly-report-overlay" class="app-modal-overlay">
+  <div class="app-modal" style="max-width:560px">
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <strong>📋 Informe</strong>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="admin-btn secondary small" onclick="window.print()">🖨 Imprimir</button>
+        <button type="button" class="admin-btn secondary small" onclick="closeWeeklyReport()">✕</button>
+      </div>
+    </div>
+    <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button type="button" class="admin-btn secondary small report-view-btn active" data-view="weekly" onclick="setReportView('weekly')">Semanal</button>
+      <button type="button" class="admin-btn secondary small report-view-btn" data-view="monthly" onclick="setReportView('monthly')">Mensual</button>
+      <button type="button" class="admin-btn small" id="report-send-monthly-btn" style="display:none;margin-left:auto" onclick="sendMonthlySummary(weeklyReportStudentId)">📨 Enviar resumen mensual</button>
+    </div>
+    <div id="weekly-report-content"></div>
+  </div>
+</div>
+
 <script>
 const nudges = {
   green: ["¡Excelente ritmo, no aflojés!", "Ya casi, cerralo hoy", "Vas muy bien, seguí así"],
@@ -1022,7 +1088,7 @@ function showTab(name){
     document.querySelectorAll('.tab-btn')[map[name]].classList.add('active');
   }
 }
-const curriculumData = {"modules": [{"id": "mod-crecimiento-desarrollo", "name": "Crecimiento y Desarrollo", "units": [{"id": "u1", "number": 1, "name": "Unidad 1", "subjects": [{"id": "s1-histologia", "name": "Histología", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1aNpT0t2f1RHsdVWeZOLRpPxDLTxMH7kk/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1SSlomkZE0RaruJ_uRG2LXwBF4rOcFzuU/view"}], "quizTotal": 30}, {"id": "s2-quimica-biologica", "name": "Química Biológica", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química", "type": "pdf", "url": "https://drive.google.com/file/d/1oCCbNrwrDq6ZMFGerTX7M1KwvmVzUNtt/view"}, {"name": "Química Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/19A6iRkicIkJ4cckVmJUe51EWRlvQWRhc/view"}], "quizTotal": 30}, {"id": "s3-fisiologia", "name": "Fisiología", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1Z2gP-qGq7EmBT0MQkBw2xMxibwoLBE3O/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1wHDzMGns9Zn8KXX34MCrV3y6X3Q02qlM/view"}], "quizTotal": 30}, {"id": "s33-medicina-sociedad", "name": "Medicina y Sociedad", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1ougXykHgoyhdz5x1g-7-IaYZLL5e4Z88/view"}], "quizTotal": 30}, {"id": "s34-biologia", "name": "Biología", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Biología", "type": "pdf", "url": "https://drive.google.com/file/d/1e5Yv8bfnx7p-M9cvPCnMRximklTXO0kN/view"}, {"name": "Biología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/10TeFPprvIvcWIsbL256LQ4-foUS-2WwC/view"}], "quizTotal": 30}, {"id": "s35-anatomia-generalidades", "name": "Anatomía Generalidades", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía Generalidades", "type": "pdf", "url": "https://drive.google.com/file/d/12KK27jLKyyc6p79V6-RIfMu7xFR2Hnyn/view"}, {"name": "Anatomía Generalidades Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1rNkZdTVgcUOToH53ggnV_7-gwFDvDpMy/view"}], "quizTotal": 30}, {"id": "s36-anatomia-craneo-columna", "name": "Anatomía Cráneo y Columna", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía Cráneo y Columna", "type": "pdf", "url": "https://drive.google.com/file/d/1R5shVRnZgUFzdJ9dzs0Z7sT-4E_P4Q0C/view"}, {"name": "Anatomía Cráneo y Columna Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1gc8tKODnzaSYMv-Qb47yt5DLaXfcizeO/view"}], "quizTotal": 30}]}, {"id": "u2", "number": 2, "name": "Unidad 2", "subjects": [{"id": "s37-quimica-u2", "name": "Química", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química", "type": "pdf", "url": "https://drive.google.com/file/d/1UfscbrZse5sVoJdXChs1AZdc8msnhiwv/view"}, {"name": "Química Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1heVrwhE1LvxGc9-DFST20el1y6mQfGI1/view"}], "quizTotal": 30}, {"id": "s38-biologia-u2", "name": "Biología", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Biología", "type": "pdf", "url": "https://drive.google.com/file/d/16qFqR1i-tI1q6-1O0nsODO-FNnDL_AUu/view"}, {"name": "Biología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1zmVL5T_K4EFUKCFPbK1Mv1B7FY1RTM2q/view"}], "quizTotal": 30}, {"id": "s39-histologia-u2", "name": "Histología", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1XO_Z1R62k9DHbrvLfLzz0LHjE8KMw5Gt/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1nV0gZMQ7wNkr0UGXPBtMoyUeqQQfoOzV/view"}], "quizTotal": 30}, {"id": "s40-medicina-sociedad-u2", "name": "Medicina y Sociedad", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1clF4LnhPpNZ8LOaJp0Wo5VuCHFTZCgfq/view"}], "quizTotal": 30}]}, {"id": "u3", "number": 3, "name": "Unidad 3", "subjects": [{"id": "s41-histologia-u3", "name": "Histología", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1CO2UqxSa6VvgVQW4B57vhUPppc61ojKN/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1r1pvKXWARKh1s1fmjOat92tKO2r80TMZ/view"}], "quizTotal": 30}, {"id": "s42-quimica-u3", "name": "Química", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química", "type": "pdf", "url": "https://drive.google.com/file/d/1FLxnD9sCcwih04gI2yu420-z0u9RxmKa/view"}, {"name": "Química Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1m7qSarF0zxb5REVAxTQ5ZAXRuNTuFofF/view"}], "quizTotal": 30}, {"id": "s43-fisiologia-u3", "name": "Fisiología", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1-MGmLRcumEtkN6bD0zLrrkoqtcpRBKRP/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1c9KuP-xvLf4ia-zN81mEb3iOCUIUs6jR/view"}], "quizTotal": 30}, {"id": "s44-fisica-biologica-u3", "name": "Física Biológica", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Física Biológica", "type": "pdf", "url": "https://drive.google.com/file/d/1NXIDOr6Kq-78-xNBIWC4sGEn6HS25UmB/view"}, {"name": "Física Biológica Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/13ePGhNs8O6bMLMhzRlNCUl9I_PuMFFqj/view"}], "quizTotal": 30}, {"id": "s45-medicina-sociedad-u3", "name": "Medicina y Sociedad", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1J1pDquRSqtpn4CL8teKS1j_z8feVmvfZ/view"}], "quizTotal": 30}]}, {"id": "u4", "number": 4, "name": "Unidad 4", "subjects": [{"id": "s46-histologia-u4", "name": "Histología", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1hsSRllqjTcr7JbB-hqC3kig-MzKkmEt3/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1tBj6AKk2cviNARfXH3WUCDin6_8zP2_8/view"}], "quizTotal": 30}, {"id": "s47-fisiologia-u4", "name": "Fisiología", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1zKQD19UDyX5X4Jxi7zjtpsd3G7AhFn4z/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1qJz37dCqGXAPFBntOrZmRjdUXZLGI30l/view"}], "quizTotal": 30}, {"id": "s48-fisica-biologica-u4", "name": "Física Biológica", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Física Biológica", "type": "pdf", "url": "https://drive.google.com/file/d/1syqgdcSFqivnU5xxes2JhPQUc7qF5znZ/view"}, {"name": "Física Biológica Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1BXcfdZqK8Yf5XEpDksNbffZaYrXbfG2B/view"}], "quizTotal": 30}, {"id": "s49-embriologia-u4", "name": "Embriología", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1UEH3VZ20_0zA8lH4Qh23U_ovalBK-7MS/view"}, {"name": "Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/15o12iDzTmpU7iEWBrfRAT9Z17AuwIEOq/view"}], "quizTotal": 30}, {"id": "s50-medicina-sociedad-u4", "name": "Medicina y Sociedad", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1CzDWzWSzrkOfmXe-13DuYYwj8KBq7E38/view"}, {"name": "Control preconcepcional, prenatal y puerperal (comunidades)", "type": "pdf", "url": "https://drive.google.com/file/d/15mIW1lfTDbTd_wwsnbrlA_hYc-RZql4U/view"}], "quizTotal": 30}]}, {"id": "u5", "number": 5, "name": "Unidad 5", "subjects": [{"id": "s51-fisiologia-u5", "name": "Fisiología", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1f5hVs0u2o2hn6PPdsRu6c804GmGMl4bM/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1sSCI6e6_2eF18rJxGp_kCu6FfssQxa3B/view"}], "quizTotal": 30}, {"id": "s52-histologia-u5", "name": "Histología", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1RUk2tWJmdA0d8fcLKcx_xqoWmpT26iu_/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1X4kpGN7jZbWz-N6GI0guUbBX2GKvodDj/view"}], "quizTotal": 30}, {"id": "s53-pediatria-u5", "name": "Pediatría", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Pediatría Parte 1", "type": "pdf", "url": "https://drive.google.com/file/d/1yTGMOTAaCZh7bKB0RLbaTe_rJGkpvwKd/view"}, {"name": "Pediatría Parte 1 Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/14O6XH_8f63FiTTJO8qSQct8WFJyXu56j/view"}, {"name": "Pediatría Parte 2", "type": "pdf", "url": "https://drive.google.com/file/d/11JOZVxtL9ee-5VEVXXsMRHbPnnNLvodJ/view"}, {"name": "Pediatría Parte 2 Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1lYd1u1fsc8ICg2cIto8frXVUJWv2O5-X/view"}], "quizTotal": 30}, {"id": "s54-paidopsiquiatria-u5", "name": "Paidopsiquiatría", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Paidopsiquiatría", "type": "pdf", "url": "https://drive.google.com/file/d/177wOF4wK9SYLg8s8m9U6190BbWKJ_rtx/view"}, {"name": "Paidopsiquiatría Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1GpszkvjDon8udr5KekdpdyoE4rM-dp_a/view"}], "quizTotal": 30}]}, {"id": "u6", "number": 6, "name": "Unidad 6", "subjects": [{"id": "s55-histologia-embriologia-u6", "name": "Histología y Embriología", "unit": 6, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1V2uBWRm5i87li0vs7Z0Ez2YEICfkKNPY/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1zJ5-A08Tt72CVb8wcukFsD64NshSlPy6/view"}], "quizTotal": 30}, {"id": "s56-pediatria-u6", "name": "Pediatría", "unit": 6, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Pediatría", "type": "pdf", "url": "https://drive.google.com/file/d/1a5ah3b0HKtpHg7jPSdnSQxHYYzNlGCtm/view"}, {"name": "Pediatría Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1xTuQkqMvcrBGfJE-hAudgQcVP0M6gyLo/view"}], "quizTotal": 30}, {"id": "s57-medicina-sociedad-u6", "name": "Medicina y Sociedad", "unit": 6, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1b-q-6zKthgMW-yR7HadMQVveYN0SGSGm/view"}], "quizTotal": 30}]}, {"id": "u7", "number": 7, "name": "Unidad 7", "subjects": [{"id": "s58-anatomia-u7", "name": "Anatomía", "unit": 7, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía", "type": "pdf", "url": "https://drive.google.com/file/d/1m9RoXisdlugv2REHD4R8K_oosz84x9de/view"}, {"name": "Anatomía Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1oPjk14SY722Z1cVpIuDgm2_TqQG0zcRX/view"}], "quizTotal": 30}, {"id": "s59-fisiologia-u7", "name": "Fisiología", "unit": 7, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1c0VsbCyQvKLw12to-ME6KWA0cwXPpD3C/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1m6gV7M2XXaRMvgZpxeTzI8DA28LKelXn/view"}], "quizTotal": 30}]}, {"id": "u8", "number": 8, "name": "Unidad 8", "subjects": [{"id": "s60-histologia-embriologia-u8", "name": "Histología y Embriología", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1M0CdqJFghj15f_LNipX55oq0FAgePK39/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1czH419WpjGWrGOtgaNQVUCHvHkknsv37/view"}], "quizTotal": 30}, {"id": "s61-crecimiento-desarrollo-u8", "name": "Crecimiento y Desarrollo", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Crecimiento y Desarrollo", "type": "pdf", "url": "https://drive.google.com/file/d/11arZDfuSLc0OpJxmrqswbNjMVw6p_OEF/view"}, {"name": "Crecimiento y Desarrollo Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1wS34ME_dZP_H5VQPGEV1PMifWKqp_bfF/view"}], "quizTotal": 30}, {"id": "s62-biologia-u8", "name": "Biología", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Biología", "type": "pdf", "url": "https://drive.google.com/file/d/11QwcwbT2W_Mr9j00UWQrx0L1xu318zT6/view"}, {"name": "Biología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1Vp1YYIWIErtZ7gawxNpN0stjUi3FJW9B/view"}], "quizTotal": 30}, {"id": "s63-anatomia-u8", "name": "Anatomía", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía", "type": "pdf", "url": "https://drive.google.com/file/d/1P4T-xydnIWqG7SKiCqyuAY-xila873xO/view"}, {"name": "Anatomía Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1VC9liRnkTsHT_uMyD2JYY_PlndInG-Q4/view"}], "quizTotal": 30}, {"id": "s64-fisiologia-u8", "name": "Fisiología", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/15_pMgRI52lDzr9PihhU6QTfvWJUSFNxO/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1qjNTgNP_L96pNBeQDAxL6aAkp454-xT3/view"}], "quizTotal": 30}]}, {"id": "u9", "number": 9, "name": "Unidad 9", "subjects": [{"id": "s65-histologia-embriologia-u9", "name": "Histología y Embriología", "unit": 9, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1w2m5ZjF4whd18mIps-pWggY4DipDJAq0/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1YNLuw-e5rUN97CmdSAvcCDIxq8cNGeo6/view"}], "quizTotal": 30}, {"id": "s66-inmunologia-u9", "name": "Inmunología", "unit": 9, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Inmunología", "type": "pdf", "url": "https://drive.google.com/file/d/1BGAl1mdzUhApn03SD7eW78I1W0xB0V5V/view"}, {"name": "Inmunología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1b9E4wu-L9mmM8hPRFB-7HX-jslj1Fx1d/view"}], "quizTotal": 30}, {"id": "s67-quimica-biologica-u9", "name": "Química Biológica", "unit": 9, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química Biológica", "type": "pdf", "url": "https://drive.google.com/file/d/13ILitZRh_4HksxVvFpobmsrVg3Lu-XOd/view"}, {"name": "Química Biológica Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/17gQ3RUDWmIXiXiafNRpdcRlmkwQ_Dp6s/view"}], "quizTotal": 30}]}, {"id": "u10", "number": 10, "name": "Unidad 10", "subjects": [{"id": "s68-anatomia-u10", "name": "Anatomía", "unit": 10, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía", "type": "pdf", "url": "https://drive.google.com/file/d/1YSJm9QiXmodMLmv02urUnw-9aALgXfSF/view"}, {"name": "Anatomía Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1FYUtRfpcKwZHjbY_9s3tyCGN5k8d4uwi/view"}], "quizTotal": 30}, {"id": "s69-fisiologia-u10", "name": "Fisiología", "unit": 10, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1EQpB7ffbZ85zPTEoNQpwbOpyuBJB0LAH/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/18HTUW2UXBt6MxWd296fb45IE1pCC3pd6/view"}], "quizTotal": 30}, {"id": "s70-histologia-u10", "name": "Histología", "unit": 10, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1UzHg_YEM4nJ6j_LwZ927olKmICj_OBoy/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/13Qh3F_2lVCy9Ak9VVTy_SmVkjRgPUjdy/view"}], "quizTotal": 30}]}, {"id": "u11", "number": 11, "name": "Unidad 11", "subjects": [{"id": "s71-histologia-embriologia-u11", "name": "Histología y Embriología", "unit": 11, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1HeYUGMttSkvc4UnOC6QdVaognIuMJCBg/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1_hgOThQJV1bwgTFZDw7O6sfWDGg5GI62/view"}], "quizTotal": 30}]}, {"id": "u12", "number": 12, "name": "Unidad 12", "subjects": []}]}]};
+const curriculumData = {"modules": [{"id": "mod-crecimiento-desarrollo", "name": "Crecimiento y Desarrollo", "units": [{"id": "u1", "number": 1, "name": "Unidad 1", "subjects": [{"id": "s1-histologia", "name": "Histología", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1aNpT0t2f1RHsdVWeZOLRpPxDLTxMH7kk/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1SSlomkZE0RaruJ_uRG2LXwBF4rOcFzuU/view"}], "quizTotal": 30}, {"id": "s2-quimica-biologica", "name": "Química Biológica", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química", "type": "pdf", "url": "https://drive.google.com/file/d/1oCCbNrwrDq6ZMFGerTX7M1KwvmVzUNtt/view"}, {"name": "Química Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/19A6iRkicIkJ4cckVmJUe51EWRlvQWRhc/view"}], "quizTotal": 30}, {"id": "s3-fisiologia", "name": "Fisiología", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1Z2gP-qGq7EmBT0MQkBw2xMxibwoLBE3O/view"}], "quizTotal": 30}, {"id": "s33-medicina-sociedad", "name": "Medicina y Sociedad", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1ougXykHgoyhdz5x1g-7-IaYZLL5e4Z88/view"}], "quizTotal": 30}, {"id": "s34-biologia", "name": "Biología", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Biología", "type": "pdf", "url": "https://drive.google.com/file/d/1e5Yv8bfnx7p-M9cvPCnMRximklTXO0kN/view"}, {"name": "Biología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/10TeFPprvIvcWIsbL256LQ4-foUS-2WwC/view"}], "quizTotal": 30}, {"id": "s35-anatomia-generalidades", "name": "Anatomía Generalidades", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía Generalidades", "type": "pdf", "url": "https://drive.google.com/file/d/12KK27jLKyyc6p79V6-RIfMu7xFR2Hnyn/view"}, {"name": "Anatomía Generalidades Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1rNkZdTVgcUOToH53ggnV_7-gwFDvDpMy/view"}], "quizTotal": 30}, {"id": "s36-anatomia-craneo-columna", "name": "Anatomía Cráneo y Columna", "unit": 1, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía Cráneo y Columna", "type": "pdf", "url": "https://drive.google.com/file/d/1R5shVRnZgUFzdJ9dzs0Z7sT-4E_P4Q0C/view"}, {"name": "Anatomía Cráneo y Columna Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1gc8tKODnzaSYMv-Qb47yt5DLaXfcizeO/view"}], "quizTotal": 30}]}, {"id": "u2", "number": 2, "name": "Unidad 2", "subjects": [{"id": "s37-quimica-u2", "name": "Química", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química", "type": "pdf", "url": "https://drive.google.com/file/d/1UfscbrZse5sVoJdXChs1AZdc8msnhiwv/view"}, {"name": "Química Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1heVrwhE1LvxGc9-DFST20el1y6mQfGI1/view"}], "quizTotal": 30}, {"id": "s38-biologia-u2", "name": "Biología", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Biología", "type": "pdf", "url": "https://drive.google.com/file/d/16qFqR1i-tI1q6-1O0nsODO-FNnDL_AUu/view"}, {"name": "Biología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1zmVL5T_K4EFUKCFPbK1Mv1B7FY1RTM2q/view"}], "quizTotal": 30}, {"id": "s39-histologia-u2", "name": "Histología", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1XO_Z1R62k9DHbrvLfLzz0LHjE8KMw5Gt/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1nV0gZMQ7wNkr0UGXPBtMoyUeqQQfoOzV/view"}], "quizTotal": 30}, {"id": "s40-medicina-sociedad-u2", "name": "Medicina y Sociedad", "unit": 2, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1clF4LnhPpNZ8LOaJp0Wo5VuCHFTZCgfq/view"}], "quizTotal": 30}]}, {"id": "u3", "number": 3, "name": "Unidad 3", "subjects": [{"id": "s41-histologia-u3", "name": "Histología", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1CO2UqxSa6VvgVQW4B57vhUPppc61ojKN/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1r1pvKXWARKh1s1fmjOat92tKO2r80TMZ/view"}], "quizTotal": 30}, {"id": "s42-quimica-u3", "name": "Química", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química", "type": "pdf", "url": "https://drive.google.com/file/d/1FLxnD9sCcwih04gI2yu420-z0u9RxmKa/view"}, {"name": "Química Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1m7qSarF0zxb5REVAxTQ5ZAXRuNTuFofF/view"}], "quizTotal": 30}, {"id": "s43-fisiologia-u3", "name": "Fisiología", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1-MGmLRcumEtkN6bD0zLrrkoqtcpRBKRP/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1c9KuP-xvLf4ia-zN81mEb3iOCUIUs6jR/view"}], "quizTotal": 30}, {"id": "s44-fisica-biologica-u3", "name": "Física Biológica", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Física Biológica", "type": "pdf", "url": "https://drive.google.com/file/d/1NXIDOr6Kq-78-xNBIWC4sGEn6HS25UmB/view"}, {"name": "Física Biológica Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/13ePGhNs8O6bMLMhzRlNCUl9I_PuMFFqj/view"}], "quizTotal": 30}, {"id": "s45-medicina-sociedad-u3", "name": "Medicina y Sociedad", "unit": 3, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1J1pDquRSqtpn4CL8teKS1j_z8feVmvfZ/view"}], "quizTotal": 30}]}, {"id": "u4", "number": 4, "name": "Unidad 4", "subjects": [{"id": "s46-histologia-u4", "name": "Histología", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1hsSRllqjTcr7JbB-hqC3kig-MzKkmEt3/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1tBj6AKk2cviNARfXH3WUCDin6_8zP2_8/view"}], "quizTotal": 30}, {"id": "s47-fisiologia-u4", "name": "Fisiología", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1zKQD19UDyX5X4Jxi7zjtpsd3G7AhFn4z/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1qJz37dCqGXAPFBntOrZmRjdUXZLGI30l/view"}], "quizTotal": 30}, {"id": "s48-fisica-biologica-u4", "name": "Física Biológica", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Física Biológica", "type": "pdf", "url": "https://drive.google.com/file/d/1syqgdcSFqivnU5xxes2JhPQUc7qF5znZ/view"}, {"name": "Física Biológica Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1BXcfdZqK8Yf5XEpDksNbffZaYrXbfG2B/view"}], "quizTotal": 30}, {"id": "s49-embriologia-u4", "name": "Embriología", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1UEH3VZ20_0zA8lH4Qh23U_ovalBK-7MS/view"}, {"name": "Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/15o12iDzTmpU7iEWBrfRAT9Z17AuwIEOq/view"}], "quizTotal": 30}, {"id": "s50-medicina-sociedad-u4", "name": "Medicina y Sociedad", "unit": 4, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1CzDWzWSzrkOfmXe-13DuYYwj8KBq7E38/view"}, {"name": "Control preconcepcional, prenatal y puerperal (comunidades)", "type": "pdf", "url": "https://drive.google.com/file/d/15mIW1lfTDbTd_wwsnbrlA_hYc-RZql4U/view"}], "quizTotal": 30}]}, {"id": "u5", "number": 5, "name": "Unidad 5", "subjects": [{"id": "s51-fisiologia-u5", "name": "Fisiología", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1f5hVs0u2o2hn6PPdsRu6c804GmGMl4bM/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1sSCI6e6_2eF18rJxGp_kCu6FfssQxa3B/view"}], "quizTotal": 30}, {"id": "s52-histologia-u5", "name": "Histología", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1RUk2tWJmdA0d8fcLKcx_xqoWmpT26iu_/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1X4kpGN7jZbWz-N6GI0guUbBX2GKvodDj/view"}], "quizTotal": 30}, {"id": "s53-pediatria-u5", "name": "Pediatría", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Pediatría Parte 1", "type": "pdf", "url": "https://drive.google.com/file/d/1yTGMOTAaCZh7bKB0RLbaTe_rJGkpvwKd/view"}, {"name": "Pediatría Parte 1 Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/14O6XH_8f63FiTTJO8qSQct8WFJyXu56j/view"}, {"name": "Pediatría Parte 2", "type": "pdf", "url": "https://drive.google.com/file/d/11JOZVxtL9ee-5VEVXXsMRHbPnnNLvodJ/view"}, {"name": "Pediatría Parte 2 Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1lYd1u1fsc8ICg2cIto8frXVUJWv2O5-X/view"}], "quizTotal": 30}, {"id": "s54-paidopsiquiatria-u5", "name": "Paidopsiquiatría", "unit": 5, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Paidopsiquiatría", "type": "pdf", "url": "https://drive.google.com/file/d/177wOF4wK9SYLg8s8m9U6190BbWKJ_rtx/view"}, {"name": "Paidopsiquiatría Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1GpszkvjDon8udr5KekdpdyoE4rM-dp_a/view"}], "quizTotal": 30}]}, {"id": "u6", "number": 6, "name": "Unidad 6", "subjects": [{"id": "s55-histologia-embriologia-u6", "name": "Histología y Embriología", "unit": 6, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1V2uBWRm5i87li0vs7Z0Ez2YEICfkKNPY/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1zJ5-A08Tt72CVb8wcukFsD64NshSlPy6/view"}], "quizTotal": 30}, {"id": "s56-pediatria-u6", "name": "Pediatría", "unit": 6, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Pediatría", "type": "pdf", "url": "https://drive.google.com/file/d/1a5ah3b0HKtpHg7jPSdnSQxHYYzNlGCtm/view"}, {"name": "Pediatría Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1xTuQkqMvcrBGfJE-hAudgQcVP0M6gyLo/view"}], "quizTotal": 30}, {"id": "s57-medicina-sociedad-u6", "name": "Medicina y Sociedad", "unit": 6, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Medicina y Sociedad", "type": "pdf", "url": "https://drive.google.com/file/d/1b-q-6zKthgMW-yR7HadMQVveYN0SGSGm/view"}], "quizTotal": 30}]}, {"id": "u7", "number": 7, "name": "Unidad 7", "subjects": [{"id": "s58-anatomia-u7", "name": "Anatomía", "unit": 7, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía", "type": "pdf", "url": "https://drive.google.com/file/d/1m9RoXisdlugv2REHD4R8K_oosz84x9de/view"}, {"name": "Anatomía Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1oPjk14SY722Z1cVpIuDgm2_TqQG0zcRX/view"}], "quizTotal": 30}, {"id": "s59-fisiologia-u7", "name": "Fisiología", "unit": 7, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1c0VsbCyQvKLw12to-ME6KWA0cwXPpD3C/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1m6gV7M2XXaRMvgZpxeTzI8DA28LKelXn/view"}], "quizTotal": 30}]}, {"id": "u8", "number": 8, "name": "Unidad 8", "subjects": [{"id": "s60-histologia-embriologia-u8", "name": "Histología y Embriología", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1M0CdqJFghj15f_LNipX55oq0FAgePK39/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1czH419WpjGWrGOtgaNQVUCHvHkknsv37/view"}], "quizTotal": 30}, {"id": "s61-crecimiento-desarrollo-u8", "name": "Crecimiento y Desarrollo", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Crecimiento y Desarrollo", "type": "pdf", "url": "https://drive.google.com/file/d/11arZDfuSLc0OpJxmrqswbNjMVw6p_OEF/view"}, {"name": "Crecimiento y Desarrollo Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1wS34ME_dZP_H5VQPGEV1PMifWKqp_bfF/view"}], "quizTotal": 30}, {"id": "s62-biologia-u8", "name": "Biología", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Biología", "type": "pdf", "url": "https://drive.google.com/file/d/11QwcwbT2W_Mr9j00UWQrx0L1xu318zT6/view"}, {"name": "Biología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1Vp1YYIWIErtZ7gawxNpN0stjUi3FJW9B/view"}], "quizTotal": 30}, {"id": "s63-anatomia-u8", "name": "Anatomía", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía", "type": "pdf", "url": "https://drive.google.com/file/d/1P4T-xydnIWqG7SKiCqyuAY-xila873xO/view"}, {"name": "Anatomía Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1VC9liRnkTsHT_uMyD2JYY_PlndInG-Q4/view"}], "quizTotal": 30}, {"id": "s64-fisiologia-u8", "name": "Fisiología", "unit": 8, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/15_pMgRI52lDzr9PihhU6QTfvWJUSFNxO/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1qjNTgNP_L96pNBeQDAxL6aAkp454-xT3/view"}], "quizTotal": 30}]}, {"id": "u9", "number": 9, "name": "Unidad 9", "subjects": [{"id": "s65-histologia-embriologia-u9", "name": "Histología y Embriología", "unit": 9, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1w2m5ZjF4whd18mIps-pWggY4DipDJAq0/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1YNLuw-e5rUN97CmdSAvcCDIxq8cNGeo6/view"}], "quizTotal": 30}, {"id": "s66-inmunologia-u9", "name": "Inmunología", "unit": 9, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Inmunología", "type": "pdf", "url": "https://drive.google.com/file/d/1BGAl1mdzUhApn03SD7eW78I1W0xB0V5V/view"}, {"name": "Inmunología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1b9E4wu-L9mmM8hPRFB-7HX-jslj1Fx1d/view"}], "quizTotal": 30}, {"id": "s67-quimica-biologica-u9", "name": "Química Biológica", "unit": 9, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Química Biológica", "type": "pdf", "url": "https://drive.google.com/file/d/13ILitZRh_4HksxVvFpobmsrVg3Lu-XOd/view"}, {"name": "Química Biológica Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/17gQ3RUDWmIXiXiafNRpdcRlmkwQ_Dp6s/view"}], "quizTotal": 30}]}, {"id": "u10", "number": 10, "name": "Unidad 10", "subjects": [{"id": "s68-anatomia-u10", "name": "Anatomía", "unit": 10, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Anatomía", "type": "pdf", "url": "https://drive.google.com/file/d/1YSJm9QiXmodMLmv02urUnw-9aALgXfSF/view"}, {"name": "Anatomía Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1FYUtRfpcKwZHjbY_9s3tyCGN5k8d4uwi/view"}], "quizTotal": 30}, {"id": "s69-fisiologia-u10", "name": "Fisiología", "unit": 10, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Fisiología", "type": "pdf", "url": "https://drive.google.com/file/d/1EQpB7ffbZ85zPTEoNQpwbOpyuBJB0LAH/view"}, {"name": "Fisiología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/18HTUW2UXBt6MxWd296fb45IE1pCC3pd6/view"}], "quizTotal": 30}, {"id": "s70-histologia-u10", "name": "Histología", "unit": 10, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología", "type": "pdf", "url": "https://drive.google.com/file/d/1UzHg_YEM4nJ6j_LwZ927olKmICj_OBoy/view"}, {"name": "Histología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/13Qh3F_2lVCy9Ak9VVTy_SmVkjRgPUjdy/view"}], "quizTotal": 30}]}, {"id": "u11", "number": 11, "name": "Unidad 11", "subjects": [{"id": "s71-histologia-embriologia-u11", "name": "Histología y Embriología", "unit": 11, "professor": "Equipo docente C.A.E.R.", "lessonsTotal": 0, "lessonsWatched": 0, "pct": 0, "videos": [], "materials": [{"name": "Histología y Embriología", "type": "pdf", "url": "https://drive.google.com/file/d/1HeYUGMttSkvc4UnOC6QdVaognIuMJCBg/view"}, {"name": "Histología y Embriología Imágenes", "type": "pdf", "url": "https://drive.google.com/file/d/1_hgOThQJV1bwgTFZDw7O6sfWDGg5GI62/view"}], "quizTotal": 30}]}, {"id": "u12", "number": 12, "name": "Unidad 12", "subjects": []}]}]};
 const currentModule = curriculumData.modules[0];
 const seedUnits = JSON.parse(JSON.stringify(curriculumData.modules[0].units));
 let currentUnitId = null;
@@ -1042,10 +1108,7 @@ function rebuildCurriculumUnits(){
       .filter(s=>!(overrides[s.id] && overrides[s.id].deleted))
       .map(s=>{
         const ov = overrides[s.id];
-        let out = {...s};
-        if(ov && ov.name) out.name = ov.name;
-        if(ov && Array.isArray(ov.materials)) out.materials = ov.materials;
-        return out;
+        return (ov && ov.name) ? {...s, name: ov.name} : {...s};
       });
     Object.keys(overrides).forEach(id=>{
       const ov = overrides[id];
@@ -1125,11 +1188,6 @@ function renderUnits(){
   const grid = document.getElementById('units-grid');
   if(!grid) return;
   document.getElementById('module-title').textContent = currentModule.name;
-  const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
-  if(!student || !isStudentActive(student)){
-    grid.innerHTML = '<p class="admin-mini">Tu cuenta está creada pero todavía no tiene un paquete asignado. Cuando C.A.E.R. active tu acceso vas a ver acá tus unidades y materias.</p>';
-    return;
-  }
   grid.innerHTML = currentModule.units.map(u=>{
     let total = 0, watched = 0;
     u.subjects.forEach(s=>{ const st = realSubjectProgress(s); total += st.total; watched += st.watched; });
@@ -1545,6 +1603,10 @@ const adminData = {
   quizAttempts: [],
   unitIntros: {},
   unitSubjects: {},
+  attendance: [],
+  commitments: [],
+  sleepCheckins: [],
+  monthlySummaries: [],
   recent: []
 };
 window.adminData = adminData;
@@ -1581,7 +1643,7 @@ function currentCycleBounds(cycle){
 function cycleLabel(cycle){ return cycle==='semanal' ? 'esta semana' : (cycle==='mensual' ? 'este mes' : 'en total'); }
 function remainingClasses(student){
   const p = getPackage(student); if(!p) return 0;
-  const allowed = (student.bookingExceptionClasses!=null) ? student.bookingExceptionClasses : (p.classes||0);
+  const allowed = (student.bookingException && student.bookingExceptionClasses!=null) ? student.bookingExceptionClasses : (p.classes||0);
   const bounds = currentCycleBounds(p.bookingCycle);
   if(!bounds){
     return Math.max(0,allowed-(student.classesUsed||0));
@@ -1592,6 +1654,426 @@ function remainingClasses(student){
 function hasSubjectAccess(student,subject){const p=getPackage(student);if(!isStudentActive(student)||!p)return false;return p.subjects.includes('Todas las materias')||p.subjects.includes(subject)}
 function hasMentoria(student){const p=getPackage(student);return !!(p && p.mentoria);}
 function daysRemaining(student){const exp=getStudentExpiry(student);if(!exp)return 0;return Math.max(0,Math.ceil((new Date(exp+'T23:59:59')-new Date())/86400000))}
+
+/* ---------- asistencia (tiempo de estudio), check-in de sueño y compromisos ---------- */
+function formatMinutes(mins){
+  mins = Math.max(0, Math.round(mins||0));
+  const h = Math.floor(mins/60), m = mins%60;
+  if(h<=0) return `${m} min`;
+  return `${h} h ${m} min`;
+}
+function lastNDatesISO(n){
+  const arr=[];
+  for(let i=n-1;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push(d.toISOString().slice(0,10)); }
+  return arr;
+}
+function isoWeekStart(){
+  const d=new Date(); const day=d.getDay(); const diffToMonday=(day===0?-6:1-day);
+  d.setDate(d.getDate()+diffToMonday); return d.toISOString().slice(0,10);
+}
+function isoMonthStart(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`; }
+function attendanceMinutesInRange(studentId, fromISO, toISO){
+  return adminData.attendance.filter(a=>a.studentId===studentId && a.date>=fromISO && a.date<=toISO).reduce((sum,a)=>sum+(a.minutes||0),0);
+}
+function attendanceStats(studentId){
+  const today = todayISO();
+  return {
+    today: attendanceMinutesInRange(studentId, today, today),
+    week: attendanceMinutesInRange(studentId, isoWeekStart(), today),
+    month: attendanceMinutesInRange(studentId, isoMonthStart(), today)
+  };
+}
+function sleepCheckinFor(studentId, date){ return adminData.sleepCheckins.find(c=>c.studentId===studentId && c.date===date); }
+function sleepEmoji(quality){ return quality==='bien' ? '😊' : quality==='regular' ? '😐' : quality==='mal' ? '😔' : '—'; }
+function sleepLabel(quality){ return quality==='bien'?'Bien':quality==='regular'?'Regular':quality==='mal'?'Mal':'Sin registrar'; }
+// Mini gráfico de barras (sin librerías) para mostrar minutos estudiados por día.
+// `goalMin` (si existe) se usa como techo de referencia; si no, se usa el máximo del propio rango.
+function renderMinutesBarChart(dates, studentId, goalMin){
+  const values = dates.map(d=>attendanceMinutesInRange(studentId, d, d));
+  const ceiling = Math.max(goalMin||0, ...values, 1);
+  const bars = dates.map((d,i)=>{
+    const mins = values[i];
+    const pct = Math.max(mins>0?4:0, Math.round(mins/ceiling*100));
+    const dayLabel = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short'});
+    const over = goalMin && mins>=goalMin;
+    return `<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="font-size:.62rem;color:var(--text-muted);font-weight:700">${mins>0?Math.round(mins):''}</div>
+      <div style="width:100%;height:64px;display:flex;align-items:flex-end;background:var(--bg-soft);border-radius:6px;overflow:hidden">
+        <div style="width:100%;height:${pct}%;background:${over?'var(--gold)':'var(--forest)'};border-radius:6px 6px 0 0;transition:height ${'var(--ease)'}"></div>
+      </div>
+      <div class="admin-mini" style="text-transform:capitalize;font-size:.62rem">${dayLabel}</div>
+    </div>`;
+  }).join('');
+  return `<div style="display:flex;gap:6px;align-items:flex-end;margin-top:6px">${bars}</div>`;
+}
+function latestCommitmentFor(studentId){
+  const list = adminData.commitments.filter(c=>c.studentId===studentId);
+  if(!list.length) return null;
+  return list.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))[0];
+}
+// Temporizador de asistencia: mientras el alumno tiene la pestaña abierta y visible,
+// suma 1 minuto por tick al documento de asistencia del día (vía window.fsIncrementAttendance,
+// expuesto desde el script de Firebase más abajo).
+let attendanceIntervalId = null;
+function startAttendanceTracking(uid){
+  stopAttendanceTracking();
+  attendanceIntervalId = setInterval(()=>{
+    if(document.visibilityState !== 'visible') return;
+    if(typeof window.fsIncrementAttendance === 'function') window.fsIncrementAttendance(uid, todayISO());
+  }, 60000);
+}
+function stopAttendanceTracking(){ if(attendanceIntervalId){ clearInterval(attendanceIntervalId); attendanceIntervalId=null; } }
+
+/* ---------- check-in de sueño (lo ve el alumno al entrar) ---------- */
+function maybeShowSleepCheckin(){
+  const overlay=document.getElementById('sleep-checkin-overlay');
+  if(!overlay || !DEMO_STUDENT_ID) return;
+  const today=todayISO();
+  if(sleepCheckinFor(DEMO_STUDENT_ID, today)){ overlay.classList.remove('active'); return; }
+  const seenKey='sleepCheckinDismissed_'+DEMO_STUDENT_ID+'_'+today;
+  if(sessionStorage.getItem(seenKey)) return; // ya lo cerró esta sesión sin responder, no insistir
+  overlay.classList.add('active');
+}
+function closeSleepCheckin(){
+  document.getElementById('sleep-checkin-overlay')?.classList.remove('active');
+  if(DEMO_STUDENT_ID) sessionStorage.setItem('sleepCheckinDismissed_'+DEMO_STUDENT_ID+'_'+todayISO(), '1');
+}
+function submitSleepCheckin(quality){
+  if(!DEMO_STUDENT_ID) return;
+  window.fsSet('sleepCheckins', DEMO_STUDENT_ID+'_'+todayISO(), {studentId:DEMO_STUDENT_ID, date:todayISO(), quality, createdAt:new Date().toISOString()})
+    .then(()=>{ document.getElementById('sleep-checkin-overlay')?.classList.remove('active'); })
+    .catch(warnSaveError);
+}
+
+/* ---------- panel de bienestar del alumno (tiempo de estudio + compromiso + sueño) ---------- */
+let studentGoalEditing = false;
+function toggleStudentGoalForm(){ studentGoalEditing = !studentGoalEditing; renderStudentWellness(); }
+function saveStudentCommitment(e){
+  e.preventDefault();
+  if(!DEMO_STUDENT_ID) return;
+  const dailyH = Number(document.getElementById('student-goal-daily').value)||0;
+  const weeklyH = Number(document.getElementById('student-goal-weekly').value)||0;
+  const monthlyH = Number(document.getElementById('student-goal-monthly').value)||0;
+  if(dailyH<=0 && weeklyH<=0 && monthlyH<=0){ alert('Cargá al menos una meta de horas.'); return; }
+  window.fsAdd('commitments', {
+    studentId: DEMO_STUDENT_ID,
+    dailyMinutes: Math.round(dailyH*60),
+    weeklyMinutes: Math.round(weeklyH*60),
+    monthlyMinutes: Math.round(monthlyH*60),
+    createdAt: new Date().toISOString(),
+    sentByAdmin: false
+  }).then(()=>{
+    studentGoalEditing = false;
+    alert('¡Guardamos tu meta! Avisale a tu profesor para que te la confirme.');
+    renderStudentWellness();
+  }).catch(warnSaveError);
+}
+function renderStudentWellness(){
+  const el=document.getElementById('student-wellness-panel');
+  if(!el || !DEMO_STUDENT_ID) return;
+  const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
+  const stats = attendanceStats(DEMO_STUDENT_ID);
+  const commitment = latestCommitmentFor(DEMO_STUDENT_ID);
+  const canSetGoal = !!(student?.goalInviteSent || commitment); // el admin habilita esto con "Enviar meta"
+  const todayCheckin = sleepCheckinFor(DEMO_STUDENT_ID, todayISO());
+  const last7 = lastNDatesISO(7).map(d=>{
+    const c = sleepCheckinFor(DEMO_STUDENT_ID, d);
+    const dayLabel = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short'});
+    return `<div style="text-align:center;flex:1;min-width:0"><div style="font-size:1.2rem">${sleepEmoji(c?.quality)}</div><div class="admin-mini" style="text-transform:capitalize;font-size:.62rem">${dayLabel}</div></div>`;
+  }).join('');
+  const goalRow=(label, actualMin, goalMin)=>{
+    if(!goalMin) return '';
+    const pct=Math.max(0, Math.min(100, Math.round(actualMin/goalMin*100)));
+    return `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted);font-weight:600"><span>${label}</span><span>${formatMinutes(actualMin)} / ${formatMinutes(goalMin)}</span></div><div style="background:var(--line);border-radius:8px;height:8px;margin-top:4px;overflow:hidden"><div style="background:var(--forest);height:100%;width:${pct}%"></div></div></div>`;
+  };
+  const goalForm = `<form onsubmit="saveStudentCommitment(event)" style="display:flex;flex-direction:column;gap:10px;margin-top:12px;padding:12px;background:var(--bg-soft);border-radius:var(--radius-md)">
+    <label style="font-size:.78rem;color:var(--text-muted);font-weight:600">Horas diarias
+      <input id="student-goal-daily" type="number" min="0" step="0.25" placeholder="Ej: 2" value="${commitment?(commitment.dailyMinutes/60):''}" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md)">
+    </label>
+    <label style="font-size:.78rem;color:var(--text-muted);font-weight:600">Horas semanales
+      <input id="student-goal-weekly" type="number" min="0" step="0.5" placeholder="Ej: 10" value="${commitment?(commitment.weeklyMinutes/60):''}" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md)">
+    </label>
+    <label style="font-size:.78rem;color:var(--text-muted);font-weight:600">Horas mensuales
+      <input id="student-goal-monthly" type="number" min="0" step="1" placeholder="Ej: 40" value="${commitment?(commitment.monthlyMinutes/60):''}" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md)">
+    </label>
+    <div style="display:flex;gap:8px">
+      <button type="submit" class="admin-btn small">Guardar mi meta</button>
+      <button type="button" class="admin-btn secondary small" onclick="toggleStudentGoalForm()">Cancelar</button>
+    </div>
+  </form>`;
+  let goalSection;
+  if(commitment){
+    goalSection = `${goalRow('Meta diaria', stats.today, commitment.dailyMinutes)}${goalRow('Meta semanal', stats.week, commitment.weeklyMinutes)}${goalRow('Meta mensual', stats.month, commitment.monthlyMinutes)}
+      ${!commitment.sentByAdmin ? '<p class="admin-mini" style="margin-top:8px">⏳ Tu profesor todavía no confirmó esta meta.</p>' : '<p class="admin-mini" style="margin-top:8px">✅ Meta confirmada por tu profesor.</p>'}
+      ${studentGoalEditing ? goalForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">Cambiar mi meta</button>`}`;
+  }else if(canSetGoal){
+    goalSection = `<p class="admin-mini" style="margin-top:12px">Tu profesor te invitó a elegir tu meta de estudio.</p>
+      ${studentGoalEditing ? goalForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">🎯 Elegir mi meta de estudio</button>`}`;
+  }else{
+    goalSection = `<p class="admin-mini" style="margin-top:12px">Todavía no podés elegir tu meta de estudio. Tu profesor te va a habilitar esta opción.</p>`;
+  }
+  el.innerHTML = `<div class="admin-card" style="margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div><span class="eyebrow">Mi ritmo de estudio</span><h3 style="margin:5px 0">Hoy estudiaste ${formatMinutes(stats.today)}</h3></div>
+      <div style="text-align:right">
+        <div class="admin-mini">Sueño de hoy</div>
+        <div style="font-size:1.5rem">${todayCheckin?sleepEmoji(todayCheckin.quality):'—'}</div>
+      </div>
+    </div>
+    ${goalSection}
+    <div style="margin-top:16px">
+      <div class="admin-mini" style="margin-bottom:6px">Sueño · últimos 7 días</div>
+      <div style="display:flex;gap:4px">${last7}</div>
+    </div>
+    ${!todayCheckin ? `<button type="button" class="admin-btn secondary small" style="margin-top:14px" onclick="document.getElementById('sleep-checkin-overlay').classList.add('active')">Registrar cómo dormí hoy</button>` : ''}
+    ${renderStudentMonthlySummaries()}
+  </div>`;
+}
+// Lista de resúmenes mensuales que el profesor le fue enviando (quedan guardados acá,
+// no solo como notificación pasajera).
+function renderStudentMonthlySummaries(){
+  if(!DEMO_STUDENT_ID) return '';
+  const list = adminData.monthlySummaries
+    .filter(m=>m.studentId===DEMO_STUDENT_ID)
+    .slice().sort((a,b)=>(b.monthKey||'').localeCompare(a.monthKey||''));
+  if(!list.length) return '';
+  const rows = list.map(m=>`
+    <div style="padding:10px 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <strong style="text-transform:capitalize;font-size:.86rem">${escapeHtml(m.monthLabel||m.monthKey)}</strong>
+        <span class="admin-mini">${formatMinutes(m.totalMinutes)} · ${m.daysWithActivity}/${m.totalDays} días</span>
+      </div>
+      <div class="admin-mini" style="margin-top:4px">😊${m.sleepBien||0} · 😐${m.sleepRegular||0} · 😔${m.sleepMal||0}${m.monthlyGoalMinutes?` · Meta: ${formatMinutes(m.monthlyGoalMinutes)} ${m.goalMet?'✅':''}`:''}</div>
+    </div>`).join('');
+  return `<div style="margin-top:18px">
+    <div class="admin-mini" style="margin-bottom:6px">📊 Resúmenes mensuales de tu profesor</div>
+    <div>${rows}</div>
+  </div>`;
+}
+
+/* ---------- perfil de alumno (admin): tiempo estudiado + compromiso + sueño + informe ---------- */
+function renderProfileAttendance(){
+  const s = adminData.students[profileStudentIndex];
+  const card = document.getElementById('profile-attendance-card');
+  if(!s || !card) return;
+  const stats = attendanceStats(s.id);
+  const commitment = latestCommitmentFor(s.id);
+  const last7 = lastNDatesISO(7).map(d=>{
+    const c = sleepCheckinFor(s.id, d);
+    const dayLabel = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short'});
+    return `<div style="text-align:center;flex:1;min-width:0"><div style="font-size:1.2rem">${sleepEmoji(c?.quality)}</div><div class="admin-mini" style="text-transform:capitalize;font-size:.62rem">${dayLabel}</div></div>`;
+  }).join('');
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+      <strong>⏱ Asistencia y compromiso</strong>
+      <button type="button" class="admin-btn secondary small" onclick="openWeeklyReport('${s.id}')">📋 Informe</button>
+    </div>
+    <div class="admin-actions" style="margin-bottom:14px">
+      ${!commitment
+        ? `<button type="button" class="admin-btn secondary small" onclick="inviteGoalSetup(${profileStudentIndex})">${s.goalInviteSent?'🔁 Reenviar meta':'📨 Enviar meta'}</button>`
+        : !commitment.sentByAdmin
+          ? `<button type="button" class="admin-btn small" onclick="confirmAndSendCommitment('${s.id}')">✅ Confirmar y enviar meta</button>`
+          : `<button type="button" class="admin-btn secondary small" onclick="sendCommitmentReminder('${s.id}')">🔔 Enviar recordatorio</button>`
+      }
+    </div>
+    <div class="access-grid">
+      <div class="access-stat">Tiempo hoy<strong>${formatMinutes(stats.today)}</strong></div>
+      <div class="access-stat">Tiempo esta semana<strong>${formatMinutes(stats.week)}</strong></div>
+      <div class="access-stat">Tiempo este mes<strong>${formatMinutes(stats.month)}</strong></div>
+    </div>
+    ${!commitment
+      ? `<p class="admin-mini" style="margin-top:12px">${s.goalInviteSent ? 'Ya lo invitaste a elegir su meta de estudio — todavía no la definió.' : 'Este alumno todavía no puede elegir su meta. Tocá "Enviar meta" para invitarlo.'}</p>`
+      : !commitment.sentByAdmin
+        ? `<div class="admin-mini" style="margin-top:12px;background:var(--rust-dim);color:var(--rust-text);padding:8px 10px;border-radius:var(--radius-md)">📩 El alumno propuso: <strong>${formatMinutes(commitment.dailyMinutes)}/día</strong> · <strong>${formatMinutes(commitment.weeklyMinutes)}/semana</strong> · <strong>${formatMinutes(commitment.monthlyMinutes)}/mes</strong> — todavía no se la confirmaste.</div>`
+        : `<div class="admin-mini" style="margin-top:12px">Meta confirmada: <strong>${formatMinutes(commitment.dailyMinutes)}/día</strong> · <strong>${formatMinutes(commitment.weeklyMinutes)}/semana</strong> · <strong>${formatMinutes(commitment.monthlyMinutes)}/mes</strong></div>`
+    }
+    <div style="margin-top:16px">
+      <div class="admin-mini" style="margin-bottom:6px">Tiempo de estudio · últimos 7 días</div>
+      ${renderMinutesBarChart(lastNDatesISO(7), s.id, commitment?.dailyMinutes)}
+    </div>
+    <div style="margin-top:16px">
+      <div class="admin-mini" style="margin-bottom:6px">Sueño · últimos 7 días</div>
+      <div style="display:flex;gap:4px">${last7}</div>
+    </div>`;
+}
+
+function confirmAndSendCommitment(studentId){
+  const commitment = latestCommitmentFor(studentId);
+  const s = adminData.students.find(x=>x.id===studentId);
+  if(!commitment){ alert('El alumno todavía no eligió su meta de estudio.'); return; }
+  window.fsUpdate('commitments', commitment.id, { sentByAdmin:true, sentAt:new Date().toISOString() }).then(()=>{
+    queuePush(studentId, 'Tu profesor confirmó tu meta 🎯', `Confirmamos tu meta de estudio: ${formatMinutes(commitment.dailyMinutes)}/día · ${formatMinutes(commitment.weeklyMinutes)}/semana · ${formatMinutes(commitment.monthlyMinutes)}/mes. ¡Vamos con todo!`);
+    adminData.recent.unshift(`Se confirmó y envió la meta de estudio de ${s?s.name:'un alumno'}.`);
+    renderProfileAttendance();
+    renderAdmin();
+  }).catch(warnSaveError);
+}
+function sendCommitmentReminder(studentId){
+  const commitment = latestCommitmentFor(studentId);
+  const s = adminData.students.find(x=>x.id===studentId);
+  if(!commitment) return;
+  const stats = attendanceStats(studentId);
+  queuePush(studentId, 'Recordatorio de tu compromiso', `Llevás ${formatMinutes(stats.today)} hoy de tu meta de ${formatMinutes(commitment.dailyMinutes)} diarios. ¡Vamos que se puede!`);
+  alert(`Se envió un recordatorio a ${s?s.name:'el alumno'}.`);
+}
+
+/* ---------- informe semanal (admin) ---------- */
+let weeklyReportStudentId = null;
+let reportViewMode = 'weekly'; // 'weekly' | 'monthly'
+function openWeeklyReport(studentId){
+  weeklyReportStudentId = studentId;
+  reportViewMode = 'weekly';
+  document.querySelectorAll('.report-view-btn').forEach(b=>b.classList.toggle('active', b.dataset.view==='weekly'));
+  const sendBtn=document.getElementById('report-send-monthly-btn'); if(sendBtn) sendBtn.style.display='none';
+  renderReportContent();
+  document.getElementById('weekly-report-overlay')?.classList.add('active');
+}
+function closeWeeklyReport(){
+  document.getElementById('weekly-report-overlay')?.classList.remove('active');
+}
+function setReportView(mode){
+  reportViewMode = mode;
+  document.querySelectorAll('.report-view-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===mode));
+  const sendBtn=document.getElementById('report-send-monthly-btn'); if(sendBtn) sendBtn.style.display = mode==='monthly' ? 'inline-flex' : 'none';
+  renderReportContent();
+}
+function renderReportContent(){
+  if(reportViewMode==='monthly') renderMonthlyReportContent();
+  else renderWeeklyReportContent();
+}
+function renderWeeklyReportContent(){
+  const s = adminData.students.find(x=>x.id===weeklyReportStudentId);
+  const el = document.getElementById('weekly-report-content');
+  if(!s || !el) return;
+  const dates = lastNDatesISO(7);
+  const commitment = latestCommitmentFor(s.id);
+  const rows = dates.map(d=>{
+    const mins = attendanceMinutesInRange(s.id, d, d);
+    const checkin = sleepCheckinFor(s.id, d);
+    const label = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'long', day:'numeric', month:'short'});
+    return `<tr><td style="text-transform:capitalize;padding:6px 4px;border-bottom:1px solid var(--line)">${label}</td><td style="padding:6px 4px;border-bottom:1px solid var(--line)">${formatMinutes(mins)}</td><td style="padding:6px 4px;border-bottom:1px solid var(--line)">${sleepEmoji(checkin?.quality)} ${sleepLabel(checkin?.quality)}</td></tr>`;
+  }).join('');
+  const totalWeekMin = dates.reduce((sum,d)=>sum+attendanceMinutesInRange(s.id,d,d),0);
+  const fromLabel = new Date(dates[0]+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'});
+  const toLabel = new Date(dates[6]+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'});
+  el.innerHTML = `
+    <div class="eyebrow">Informe semanal</div>
+    <h3 style="font-family:var(--font-display);color:var(--forest);margin:4px 0 2px">${escapeHtml(s.name)}</h3>
+    <div class="admin-mini" style="margin-bottom:14px">${fromLabel} al ${toLabel}</div>
+    <div style="margin-bottom:16px">${renderMinutesBarChart(dates, s.id, commitment?.dailyMinutes)}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:.86rem">
+      <thead><tr style="text-align:left"><th style="padding:6px 4px;border-bottom:2px solid var(--forest)">Día</th><th style="padding:6px 4px;border-bottom:2px solid var(--forest)">Tiempo de estudio</th><th style="padding:6px 4px;border-bottom:2px solid var(--forest)">Sueño</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="admin-mini" style="margin-top:12px"><strong>Total de la semana:</strong> ${formatMinutes(totalWeekMin)}${commitment?` de una meta de ${formatMinutes(commitment.weeklyMinutes)}`:''}</div>
+    ${commitment?`<div class="admin-mini" style="margin-top:4px"><strong>Compromiso vigente:</strong> ${formatMinutes(commitment.dailyMinutes)}/día · ${formatMinutes(commitment.weeklyMinutes)}/semana · ${formatMinutes(commitment.monthlyMinutes)}/mes</div>`:''}`;
+}
+
+/* ---------- resumen mensual (admin): datos del mes + envío al alumno ---------- */
+function isoDatesInMonthSoFar(){
+  const start = isoMonthStart();
+  const end = todayISO();
+  const arr=[];
+  let d = new Date(start+'T00:00:00');
+  const endDate = new Date(end+'T00:00:00');
+  while(d<=endDate){ arr.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+  return arr;
+}
+function weeklyMinutesBuckets(dates, studentId){
+  // agrupa los días del mes en bloques de 7 ("Sem 1", "Sem 2"...) y suma minutos por bloque
+  const buckets=[];
+  for(let i=0;i<dates.length;i+=7){
+    const chunk = dates.slice(i, i+7);
+    const mins = chunk.reduce((sum,d)=>sum+attendanceMinutesInRange(studentId,d,d),0);
+    buckets.push({label:`Sem ${Math.floor(i/7)+1}`, mins});
+  }
+  return buckets;
+}
+function renderWeeksBarChart(buckets, goalMin){
+  const ceiling = Math.max(goalMin||0, ...buckets.map(b=>b.mins), 1);
+  const bars = buckets.map(b=>{
+    const pct = Math.max(b.mins>0?4:0, Math.round(b.mins/ceiling*100));
+    const over = goalMin && b.mins>=goalMin;
+    return `<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="font-size:.62rem;color:var(--text-muted);font-weight:700">${b.mins>0?formatMinutes(b.mins):''}</div>
+      <div style="width:100%;height:64px;display:flex;align-items:flex-end;background:var(--bg-soft);border-radius:6px;overflow:hidden">
+        <div style="width:100%;height:${pct}%;background:${over?'var(--gold)':'var(--forest)'};border-radius:6px 6px 0 0"></div>
+      </div>
+      <div class="admin-mini" style="font-size:.62rem">${b.label}</div>
+    </div>`;
+  }).join('');
+  return `<div style="display:flex;gap:6px;align-items:flex-end;margin-top:6px">${bars}</div>`;
+}
+function sleepSummaryForRange(studentId, dates){
+  const counts = {bien:0, regular:0, mal:0};
+  dates.forEach(d=>{
+    const c = sleepCheckinFor(studentId, d);
+    if(c && counts[c.quality]!==undefined) counts[c.quality]++;
+  });
+  return counts;
+}
+function renderMonthlyReportContent(){
+  const s = adminData.students.find(x=>x.id===weeklyReportStudentId);
+  const el = document.getElementById('weekly-report-content');
+  if(!s || !el) return;
+  const dates = isoDatesInMonthSoFar();
+  const commitment = latestCommitmentFor(s.id);
+  const totalMonthMin = attendanceMinutesInRange(s.id, dates[0], dates[dates.length-1]);
+  const buckets = weeklyMinutesBuckets(dates, s.id);
+  const sleep = sleepSummaryForRange(s.id, dates);
+  const monthLabel = new Date(dates[0]+'T00:00:00').toLocaleDateString('es-AR',{month:'long', year:'numeric'});
+  const daysWithActivity = dates.filter(d=>attendanceMinutesInRange(s.id,d,d)>0).length;
+  el.innerHTML = `
+    <div class="eyebrow">Resumen mensual</div>
+    <h3 style="font-family:var(--font-display);color:var(--forest);margin:4px 0 2px;text-transform:capitalize">${escapeHtml(s.name)} · ${monthLabel}</h3>
+    <div class="admin-mini" style="margin-bottom:14px">${daysWithActivity} de ${dates.length} días con actividad hasta hoy</div>
+    <div style="margin-bottom:16px">${renderWeeksBarChart(buckets, commitment?.weeklyMinutes)}</div>
+    <div class="access-grid">
+      <div class="access-stat">Tiempo total del mes<strong>${formatMinutes(totalMonthMin)}</strong></div>
+      <div class="access-stat">Días con actividad<strong>${daysWithActivity}/${dates.length}</strong></div>
+      <div class="access-stat">Promedio diario<strong>${formatMinutes(totalMonthMin/Math.max(1,dates.length))}</strong></div>
+    </div>
+    <div style="margin-top:16px">
+      <div class="admin-mini" style="margin-bottom:6px">Sueño del mes</div>
+      <div style="display:flex;gap:16px;font-size:.86rem">
+        <span>😊 Bien: <strong>${sleep.bien}</strong></span>
+        <span>😐 Regular: <strong>${sleep.regular}</strong></span>
+        <span>😔 Mal: <strong>${sleep.mal}</strong></span>
+      </div>
+    </div>
+    ${commitment?.monthlyMinutes?`<div class="admin-mini" style="margin-top:14px"><strong>Meta mensual:</strong> ${formatMinutes(commitment.monthlyMinutes)} — ${totalMonthMin>=commitment.monthlyMinutes?'✅ cumplida':'todavía en camino'}</div>`:''}`;
+}
+function sendMonthlySummary(studentId){
+  if(!studentId) return;
+  const s = adminData.students.find(x=>x.id===studentId);
+  if(!s) return;
+  const dates = isoDatesInMonthSoFar();
+  const totalMonthMin = attendanceMinutesInRange(studentId, dates[0], dates[dates.length-1]);
+  const commitment = latestCommitmentFor(studentId);
+  const sleep = sleepSummaryForRange(studentId, dates);
+  const daysWithActivity = dates.filter(d=>attendanceMinutesInRange(studentId,d,d)>0).length;
+  const monthLabel = new Date(dates[0]+'T00:00:00').toLocaleDateString('es-AR',{month:'long'});
+  const monthKey = dates[0].slice(0,7); // YYYY-MM
+  const goalMet = !!(commitment?.monthlyMinutes && totalMonthMin>=commitment.monthlyMinutes);
+  let body = `Estudiaste ${formatMinutes(totalMonthMin)} en ${daysWithActivity} de ${dates.length} días de ${monthLabel}.`;
+  if(commitment?.monthlyMinutes) body += ` Meta mensual: ${formatMinutes(commitment.monthlyMinutes)} (${goalMet?'¡cumplida! 🎉':'todavía en camino'}).`;
+  body += ` Sueño del mes: 😊${sleep.bien} · 😐${sleep.regular} · 😔${sleep.mal}.`;
+  // Guardamos el resumen en Firestore para que quede disponible en el panel del alumno
+  // (el push es solo el aviso; esto es lo que le permite volver a verlo después).
+  window.fsSet('monthlySummaries', `${studentId}_${monthKey}`, {
+    studentId, monthKey, monthLabel,
+    totalMinutes: totalMonthMin, daysWithActivity, totalDays: dates.length,
+    sleepBien: sleep.bien, sleepRegular: sleep.regular, sleepMal: sleep.mal,
+    monthlyGoalMinutes: commitment?.monthlyMinutes || null, goalMet,
+    sentAt: new Date().toISOString()
+  }).then(()=>{
+    queuePush(studentId, `📊 Tu resumen de ${monthLabel}`, body);
+    adminData.recent.unshift(`Se envió el resumen mensual de ${s.name}.`);
+    renderAdmin();
+    alert(`Se envió el resumen mensual a ${s.name}. Ya le queda guardado en su panel "Mi ritmo de estudio".`);
+  }).catch(warnSaveError);
+}
+
 function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function fmtCredit(n){ const r=Math.round((n||0)*10)/10; return Number.isInteger(r) ? String(r) : r.toFixed(1); }
 function getViewCount(itemId){
@@ -1653,9 +2135,18 @@ function renderAdmin(){
   renderAdminUpdates();
   const pkgSelect=document.getElementById('new-student-package');if(pkgSelect)pkgSelect.innerHTML=adminData.packages.map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
   const avStudentSelect=document.getElementById('availability-student');if(avStudentSelect){const prev=avStudentSelect.value;avStudentSelect.innerHTML=adminData.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');if(prev)avStudentSelect.value=prev;}
-  renderFixedSchedules();
   const st=document.getElementById('students-table');
-  if(st)st.innerHTML=adminData.students.map((s,i)=>({s,i})).sort((a,b)=>(typeof b.s.overallPct==='number'?b.s.overallPct:0)-(typeof a.s.overallPct==='number'?a.s.overallPct:0)).map(({s,i})=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s),allowedClasses=(s.bookingExceptionClasses!=null)?s.bookingExceptionClasses:(p?p.classes:0);return `<tr><td><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${allowedClasses} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td><button class="admin-btn small" onclick="openStudentProfile(${i})">Ver perfil</button> <button class="admin-btn small" onclick="editStudent(${i})">Editar</button> <button class="admin-btn small" onclick="renewStudent(${i})">Renovar</button> <button class="admin-btn danger small" onclick="removeStudent(${i})">Eliminar</button></td></tr>`}).join('');
+  if(st)st.innerHTML=adminData.students.map((s,i)=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s);const hasGoal=adminData.commitments.some(c=>c.studentId===s.id);const goalBtn=hasGoal?'':`<button class="admin-btn secondary small" onclick="inviteGoalSetup(${i})">${s.goalInviteSent?'🔁 Reenviar meta':'📨 Enviar meta'}</button>`;return `<tr><td><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${p?p.classes:0} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td>
+    <div class="admin-actions">
+      <button class="admin-btn small" onclick="openStudentProfile(${i})">Ver perfil</button>
+      <button class="admin-btn small" onclick="editStudent(${i})">Editar</button>
+    </div>
+    <div class="admin-actions" style="margin-top:6px">
+      ${goalBtn}
+      <button class="admin-btn secondary small" onclick="renewStudent(${i})">Renovar</button>
+      <button class="admin-btn danger small" onclick="removeStudent(${i})">Eliminar</button>
+    </div>
+  </td></tr>`}).join('');
   const pl=document.getElementById('packages-list');if(pl)pl.innerHTML=adminData.packages.map((p,i)=>`<div class="package-card"><strong>${escapeHtml(p.name)}</strong><div class="package-meta"><span class="admin-badge">${p.days} días de acceso</span><span class="admin-badge" style="${p.mentoria?'':'opacity:.6'}">${p.mentoria?`✓ Mentoría · ${p.classes} clases privadas`:'Sin mentoría'}</span></div>${p.description?`<div style="opacity:.75;margin-bottom:6px">${escapeHtml(p.description)}</div>`:''}<div style="opacity:.75">Materias: ${escapeHtml(p.subjects.join(', '))}</div><div class="admin-actions" style="margin-top:10px"><button class="admin-btn small" onclick="editPackage(${i})">Editar</button> <button class="admin-btn danger" onclick="removePackage(${i})">Eliminar</button></div></div>`).join('');
   const su=document.getElementById('subjects-table');
   if(su){
@@ -1704,7 +2195,7 @@ function renderAdmin(){
   const groupTag=g=>g==='semanal'?' · Semanal':(g==='mensual'?' · Mensual':(g==='otros'?' · Otros':''));
   const studentNameById=id=>{const st=adminData.students.find(x=>x.id===id);return st?st.name:'alumno eliminado'};
   const av=document.getElementById('availability-list');if(av)av.innerHTML=adminData.availability.map((a,i)=>`<span class="admin-badge" style="margin:4px">${a.date?formatShortDate(a.date)+' ('+a.day+', Semana '+weekOfMonth(new Date(a.date+'T00:00:00'))+')':a.day} ${a.time}${groupTag(a.group)}${a.studentId?' · Individual: '+escapeHtml(studentNameById(a.studentId)):''} <button style="border:0;background:none;cursor:pointer" onclick="removeAvailability(${i})">×</button></span>`).join('');
-  const bookingRow=(b,i)=>{const s=adminData.students.find(x=>x.id===b.studentId);return `<tr><td>${escapeHtml(s?.name||'Alumno')}</td><td>${b.date?formatShortDate(b.date)+' ('+b.day+')':b.day}</td><td>${b.time}</td><td>${b.week?`Semana ${b.week}${b.monthKey?' ('+b.monthKey+')':''}`:'—'}</td><td><span class="admin-badge">${b.status}</span></td><td><div class="reserve-actions">${b.status==='Reservada'?`<button class="admin-btn small" onclick="confirmBooking(${i})">Confirmar</button>`:''}${b.status==='Confirmada'?`<button class="admin-btn small" onclick="completeBooking(${i})">Completar</button>`:''}${b.status!=='Cancelada'&&b.status!=='Completada'?`<button class="admin-btn danger small" onclick="cancelBooking(${i})">Cancelar</button>`:''}<button class="admin-btn secondary small" onclick="openEditBooking(${i})">Editar</button></div></td></tr>`};
+  const bookingRow=(b,i)=>{const s=adminData.students.find(x=>x.id===b.studentId);return `<tr><td>${escapeHtml(s?.name||'Alumno')}</td><td>${b.date?formatShortDate(b.date)+' ('+b.day+')':b.day}</td><td>${b.time}</td><td>${b.week?`Semana ${b.week}${b.monthKey?' ('+b.monthKey+')':''}`:'—'}</td><td><span class="admin-badge">${b.status}</span></td><td><div class="reserve-actions">${b.status==='Reservada'?`<button class="admin-btn small" onclick="confirmBooking(${i})">Confirmar</button>`:''}${b.status==='Confirmada'?`<button class="admin-btn small" onclick="completeBooking(${i})">Completar</button>`:''}${b.status!=='Cancelada'&&b.status!=='Completada'?`<button class="admin-btn danger small" onclick="cancelBooking(${i})">Cancelar</button>`:''}</div></td></tr>`};
   const bookingsWithIndex = adminData.bookings.map((b,i)=>({b,i}));
   const cycleOf=(b)=>{const s=adminData.students.find(x=>x.id===b.studentId);const p=s?getPackage(s):null;return p?p.bookingCycle:null;};
   const bkSemanal=document.getElementById('bookings-table-semanal');
@@ -1747,6 +2238,7 @@ function openStudentProfile(i){
   document.getElementById('admin-student-profile').classList.add('active');
   document.querySelectorAll('.admin-nav button').forEach(b=>b.classList.remove('active'));
   renderProfileHeader();
+  renderProfileAttendance();
   renderProfileUnits();
 }
 function closeStudentProfile(){
@@ -1879,19 +2371,29 @@ function openProfileSubject(subjectId){
   `;
 }
 
+function toggleFixedScheduleFields(){
+  const on=document.getElementById('new-student-fixed-enabled').checked;
+  document.getElementById('new-student-fixed-day-wrap').style.display = on ? '' : 'none';
+  document.getElementById('new-student-fixed-time-wrap').style.display = on ? '' : 'none';
+}
 function addStudent(e){e.preventDefault();const editingId=document.getElementById('editing-student-id').value;const pkg=document.getElementById('new-student-package').value;const name=document.getElementById('new-student-name').value.trim();const email=document.getElementById('new-student-email').value.trim();const status=document.getElementById('new-student-status').value;const bookingException=document.getElementById('new-student-exception').checked;const exClassesRaw=document.getElementById('new-student-exception-classes').value;const bookingExceptionClasses=exClassesRaw===''?null:Number(exClassesRaw);if(!name||!email){alert('Completá nombre y email.');return}
+  const fixedEnabled=document.getElementById('new-student-fixed-enabled').checked;
+  const fixedDay=document.getElementById('new-student-fixed-day').value;
+  const fixedTime=document.getElementById('new-student-fixed-time').value;
+  if(fixedEnabled && !fixedTime){alert('Elegí el horario fijo del alumno.');return}
+  const fixedSchedule = fixedEnabled ? {day:fixedDay,time:fixedTime} : null;
   if(editingId){
-    window.fsUpdate('students',editingId,{name,email,package:pkg,status,bookingException,bookingExceptionClasses}).then(()=>{adminData.recent.unshift(`Se editó el alumno ${name}.`);cancelEditStudent();renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
+    window.fsUpdate('students',editingId,{name,email,package:pkg,status,bookingException,bookingExceptionClasses,fixedSchedule}).then(()=>{adminData.recent.unshift(`Se editó el alumno ${name}.`);cancelEditStudent();renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
     return;
   }
   const existing = adminData.students.find(x=>(x.email||'').trim().toLowerCase()===email.toLowerCase());
   if(existing){
     if(!confirm(`Ya existe un alumno con el email ${email} (${existing.name}), probablemente porque se registró solo desde la pantalla de login. En vez de crear una ficha duplicada, se va a actualizar esa cuenta con el paquete y estado que elegiste acá. ¿Continuar?`)) return;
-    window.fsUpdate('students',existing.id,{name,package:pkg,status,bookingException,bookingExceptionClasses}).then(()=>{adminData.recent.unshift(`Se vinculó y actualizó la cuenta existente de ${name} (sin crear ficha duplicada).`);renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
+    window.fsUpdate('students',existing.id,{name,package:pkg,status,bookingException,bookingExceptionClasses,fixedSchedule}).then(()=>{adminData.recent.unshift(`Se vinculó y actualizó la cuenta existente de ${name} (sin crear ficha duplicada).`);renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
     e.target.reset();
     return;
   }
-  window.fsAdd('students',{name,email,package:pkg,status,startDate:todayISO(),classesUsed:0,bookingException,bookingExceptionClasses}).then(()=>{adminData.recent.unshift(`Se agregó el alumno ${name} con el paquete ${pkg}.`);renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
+  window.fsAdd('students',{name,email,package:pkg,status,startDate:todayISO(),classesUsed:0,bookingException,bookingExceptionClasses,fixedSchedule}).then(()=>{adminData.recent.unshift(`Se agregó el alumno ${name} con el paquete ${pkg}.`);renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
   e.target.reset();
 }
 function editStudent(i){
@@ -1904,75 +2406,14 @@ function editStudent(i){
   document.getElementById('new-student-status').value=s.status;
   document.getElementById('new-student-exception').checked=!!s.bookingException;
   document.getElementById('new-student-exception-classes').value=(s.bookingExceptionClasses??'');
+  document.getElementById('new-student-fixed-enabled').checked=!!s.fixedSchedule;
+  document.getElementById('new-student-fixed-day').value=s.fixedSchedule?s.fixedSchedule.day:'Lunes';
+  document.getElementById('new-student-fixed-time').value=s.fixedSchedule?s.fixedSchedule.time:'';
+  toggleFixedScheduleFields();
   document.getElementById('student-form-title').textContent='Editar alumno';
   document.getElementById('student-submit-btn').textContent='Guardar cambios';
   document.getElementById('student-cancel-btn').style.display='';
   document.getElementById('student-form-title').scrollIntoView({behavior:'smooth',block:'start'});
-}
-function saveFixedSchedule(e){
-  e.preventDefault();
-  const studentId=document.getElementById('fixed-schedule-student').value;
-  const day=document.getElementById('fixed-schedule-day').value;
-  const time=document.getElementById('fixed-schedule-time').value;
-  if(!studentId){alert('Elegí un alumno.');return}
-  if(!time){alert('Elegí el horario.');return}
-  const s=adminData.students.find(x=>x.id===studentId);
-  const completedWeek=(s&&s.fixedSchedule)?s.fixedSchedule.completedWeek:null;
-  window.fsUpdate('students',studentId,{fixedSchedule:{day,time,completedWeek}}).then(()=>{
-    adminData.recent.unshift(`Se asignó horario fijo a ${s?.name||'un alumno'}: ${day} ${time}.`);
-    document.getElementById('fixed-schedule-time').value='';
-    renderAdmin();
-  }).catch(err=>alert('Error al guardar: '+err.message));
-}
-function editFixedSchedule(studentId){
-  const s=adminData.students.find(x=>x.id===studentId);
-  if(!s||!s.fixedSchedule) return;
-  document.getElementById('fixed-schedule-student').value=studentId;
-  document.getElementById('fixed-schedule-day').value=s.fixedSchedule.day||'Lunes';
-  document.getElementById('fixed-schedule-time').value=s.fixedSchedule.time||'';
-  document.getElementById('fixed-schedule-student').closest('form').scrollIntoView({behavior:'smooth',block:'start'});
-}
-function markFixedClassDone(studentId){
-  const s=adminData.students.find(x=>x.id===studentId);
-  if(!s||!s.fixedSchedule) return;
-  const updated={...s.fixedSchedule,completedWeek:fixedWeekKey(new Date())};
-  window.fsUpdate('students',studentId,{fixedSchedule:updated}).then(()=>{adminData.recent.unshift(`Se marcó la clase semanal de ${s.name} como dada.`);renderAdmin()}).catch(err=>alert('Error: '+err.message));
-}
-function undoFixedClassDone(studentId){
-  const s=adminData.students.find(x=>x.id===studentId);
-  if(!s||!s.fixedSchedule) return;
-  const updated={...s.fixedSchedule,completedWeek:null};
-  window.fsUpdate('students',studentId,{fixedSchedule:updated}).then(()=>{adminData.recent.unshift(`Se deshizo la marca de clase dada de ${s.name}.`);renderAdmin()}).catch(err=>alert('Error: '+err.message));
-}
-function clearFixedSchedule(studentId){
-  const s=adminData.students.find(x=>x.id===studentId);
-  if(!confirm(`¿Quitar el horario fijo de ${s?.name||'este alumno'}? Va a poder reservar clases normalmente si su paquete lo permite.`)) return;
-  window.fsUpdate('students',studentId,{fixedSchedule:null}).then(()=>{adminData.recent.unshift(`Se quitó el horario fijo de ${s?.name||'un alumno'}.`);renderAdmin()}).catch(err=>alert('Error: '+err.message));
-}
-const ORDEN_SEMANA=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-function renderFixedSchedules(){
-  const sel=document.getElementById('fixed-schedule-student');
-  if(sel){const prev=sel.value;sel.innerHTML=adminData.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');if(prev)sel.value=prev;}
-  const list=document.getElementById('fixed-schedules-list');
-  if(!list) return;
-  const withFixed=adminData.students.filter(s=>s.fixedSchedule&&s.fixedSchedule.day)
-    .slice()
-    .sort((a,b)=>{
-      const da=ORDEN_SEMANA.indexOf(a.fixedSchedule.day),db=ORDEN_SEMANA.indexOf(b.fixedSchedule.day);
-      if(da!==db) return da-db;
-      return (a.fixedSchedule.time||'').localeCompare(b.fixedSchedule.time||'');
-    });
-  list.innerHTML=withFixed.length?withFixed.map(s=>{
-    const done=isFixedClassDoneThisWeek(s.fixedSchedule);
-    const info=daysUntilFixedClass(s.fixedSchedule);
-    let diasTxt='';
-    if(info){
-      if(info.diff===0) diasTxt='Hoy';
-      else if(info.diff===1) diasTxt='Mañana';
-      else diasTxt=`En ${info.diff} días`;
-    }
-    return `<div class="reserve-card" style="margin-bottom:8px;flex-wrap:wrap;gap:10px"><div><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.day)} · ${escapeHtml(s.fixedSchedule.time)}${diasTxt?` · <span style="font-weight:600;color:var(--forest,#1a5c2a)">${diasTxt}</span>`:''}</div>${done?'<div class="admin-mini" style="color:var(--forest,#1a5c2a);font-weight:600;margin-top:4px">✓ Clase de esta semana ya dada</div>':''}</div><div style="display:flex;gap:8px;flex-wrap:wrap">${done?`<button class="admin-btn secondary small" onclick="undoFixedClassDone('${s.id}')">Deshacer</button>`:`<button class="admin-btn small" onclick="markFixedClassDone('${s.id}')">Marcar clase dada</button>`}<button class="admin-btn secondary small" onclick="editFixedSchedule('${s.id}')">Editar</button><button class="admin-btn danger small" onclick="clearFixedSchedule('${s.id}')">Quitar</button></div></div>`;
-  }).join(''):'<p class="admin-mini">Todavía no asignaste horarios fijos.</p>';
 }
 function cancelEditStudent(){
   document.getElementById('editing-student-id').value='';
@@ -2000,6 +2441,16 @@ async function removeStudent(i){
   }
 }
 function renewStudent(i){const s=adminData.students[i];window.fsUpdate('students',s.id,{startDate:todayISO(),status:'Activo',classesUsed:0}).then(()=>{adminData.recent.unshift(`Se renovó el paquete de ${s.name}.`);renderAdmin()}).catch(err=>alert('Error: '+err.message))}
+// Habilita para el alumno la opción de elegir su propia meta de estudio (antes de esto,
+// no ve el formulario en su panel). Además le manda un push invitándolo a definirla.
+function inviteGoalSetup(i){
+  const s=adminData.students[i]; if(!s) return;
+  window.fsUpdate('students', s.id, { goalInviteSent:true, goalInviteSentAt:new Date().toISOString() }).then(()=>{
+    queuePush(s.id, 'Elegí tu meta de estudio 🎯', 'Tu profesor te invitó a definir tu meta de estudio diaria, semanal y mensual. Entrá al campus para elegirla.');
+    adminData.recent.unshift(`Se invitó a ${s.name} a definir su meta de estudio.`);
+    renderAdmin();
+  }).catch(err=>alert('Error: '+err.message));
+}
 function addPackage(e){e.preventDefault();const editingId=document.getElementById('editing-package-id').value;const subjects=document.getElementById('new-package-subjects').value.split(',').map(x=>x.trim()).filter(Boolean);const mentoria=document.getElementById('new-package-mentoria').value==='si';const name=document.getElementById('new-package-name').value.trim();if(!name){alert('Ponele un nombre al paquete.');return}
   const data={name,classes:Number(document.getElementById('new-package-classes').value)||0,days:Number(document.getElementById('new-package-days').value)||0,subjects:subjects.length?subjects:['Todas las materias'],mentoria,bookingCycle:document.getElementById('new-package-cycle').value,description:document.getElementById('new-package-description').value.trim()};
   if(editingId){
@@ -2171,52 +2622,13 @@ function renderUnitSubjectsEditor(){
   list.innerHTML = unit.subjects.map(s=>{
     const lessonsCount = adminData.lessons.filter(l=>l.subjectId===s.id).length;
     const quizCount = adminData.quizQuestions.filter(q=>q.subjectId===s.id).length;
-    const materials = s.materials || [];
-    const materialRows = materials.map((m,idx)=>materialRowHtml(s.id, idx, m.name, m.url, m.type)).join('');
-    return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap;padding-top:10px">
+    return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--line)">
       <input type="text" value="${escapeHtml(s.name)}" id="unit-subj-name-${s.id}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-family:var(--font-body)">
       <button class="admin-btn small" type="button" onclick="renameUnitSubject('${unit.id}','${s.id}')">Guardar</button>
       <button class="admin-btn danger small" type="button" onclick="removeUnitSubject('${unit.id}','${s.id}')">Eliminar</button>
       <span class="admin-mini">${lessonsCount} clases · ${quizCount} preguntas cargadas</span>
-    </div>
-    <details style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)">
-      <summary class="admin-mini" style="cursor:pointer">Material de estudio (${materials.length})</summary>
-      <div id="materials-list-${s.id}" style="margin-top:8px">${materialRows}</div>
-      <button class="admin-btn small" type="button" onclick="addMaterialRow('${s.id}')" style="margin-top:6px">+ Agregar material</button>
-      <button class="admin-btn small" type="button" onclick="saveSubjectMaterials('${s.id}')" style="margin-top:6px">Guardar materiales</button>
-    </details>`;
+    </div>`;
   }).join('');
-}
-function materialRowHtml(subjectId, idx, name, url, type){
-  name = name || ''; url = url || ''; type = type || 'pdf';
-  return `<div class="material-row" data-idx="${idx}" style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
-    <input type="text" placeholder="Nombre (ej. Fisiología Imágenes)" value="${escapeHtml(name)}" class="mat-name" style="flex:1;min-width:160px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-family:var(--font-body);font-size:.9em">
-    <input type="text" placeholder="Link de Google Drive" value="${escapeHtml(url)}" class="mat-url" style="flex:2;min-width:220px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-family:var(--font-body);font-size:.9em">
-    <select class="mat-type" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-family:var(--font-body);font-size:.9em">
-      <option value="pdf" ${type==='pdf'?'selected':''}>PDF</option>
-      <option value="ppt" ${type==='ppt'?'selected':''}>PPT</option>
-    </select>
-    <button class="admin-btn danger small" type="button" onclick="this.closest('.material-row').remove()">Quitar</button>
-  </div>`;
-}
-function addMaterialRow(subjectId){
-  const list = document.getElementById(`materials-list-${subjectId}`);
-  if(!list) return;
-  const div = document.createElement('div');
-  div.innerHTML = materialRowHtml(subjectId, list.children.length, '', '', 'pdf');
-  list.appendChild(div.firstElementChild);
-}
-function saveSubjectMaterials(subjectId){
-  const list = document.getElementById(`materials-list-${subjectId}`);
-  if(!list) return;
-  const materials = [...list.querySelectorAll('.material-row')].map(row=>({
-    name: row.querySelector('.mat-name').value.trim(),
-    url: row.querySelector('.mat-url').value.trim(),
-    type: row.querySelector('.mat-type').value
-  })).filter(m=>m.name && m.url);
-  window.fsSet('unitSubjects', subjectId, {materials}).then(()=>{
-    adminData.recent.unshift('Se actualizó el material de estudio de una materia.');
-  }).catch(err=>alert('Error: '+err.message));
 }
 function renameUnitSubject(unitId, subjectId){
   const input=document.getElementById(`unit-subj-name-${subjectId}`);
@@ -2397,41 +2809,6 @@ function addAvailability(e){
   toggleAvailabilityVisibility();
 }
 function removeAvailability(i){window.fsDelete('availability',adminData.availability[i].id).catch(err=>alert('Error: '+err.message))}
-let editingBookingIndex=null;
-function openEditBooking(i){
-  const b=adminData.bookings[i];if(!b)return;
-  editingBookingIndex=i;
-  const s=adminData.students.find(x=>x.id===b.studentId);
-  document.getElementById('edit-booking-student').textContent=s?s.name:'Alumno';
-  document.getElementById('edit-booking-date').value=b.date||'';
-  document.getElementById('edit-booking-time').value=b.time||'';
-  document.getElementById('edit-booking-status').value=b.status||'Reservada';
-  const modal=document.getElementById('edit-booking-modal');modal.style.display='flex';
-}
-function closeEditBookingModal(){const modal=document.getElementById('edit-booking-modal');if(modal)modal.style.display='none';editingBookingIndex=null;}
-function saveEditBooking(e){
-  e.preventDefault();
-  if(editingBookingIndex==null)return;
-  const b=adminData.bookings[editingBookingIndex];if(!b){closeEditBookingModal();return;}
-  const dateVal=document.getElementById('edit-booking-date').value||null;
-  const time=document.getElementById('edit-booking-time').value;
-  const status=document.getElementById('edit-booking-status').value;
-  if(!time){alert('Ingresá un horario.');return;}
-  const updates={time,status};
-  if(dateVal){
-    const d=new Date(dateVal+'T00:00:00');
-    updates.date=dateVal;
-    updates.day=DIAS_SEMANA[d.getDay()];
-    updates.week=weekOfMonth(d);
-    updates.monthKey=monthKey(d);
-  }
-  if(status==='Completada'&&b.status!=='Completada'){updates.completedDate=todayISO();}
-  window.fsUpdate('bookings',b.id,updates).then(()=>{
-    adminData.recent.unshift('Se editó una reserva.');
-    closeEditBookingModal();
-    renderAdmin();renderStudentBooking();
-  }).catch(err=>alert('Error al guardar: '+err.message));
-}
 function confirmBooking(i){window.fsUpdate('bookings',adminData.bookings[i].id,{status:'Confirmada'}).then(()=>{adminData.recent.unshift('Se confirmó una reserva.');renderAdmin();renderStudentBooking()}).catch(err=>alert('Error: '+err.message))}
 function cancelBooking(i){window.fsUpdate('bookings',adminData.bookings[i].id,{status:'Cancelada'}).then(()=>{adminData.recent.unshift('Se canceló una reserva.');renderAdmin();renderStudentBooking()}).catch(err=>alert('Error: '+err.message))}
 function completeBooking(i){const b=adminData.bookings[i];if(b.status!=='Confirmada')return;const s=adminData.students.find(x=>x.id===b.studentId);const tasks=[window.fsUpdate('bookings',b.id,{status:'Completada',completedDate:todayISO()})];if(s&&remainingClasses(s)>0)tasks.push(window.fsUpdate('students',s.id,{classesUsed:(s.classesUsed||0)+1}));Promise.all(tasks).then(()=>{adminData.recent.unshift(`Se completó una clase de ${s?.name||'un alumno'} y se descontó 1 clase.`);renderAdmin();renderStudentAccess();renderStudentBooking()}).catch(err=>alert('Error: '+err.message))}
@@ -2465,7 +2842,7 @@ function sortedUpdates(){return [...adminData.updates].sort((a,b)=>(b.pinned?1:0
 function formatUpdateDate(iso){if(!iso)return '';const d=new Date(iso);return d.toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'})}
 function renderUpdateCard(u,actionsHtml){return `<div class="update-card ${u.pinned?'pinned':''}"><div class="update-card-top"><h4>${u.pinned?'<span class="update-pin-tag">Fijado</span>':''}${escapeHtml(u.title)}</h4><span class="update-date">${formatUpdateDate(u.date)}</span></div><p>${escapeHtml(u.message)}</p>${actionsHtml||''}</div>`}
 function renderAdminUpdates(){const el=document.getElementById('admin-updates-list');if(!el)return;const list=sortedUpdates();el.innerHTML=list.length?list.map((u,i)=>renderUpdateCard(u,`<div class="admin-actions" style="margin-top:10px"><button class="admin-btn small" onclick="editUpdate(${i})">Editar</button> <button class="admin-btn danger small" onclick="removeUpdate(${i})">Eliminar</button></div>`)).join(''):'<p class="updates-feed-empty">Todavía no publicaste ninguna novedad.</p>'}
-function renderStudentUpdates(){const panel=document.getElementById('student-updates-panel');const el=document.getElementById('student-updates-list');if(!panel||!el)return;const student=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);if(!student||!isStudentActive(student)){panel.style.display='none';return}const list=sortedUpdates();if(!list.length){panel.style.display='none';return}panel.style.display='block';el.innerHTML=list.map(u=>renderUpdateCard(u)).join('')}
+function renderStudentUpdates(){const panel=document.getElementById('student-updates-panel');const el=document.getElementById('student-updates-list');if(!panel||!el)return;const list=sortedUpdates();if(!list.length){panel.style.display='none';return}panel.style.display='block';el.innerHTML=list.map(u=>renderUpdateCard(u)).join('')}
 // Semana del mes en bloques simples de 7 días (1-7=Semana 1, 8-14=Semana 2, 15-21=Semana 3, 22-31=Semana 4).
 function weekOfMonth(d){ return Math.min(4, Math.ceil(d.getDate()/7)); }
 function monthKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
@@ -2480,34 +2857,12 @@ function bookSlot(i){const s=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
   if(a.group && a.group!==studentBookingGroup(s)){ alert('Ese horario no está disponible para tu tipo de paquete.'); return; }
   if(a.studentId && a.studentId!==s.id){ alert('Ese horario es individual, reservado para otro alumno.'); return; }
   const occupied=adminData.bookings.some(b=>(a.date?b.date===a.date:(b.day===a.day&&!b.date))&&b.time===a.time&&['Reservada','Confirmada'].includes(b.status));if(occupied){alert('Ese horario ya está reservado.');return}window.fsAdd('bookings',{studentId:s.id,day:a.day,time:a.time,date:a.date||null,status:'Reservada',week,monthKey:mKey}).then(()=>{adminData.recent.unshift(`${s.name} reservó ${a.date?formatShortDate(a.date):a.day} ${a.time}.`);renderStudentBooking();renderAdmin()}).catch(err=>alert('Error: '+err.message))}
-function renderStudentAccess(){const s=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);const el=document.getElementById('student-access-panel');if(!el||!s)return;const p=getPackage(s),active=isStudentActive(s),rem=remainingClasses(s),days=daysRemaining(s);const cycleTxt=p?cycleLabel(p.bookingCycle):'';const allowedClasses=(s.bookingExceptionClasses!=null) ? s.bookingExceptionClasses : (p?.classes||0);let statusMsg=active?`Acceso activo · vence el ${getStudentExpiry(s)}`:'Acceso vencido o suspendido';if(!active && s.status==='Pendiente' && !p){statusMsg='Tu cuenta está creada pero todavía no tiene un paquete asignado. Escribinos a C.A.E.R. para activar tu acceso y ver el contenido.';}el.innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap"><div><span class="eyebrow">Mi paquete</span><h3 style="margin:5px 0">${escapeHtml(s.package)}</h3><div class="admin-mini">${statusMsg}</div></div><div class="${active?'expiry-ok':'expiry-bad'}"><strong>${active?days+' días restantes':'Acceso bloqueado'}</strong></div></div><div class="access-grid"><div class="access-stat">Clases permitidas ${cycleTxt}<strong>${allowedClasses}</strong></div><div class="access-stat">Clases restantes ${cycleTxt}<strong>${rem}</strong></div><div class="access-stat">Materias habilitadas<strong>${p?.subjects.includes('Todas las materias')?'Todas':p?.subjects.length||0}</strong></div></div><div style="margin-top:14px"><strong>Materias disponibles</strong><div class="admin-mini">${p?.subjects.includes('Todas las materias')?'Tenés acceso a todas las materias.':(p?.subjects||[]).join(' · ')}</div></div>`}
+function renderStudentAccess(){const s=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);const el=document.getElementById('student-access-panel');if(!el||!s)return;const p=getPackage(s),active=isStudentActive(s),rem=remainingClasses(s),days=daysRemaining(s);const cycleTxt=p?cycleLabel(p.bookingCycle):'';let statusMsg=active?`Acceso activo · vence el ${getStudentExpiry(s)}`:'Acceso vencido o suspendido';if(!active && s.status==='Pendiente' && !p){statusMsg='Tu cuenta está creada pero todavía no tiene un paquete asignado. Escribinos a C.A.E.R. para activar tu acceso y ver el contenido.';}el.innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap"><div><span class="eyebrow">Mi paquete</span><h3 style="margin:5px 0">${escapeHtml(s.package)}</h3><div class="admin-mini">${statusMsg}</div></div><div class="${active?'expiry-ok':'expiry-bad'}"><strong>${active?days+' días restantes':'Acceso bloqueado'}</strong></div></div><div class="access-grid"><div class="access-stat">Clases permitidas ${cycleTxt}<strong>${p?.classes||0}</strong></div><div class="access-stat">Clases restantes ${cycleTxt}<strong>${rem}</strong></div><div class="access-stat">Materias habilitadas<strong>${p?.subjects.includes('Todas las materias')?'Todas':p?.subjects.length||0}</strong></div></div><div style="margin-top:14px"><strong>Materias disponibles</strong><div class="admin-mini">${p?.subjects.includes('Todas las materias')?'Tenés acceso a todas las materias.':(p?.subjects||[]).join(' · ')}</div></div>`}
 // A qué grupo de reservas pertenece un alumno según el ciclo de su paquete.
 function studentBookingGroup(student){
   const p=getPackage(student);
   if(!p) return 'otros';
   return p.bookingCycle==='semanal' ? 'semanal' : (p.bookingCycle==='mensual' ? 'mensual' : 'otros');
-}
-// Calcula cuántos días faltan para la próxima clase de horario fijo (0 = hoy).
-function daysUntilFixedClass(fixedSchedule){
-  if(!fixedSchedule||!fixedSchedule.day) return null;
-  const dayIdx=DIAS_SEMANA.indexOf(fixedSchedule.day);
-  if(dayIdx<0) return null;
-  const now=new Date();
-  const todayIdx=now.getDay();
-  const diff=(dayIdx-todayIdx+7)%7;
-  const nextDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()+diff);
-  return {diff,nextDate};
-}
-// Clave única de la semana actual (lunes de esa semana, formato YYYY-MM-DD), para saber si la clase semanal ya se dio.
-function fixedWeekKey(d){
-  const date=new Date(d);date.setHours(0,0,0,0);
-  const day=date.getDay();
-  const diffToMonday=(day===0?-6:1)-day;
-  date.setDate(date.getDate()+diffToMonday);
-  return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
-}
-function isFixedClassDoneThisWeek(fixedSchedule){
-  return !!(fixedSchedule&&fixedSchedule.completedWeek===fixedWeekKey(new Date()));
 }
 function renderStudentBooking(){
   const el=document.getElementById('student-booking-panel');
@@ -2521,20 +2876,7 @@ function renderStudentBooking(){
     return;
   }
   if(s.fixedSchedule){
-    const doneThisWeek=isFixedClassDoneThisWeek(s.fixedSchedule);
-    let statusTxt='';
-    if(doneThisWeek){
-      statusTxt='✅ Ya tuviste tu clase de esta semana.';
-    }else{
-      const info=daysUntilFixedClass(s.fixedSchedule);
-      if(info){
-        if(info.diff===0) statusTxt='Hoy es tu clase 🎉';
-        else if(info.diff===1) statusTxt='Tu clase es mañana';
-        else statusTxt=`Faltan ${info.diff} días para tu clase`;
-        statusTxt+=` · ${info.nextDate.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}`;
-      }
-    }
-    el.innerHTML=`<div class="access-panel"><strong>Tu horario de clase</strong><div class="admin-mini" style="margin-top:8px">C.A.E.R. te asignó un horario fijo para tus clases particulares. No hace falta que reserves: tu clase es siempre el mismo día y horario.</div><div class="reserve-card" style="margin-top:12px"><div><strong>${escapeHtml(s.fixedSchedule.day)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.time)}</div></div><span class="admin-badge">Horario fijo</span></div>${statusTxt?`<div class="admin-mini" style="margin-top:10px;font-weight:600;color:var(--forest,#1a5c2a)">${statusTxt}</div>`:''}<div class="admin-mini" style="margin-top:10px">Si necesitás cambiar el día u horario, consultá con C.A.E.R.</div></div>`;
+    el.innerHTML=`<div class="access-panel"><strong>Tu horario de clase</strong><div class="admin-mini" style="margin-top:8px">C.A.E.R. te asignó un horario fijo para tus clases particulares. No hace falta que reserves: tu clase es siempre el mismo día y horario.</div><div class="reserve-card" style="margin-top:12px"><div><strong>${escapeHtml(s.fixedSchedule.day)}</strong><div class="admin-mini">${escapeHtml(s.fixedSchedule.time)}</div></div><span class="admin-badge">Horario fijo</span></div><div class="admin-mini" style="margin-top:10px">Si necesitás cambiar el día u horario, consultá con C.A.E.R.</div></div>`;
     return;
   }
   const active=isStudentActive(s),rem=remainingClasses(s),pCycle=getPackage(s);
@@ -2551,24 +2893,12 @@ function renderStudentBooking(){
   <div class="access-panel"><strong>Mis otras reservas de este mes</strong>${restOfMonth.length?restOfMonth.map(renderBookingCard).join(''):'<p class="admin-mini">No tenés otras reservas este mes.</p>'}</div>
   ${otherMonths.length?`<div class="access-panel"><strong>Reservas de otros meses</strong>${otherMonths.map(renderBookingCard).join('')}</div>`:''}`
 }
-function renderStudyToolsAccess(){
-  const student=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
-  const active=!!(student && isStudentActive(student));
-  const pomodoroBtn=document.getElementById('pomodoro-topbar-btn');
-  const soundBtn=document.getElementById('sound-topbar-btn');
-  if(pomodoroBtn) pomodoroBtn.style.display = active ? 'flex' : 'none';
-  if(soundBtn) soundBtn.style.display = active ? 'flex' : 'none';
-  if(!active){
-    document.getElementById('pomodoro-panel')?.style.setProperty('display','none');
-    document.getElementById('sound-panel')?.style.setProperty('display','none');
-    document.getElementById('sound-float-btn')?.style.setProperty('display','none');
-  }
-}
-function renderStudentDashboard(){renderStudentAccess();renderStudentBooking();renderStudentUpdates();renderStudyToolsAccess()}
+function renderStudentDashboard(){renderStudentAccess();renderStudentBooking();renderStudentUpdates();renderStudentWellness()}
 renderAdmin();
 
 /* ---------- reproductor de sonido relajante / ruido blanco / naturaleza (100% generado en el navegador) ---------- */
 let soundCtx=null, soundSource=null, soundGain=null, soundFilters=[], soundLFO=null, soundLFOGain=null, soundScheduleId=null;
+let binauralOscs=[], binauralGains=[], binauralMerger=null;
 let currentSoundPreset='white', soundPlaying=false;
 function ensureSoundCtx(){ if(!soundCtx){ soundCtx = new (window.AudioContext||window.webkitAudioContext)(); } return soundCtx; }
 function buildNoiseBuffer(ctx, type){
@@ -2636,24 +2966,50 @@ function scheduleAmbientEvents(ctx, kind){
 }
 function clearAmbientSchedule(){ if(soundScheduleId){ clearTimeout(soundScheduleId); soundScheduleId=null; } }
 
-/* ---------- melodía relajante generativa para estudiar ---------- */
-const MELODY_CHORDS = [[130.81,164.81,196.00],[110.00,130.81,164.81],[87.31,110.00,130.81],[98.00,123.47,146.83]]; // C - Am - F - G
-const MELODY_PATTERN = [261.63,null,329.63,null,392.00,329.63,null,293.66,220.00,null,261.63,null,329.63,293.66,null,246.94];
+/* ---------- melodías generativas para estudiar / leer ---------- */
+// Tres estilos distintos, cada uno con su propio acorde base, patrón melódico,
+// tempo y timbre. Todas son instrumentales (sin voces) y de dinámica estable,
+// para no distraer durante la lectura o el estudio.
+const MELODIES = {
+  melody:{
+    label:'Ambiente suave',
+    chords:[[130.81,164.81,196.00],[110.00,130.81,164.81],[87.31,110.00,130.81],[98.00,123.47,146.83]], // C - Am - F - G
+    pattern:[261.63,null,329.63,null,392.00,329.63,null,293.66,220.00,null,261.63,null,329.63,293.66,null,246.94],
+    stepMs:480, waveType:'triangle', filterFreq:1800, padGain:0.025, noteGain:0.07
+  },
+  baroque:{
+    // Progresión I-IV-V-I en Do mayor, tempo pausado (~60 BPM), estilo
+    // barroco: se asocia a un ritmo relajado que ayuda a sostener la
+    // concentración en tareas largas de estudio.
+    label:'Concentración barroca',
+    chords:[[130.81,164.81,196.00],[174.61,220.00,261.63],[196.00,246.94,293.66],[130.81,164.81,196.00]], // C - F - G - C
+    pattern:[261.63,329.63,392.00,329.63,349.23,392.00,440.00,392.00,392.00,440.00,493.88,440.00,261.63,329.63,392.00,329.63],
+    stepMs:600, waveType:'sine', filterFreq:2200, padGain:0.02, noteGain:0.06
+  },
+  reading:{
+    // Escala pentatónica mayor, sin semitonos "tensos": acompaña la lectura
+    // sin generar picos de atención que corten la concentración lectora.
+    label:'Lectura activa',
+    chords:[[146.83,196.00,246.94],[130.81,174.61,220.00],[110.00,146.83,196.00],[130.81,174.61,220.00]], // F - Eb-ish pentatonic beds
+    pattern:[293.66,349.23,392.00,440.00,392.00,349.23,293.66,246.94,293.66,349.23,440.00,392.00,349.23,293.66,246.94,220.00],
+    stepMs:420, waveType:'triangle', filterFreq:2600, padGain:0.022, noteGain:0.065
+  }
+};
 let melodyStep=0, melodyPadOscs=[], melodyPadGain=null;
-function playMelodyNote(ctx, freq){
+function playMelodyNote(ctx, freq, cfg){
   if(freq==null) return;
   const t=ctx.currentTime;
-  const osc=ctx.createOscillator(); osc.type='triangle'; osc.frequency.value=freq;
-  const filt=ctx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=1800;
+  const osc=ctx.createOscillator(); osc.type=cfg.waveType; osc.frequency.value=freq;
+  const filt=ctx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=cfg.filterFreq;
   const g=ctx.createGain(); g.gain.value=0;
   g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(0.07, t+0.05);
-  g.gain.linearRampToValueAtTime(0.03, t+0.3);
+  g.gain.linearRampToValueAtTime(cfg.noteGain, t+0.05);
+  g.gain.linearRampToValueAtTime(cfg.noteGain*0.43, t+0.3);
   g.gain.linearRampToValueAtTime(0, t+0.85);
   osc.connect(filt); filt.connect(g); g.connect(soundGain);
   osc.start(t); osc.stop(t+0.9);
 }
-function setMelodyPad(ctx, chordFreqs){
+function setMelodyPad(ctx, chordFreqs, cfg){
   const oldOscs=melodyPadOscs, oldGain=melodyPadGain;
   if(oldGain){
     const t=ctx.currentTime;
@@ -2664,7 +3020,7 @@ function setMelodyPad(ctx, chordFreqs){
   }
   const g=ctx.createGain(); g.gain.value=0; g.connect(soundGain);
   const t=ctx.currentTime;
-  g.gain.linearRampToValueAtTime(0.025, t+0.6);
+  g.gain.linearRampToValueAtTime(cfg.padGain, t+0.6);
   const oscs=chordFreqs.map(freq=>{
     const osc=ctx.createOscillator(); osc.type='sine'; osc.frequency.value=freq;
     osc.connect(g); osc.start(t);
@@ -2672,15 +3028,16 @@ function setMelodyPad(ctx, chordFreqs){
   });
   melodyPadOscs=oscs; melodyPadGain=g;
 }
-function scheduleMelody(ctx){
+function scheduleMelody(ctx, presetKey){
   clearAmbientSchedule();
   melodyStep=0;
+  const cfg = MELODIES[presetKey] || MELODIES.melody;
   const tick=()=>{
-    if(!soundPlaying || currentSoundPreset!=='melody') return;
-    if(melodyStep % 4 === 0){ setMelodyPad(ctx, MELODY_CHORDS[(melodyStep/4)%MELODY_CHORDS.length]); }
-    playMelodyNote(ctx, MELODY_PATTERN[melodyStep % MELODY_PATTERN.length]);
+    if(!soundPlaying || currentSoundPreset!==presetKey) return;
+    if(melodyStep % 4 === 0){ setMelodyPad(ctx, cfg.chords[(melodyStep/4)%cfg.chords.length], cfg); }
+    playMelodyNote(ctx, cfg.pattern[melodyStep % cfg.pattern.length], cfg);
     melodyStep++;
-    soundScheduleId = setTimeout(tick, 480);
+    soundScheduleId = setTimeout(tick, cfg.stepMs);
   };
   tick();
 }
@@ -2691,9 +3048,39 @@ function clearMelodyPad(){
   melodyPadOscs=[]; melodyPadGain=null;
 }
 
+/* ---------- ondas cerebrales (binaural beats) para estudio, lectura y retención ---------- */
+// Cada oído recibe un tono levemente distinto (portadora vs portadora+diferencia);
+// el cerebro percibe la diferencia entre ambos como un pulso a esa frecuencia
+// (efecto binaural). Por eso, para que se note el efecto, hacen falta auriculares.
+const BRAINWAVES = {
+  theta:{ label:'Theta · Memoria', carrier:190, beat:6,  hint:'6 Hz · consolidación de memoria y aprendizaje profundo' },
+  alpha:{ label:'Alfa · Atención relajada', carrier:200, beat:10, hint:'10 Hz · foco relajado, ideal para leer y estudiar' },
+  beta:{ label:'Beta · Concentración activa', carrier:210, beat:18, hint:'18 Hz · alerta y concentración para tareas analíticas' },
+  gamma:{ label:'Gamma · Retención', carrier:220, beat:40, hint:'40 Hz · asociada a la retención y el procesamiento de información' }
+};
+function buildBinauralGraph(ctx, cfg){
+  binauralMerger = ctx.createChannelMerger(2);
+  const oscL=ctx.createOscillator(); oscL.type='sine'; oscL.frequency.value=cfg.carrier;
+  const oscR=ctx.createOscillator(); oscR.type='sine'; oscR.frequency.value=cfg.carrier+cfg.beat;
+  const gL=ctx.createGain(); gL.gain.value=0.18;
+  const gR=ctx.createGain(); gR.gain.value=0.18;
+  oscL.connect(gL); gL.connect(binauralMerger,0,0);
+  oscR.connect(gR); gR.connect(binauralMerger,0,1);
+  binauralMerger.connect(soundGain);
+  oscL.start(); oscR.start();
+  binauralOscs=[oscL,oscR]; binauralGains=[gL,gR];
+}
+function clearBinauralGraph(){
+  binauralOscs.forEach(o=>{ try{o.stop();}catch(e){} o.disconnect(); });
+  binauralGains.forEach(g=>g.disconnect());
+  if(binauralMerger){ binauralMerger.disconnect(); binauralMerger=null; }
+  binauralOscs=[]; binauralGains=[];
+}
+
 function stopSoundGraph(){
   clearAmbientSchedule();
   clearMelodyPad();
+  clearBinauralGraph();
   if(soundSource){ try{soundSource.stop();}catch(e){} soundSource.disconnect(); soundSource=null; }
   if(soundLFO){ try{soundLFO.stop();}catch(e){} soundLFO.disconnect(); soundLFO=null; }
   if(soundLFOGain){ soundLFOGain.disconnect(); soundLFOGain=null; }
@@ -2706,8 +3093,12 @@ function buildSoundGraph(ctx, preset){
     scheduleAmbientEvents(ctx, preset);
     return;
   }
-  if(preset==='melody'){
-    scheduleMelody(ctx);
+  if(preset==='melody'||preset==='baroque'||preset==='reading'){
+    scheduleMelody(ctx, preset);
+    return;
+  }
+  if(BRAINWAVES[preset]){
+    buildBinauralGraph(ctx, BRAINWAVES[preset]);
     return;
   }
   const baseType = (preset==='rain') ? 'white' : (preset==='waves' ? 'brown' : preset);
@@ -2733,6 +3124,7 @@ function buildSoundGraph(ctx, preset){
 function setSoundPreset(preset){
   currentSoundPreset=preset;
   document.querySelectorAll('.sound-preset-btn').forEach(b=>b.classList.toggle('active', b.dataset.sound===preset));
+  const hint=document.getElementById('sound-brainwave-hint'); if(hint) hint.style.display = BRAINWAVES[preset] ? 'block' : 'none';
   if(soundPlaying){ buildSoundGraph(ensureSoundCtx(), preset); }
 }
 function toggleSound(){
@@ -2755,15 +3147,59 @@ function toggleSound(){
   }
 }
 function setSoundVolume(val){ if(soundGain) soundGain.gain.value=Number(val)/100; }
+/* ---------- helper: posiciona un panel flotante justo debajo del botón que lo abrió ---------- */
+function closeOtherFloatingPanels(exceptId){
+  ['pomodoro-panel','sound-panel','wellness-panel','package-panel'].forEach(id=>{
+    if(id===exceptId) return;
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+}
+function positionPanelBelowButton(panel, btn){
+  if(!panel || !btn) return;
+  const rect = btn.getBoundingClientRect();
+  const margin = 12;
+  const panelWidth = panel.offsetWidth || 300;
+  let left = rect.left;
+  const maxLeft = window.innerWidth - panelWidth - margin;
+  if(left > maxLeft) left = maxLeft;
+  if(left < margin) left = margin;
+  panel.style.left = left+'px';
+  panel.style.right = 'auto';
+  panel.style.top = (rect.bottom + 8) + 'px';
+}
 function toggleSoundPanel(){
   const panel=document.getElementById('sound-panel');
   if(!panel) return;
-  const pomo=document.getElementById('pomodoro-panel'); if(pomo) pomo.style.display='none';
-  panel.style.display = panel.style.display==='none' ? 'block' : 'none';
+  const opening = panel.style.display==='none' || !panel.style.display;
+  closeOtherFloatingPanels('sound-panel');
+  panel.style.display = opening ? 'block' : 'none';
+  if(opening) positionPanelBelowButton(panel, document.getElementById('sound-topbar-btn'));
+}
+function toggleWellnessPanel(){
+  const panel=document.getElementById('wellness-panel');
+  if(!panel) return;
+  const opening = panel.style.display==='none' || !panel.style.display;
+  closeOtherFloatingPanels('wellness-panel');
+  panel.style.display = opening ? 'block' : 'none';
+  if(opening){
+    positionPanelBelowButton(panel, document.getElementById('wellness-topbar-btn'));
+    if(typeof window.renderStudentWellness==='function') window.renderStudentWellness();
+  }
+}
+function togglePackagePanel(){
+  const panel=document.getElementById('package-panel');
+  if(!panel) return;
+  const opening = panel.style.display==='none' || !panel.style.display;
+  closeOtherFloatingPanels('package-panel');
+  panel.style.display = opening ? 'block' : 'none';
+  if(opening){
+    positionPanelBelowButton(panel, document.getElementById('package-topbar-btn'));
+    if(typeof window.renderStudentAccess==='function') window.renderStudentAccess();
+  }
 }
 
 /* ---------- temporizador Pomodoro ---------- */
-const pomodoroSettings={ work:25, short:5, long:15, cyclesBeforeLong:4 };
+const pomodoroSettings={ work:25, short:5, long:15, cyclesBeforeLong:4, chime: localStorage.getItem('pomodoroChime') || 'medium' };
 const pomodoroState={ phase:'work', remaining:25*60, running:false, cycleCount:1, intervalId:null };
 let pomodoroPulseTimeoutId=null;
 function pomodoroPhaseLabel(phase){ return phase==='work' ? 'Enfoque' : (phase==='long' ? 'Descanso largo' : 'Descanso corto'); }
@@ -2776,24 +3212,60 @@ function formatClock(totalSeconds){
   const m=Math.floor(totalSeconds/60), s=totalSeconds%60;
   return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
+// Toca N repiques de campana a partir del instante `startAt`, con los armónicos
+// (partials) indicados. Función interna reutilizada por los 3 tonos disponibles.
+function playBellStrikes(ctx, startAt, strikes, strikeGap, partials, fundamental){
+  for(let i=0;i<strikes;i++){
+    const start=startAt+i*strikeGap;
+    partials.forEach(p=>{
+      const osc=ctx.createOscillator(); osc.type=p.type; osc.frequency.value=fundamental*p.ratio;
+      const g=ctx.createGain(); g.gain.value=0;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(p.gain, start+0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, start+p.decay);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(start); osc.stop(start+p.decay+0.05);
+    });
+  }
+}
+// Tono "Clásica": el timbre escolar original, 3 repiques cortos.
+function playChimeClassic(ctx, t){
+  playBellStrikes(ctx, t, 3, 0.32, [
+    {ratio:1,   gain:0.32, decay:0.28, type:'square'},
+    {ratio:2.4, gain:0.1,  decay:0.28, type:'sine'}
+  ], 880);
+}
+// Tono "Media": punto intermedio entre la clásica y la larga.
+function playChimeMedium(ctx, t){
+  playBellStrikes(ctx, t, 4, 0.4, [
+    {ratio:1,    gain:0.4,  decay:1.3, type:'square'},
+    {ratio:2.01, gain:0.24, decay:1.0, type:'sine'},
+    {ratio:3.3,  gain:0.12, decay:0.7, type:'sine'}
+  ], 800);
+}
+// Tono "Larga": campana grande, 5 repiques con cola de resonancia extendida.
+function playChimeLong(ctx, t){
+  playBellStrikes(ctx, t, 5, 0.48, [
+    {ratio:1,    gain:0.5,  decay:2.6, type:'square'},
+    {ratio:2.01, gain:0.34, decay:2.1, type:'sine'},
+    {ratio:2.99, gain:0.22, decay:1.7, type:'sine'},
+    {ratio:4.2,  gain:0.15, decay:1.2, type:'sine'},
+    {ratio:5.4,  gain:0.1,  decay:0.8, type:'sine'}
+  ], 740);
+}
 function playPomodoroChime(){
   const ctx=ensureSoundCtx();
   if(ctx.state==='suspended') ctx.resume();
   const t=ctx.currentTime;
-  // Timbre de timbre escolar: 3 repiques de campana con armónico metálico.
-  for(let i=0;i<3;i++){
-    const start=t+i*0.32;
-    [880, 880*2.4].forEach((freq,h)=>{
-      const osc=ctx.createOscillator(); osc.type=h===0?'square':'sine'; osc.frequency.value=freq;
-      const g=ctx.createGain(); g.gain.value=0;
-      const peak=h===0?0.32:0.1;
-      g.gain.setValueAtTime(0, start);
-      g.gain.linearRampToValueAtTime(peak, start+0.015);
-      g.gain.exponentialRampToValueAtTime(0.001, start+0.28);
-      osc.connect(g); g.connect(ctx.destination);
-      osc.start(start); osc.stop(start+0.3);
-    });
-  }
+  if(pomodoroSettings.chime==='classic') playChimeClassic(ctx, t);
+  else if(pomodoroSettings.chime==='long') playChimeLong(ctx, t);
+  else playChimeMedium(ctx, t);
+}
+function setPomodoroChime(choice){
+  pomodoroSettings.chime=choice;
+  localStorage.setItem('pomodoroChime', choice);
+  document.querySelectorAll('.chime-preset-btn').forEach(b=>b.classList.toggle('active', b.dataset.chime===choice));
+  playPomodoroChime();
 }
 function pulsePomodoroFloatBtn(){
   const btn=document.getElementById('pomodoro-float-btn');
@@ -2859,12 +3331,15 @@ function applyPomodoroSettings(){
 function togglePomodoroPanel(){
   const panel=document.getElementById('pomodoro-panel');
   if(!panel) return;
-  const sound=document.getElementById('sound-panel'); if(sound) sound.style.display='none';
-  panel.style.display = panel.style.display==='none' ? 'block' : 'none';
+  const opening = panel.style.display==='none' || !panel.style.display;
+  closeOtherFloatingPanels('pomodoro-panel');
+  panel.style.display = opening ? 'block' : 'none';
+  if(opening) positionPanelBelowButton(panel, document.getElementById('pomodoro-topbar-btn'));
   const floatBtn=document.getElementById('pomodoro-float-btn'); if(floatBtn) floatBtn.classList.remove('pulsing');
   clearTimeout(pomodoroPulseTimeoutId);
 }
 renderPomodoroDisplays();
+document.querySelectorAll('.chime-preset-btn').forEach(b=>b.classList.toggle('active', b.dataset.chime===pomodoroSettings.chime));
 
 /* ---------- arrastrar las burbujas flotantes (sonido y tiempo) ---------- */
 function setupFloatDrag(id){
@@ -2951,6 +3426,7 @@ const db = getFirestore(fbApp);
 window.fsAdd = (col, data) => addDoc(collection(db, col), data);
 window.fsUpdate = (col, id, data) => updateDoc(doc(db, col, id), data);
 window.fsDelete = (col, id) => deleteDoc(doc(db, col, id));
+window.fsIncrementAttendance = (studentId, date) => setDoc(doc(db,'attendance', studentId+'_'+date), { studentId, date, minutes: increment(1) }, { merge:true }).catch(()=>{});
 window.fsSet = (col, id, data) => setDoc(doc(db, col, id), data, { merge: true });
 window.fsIncrement = (col, id, baseData) => setDoc(doc(db, col, id), {...baseData, count: increment(1)}, { merge: true });
 
@@ -3159,13 +3635,13 @@ window.seedInitialData = async function(){
 };
 
 /* ---------- listeners en tiempo real de las colecciones compartidas ---------- */
-let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubAvailability=null, unsubBookings=null, unsubLessons=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null;
+let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubAvailability=null, unsubBookings=null, unsubLessons=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubCommitments=null, unsubSleepCheckins=null, unsubMonthlySummaries=null;
 
 function startCollectionListeners(){
   stopCollectionListeners();
   unsubStudents = onSnapshot(collection(db,'students'), snap=>{
     window.adminData.students = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits(); updateUserChip();
+    safeRenderAdmin(); safeRenderStudentDashboard(); updateUserChip();
   });
   unsubPackages = onSnapshot(collection(db,'packages'), snap=>{
     window.adminData.packages = snap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -3220,14 +3696,32 @@ function startCollectionListeners(){
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
     if(typeof window.refreshOpenUnitAfterEdit==='function') window.refreshOpenUnitAfterEdit();
   });
+  unsubAttendance = onSnapshot(collection(db,'attendance'), snap=>{
+    window.adminData.attendance = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance();
+  });
+  unsubCommitments = onSnapshot(collection(db,'commitments'), snap=>{
+    window.adminData.commitments = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance();
+  });
+  unsubSleepCheckins = onSnapshot(collection(db,'sleepCheckins'), snap=>{
+    window.adminData.sleepCheckins = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance(); safeMaybeShowSleepCheckin();
+  });
+  unsubMonthlySummaries = onSnapshot(collection(db,'monthlySummaries'), snap=>{
+    window.adminData.monthlySummaries = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    safeRenderAdmin(); safeRenderStudentDashboard();
+  });
 }
 function stopCollectionListeners(){
-  [unsubStudents,unsubPackages,unsubSubjects,unsubAvailability,unsubBookings,unsubLessons,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects].forEach(u=>{ if(u) u(); });
-  unsubStudents=unsubPackages=unsubSubjects=unsubAvailability=unsubBookings=unsubLessons=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=null;
+  [unsubStudents,unsubPackages,unsubSubjects,unsubAvailability,unsubBookings,unsubLessons,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubCommitments,unsubSleepCheckins,unsubMonthlySummaries].forEach(u=>{ if(u) u(); });
+  unsubStudents=unsubPackages=unsubSubjects=unsubAvailability=unsubBookings=unsubLessons=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubCommitments=unsubSleepCheckins=unsubMonthlySummaries=null;
 }
 function safeRenderAdmin(){ if(typeof window.renderAdmin==='function') window.renderAdmin(); }
 function safeRenderStudentDashboard(){ if(window.__currentUid && typeof window.renderStudentDashboard==='function') window.renderStudentDashboard(); }
 function safeRenderUnits(){ if(typeof renderUnits==='function') renderUnits(); }
+function safeRenderProfileAttendance(){ if(typeof window.renderProfileAttendance==='function') window.renderProfileAttendance(); }
+function safeMaybeShowSleepCheckin(){ if(typeof window.maybeShowSleepCheckin==='function') window.maybeShowSleepCheckin(); }
 
 function updateUserChip(){
   const chip = document.getElementById('user-chip');
@@ -3276,6 +3770,8 @@ async function routeUser(user){
       window.showTab('dashboard');
       markStudentActiveNow(user.uid);
       setupPushNotifications(user.uid);
+      startAttendanceTracking(user.uid);
+      safeMaybeShowSleepCheckin();
     }
   }catch(err){
     alert('Error al cargar tu cuenta: ' + err.message + '\n\nProbá recargar la página e iniciar sesión de nuevo.');
@@ -3294,6 +3790,7 @@ onAuthStateChanged(auth, async (user) => {
     window.__currentUid = null;
     setCurrentStudentId(null);
     stopCollectionListeners();
+    stopAttendanceTracking();
     document.getElementById('admin-shell')?.style.setProperty('display','none');
     document.getElementById('app-shell')?.style.setProperty('display','none');
     const authView = document.getElementById('view-auth');
