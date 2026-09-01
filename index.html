@@ -4063,7 +4063,27 @@ onAuthStateChanged(auth, async (user) => {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW error:', err));
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      // Fuerza a chequear si hay una versión nueva del Service Worker apenas carga la página,
+      // en vez de esperar a que el navegador lo revise solo (a veces tarda horas o días en
+      // darse cuenta de que hay una versión nueva, y la app queda mostrando contenido viejo).
+      reg.update().catch(()=>{});
+      // Si se activa una versión nueva del Service Worker mientras la página ya estaba
+      // abierta, recargamos una sola vez para que se vea el contenido actualizado al toque.
+      let refreshedForNewSW = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshedForNewSW) return;
+        refreshedForNewSW = true;
+        window.location.reload();
+      });
+    }).catch(err => console.warn('SW error:', err));
+  });
+  // Vuelve a chequear si hay una versión nueva cada vez que el alumno vuelve a la pestaña o
+  // reabre la app (por si se publicó algo mientras la tenía en segundo plano).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible'){
+      navigator.serviceWorker.getRegistration().then(reg => { if(reg) reg.update().catch(()=>{}); });
+    }
   });
 }
 let deferredInstallPrompt = null;
@@ -4091,63 +4111,3 @@ window.addEventListener('appinstalled', () => {
 </script>
 </body>
 </html>
-
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /students/{studentId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (request.auth.uid == studentId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-    }
-    match /admins/{adminId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-    match /itemViews/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (docId.matches(request.auth.uid + '_.*') || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-    }
-    match /quizAttempts/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (docId.matches(request.auth.uid + '_.*') || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-    }
-
-    // --- Ritmo de estudio: asistencia, sueño y compromisos ---
-    match /attendance/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (docId.matches(request.auth.uid + '_.*') || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-    }
-    match /sleepCheckins/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (docId.matches(request.auth.uid + '_.*') || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-    }
-    match /commitments/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && (request.resource.data.studentId == request.auth.uid || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-      allow update, delete: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-    // monthlySummaries NO tiene regla propia a propósito: cae en la regla general
-    // de abajo (solo admin puede escribir), que es correcto porque solo el
-    // profesor envía resúmenes; el alumno únicamente los lee.
-
-    match /bookings/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.studentId == request.auth.uid;
-      allow update, delete: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-    match /avisos/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-    match /pushQueue/{docId} {
-      allow read: if false;
-      allow create: if request.auth != null && request.resource.data.studentId == request.auth.uid;
-      allow update, delete: if false;
-    }
-    match /{collection}/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-  }
-}
