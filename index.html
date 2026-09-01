@@ -859,18 +859,8 @@
           <div class="full"><button class="admin-btn" type="submit">Agregar materia a la unidad</button></div>
         </form>
       </div>
-      <div class="admin-card">
-        <h3>Materias y contenidos</h3>
-        <p class="admin-mini" style="margin-bottom:12px">Esta es la lista real, la misma que administrás en "Materias por unidad" arriba. Para cambiar un nombre, agregar o quitar una materia, hacelo ahí.</p>
-        <div style="overflow:auto">
-          <table class="admin-table">
-            <thead><tr><th>Materia</th><th>Unidad</th><th>Clases cargadas</th><th>Preguntas cargadas</th><th>Acceso por paquete</th></tr></thead>
-            <tbody id="subjects-table"></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="admin-card">
-        <h3 id="material-form-title">Material de estudio (PDF / PPT / links)</h3>
+      <div class="admin-card" style="border:2px solid var(--gold)">
+        <h3 id="material-form-title">📄 Material de estudio (PDF / PPT / links)</h3>
         <p class="admin-mini" style="margin-bottom:12px">Cargá acá el material de lectura de cada materia (apuntes, PDF, PowerPoint, o cualquier link). Se suma al material que ya tenía esa materia — el alumno lo ve al toque en "Material de estudio" dentro de la materia.</p>
         <form class="admin-form" onsubmit="addMaterial(event)">
           <input type="hidden" id="editing-material-id" value="">
@@ -882,9 +872,19 @@
           <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="material-submit-btn">Agregar material</button><button class="admin-btn secondary" type="button" id="material-cancel-btn" style="display:none" onclick="cancelEditMaterial()">Cancelar edición</button></div>
         </form>
       </div>
-      <div class="admin-card">
-        <h3>Materiales cargados</h3>
+      <div class="admin-card" style="border:2px solid var(--gold)">
+        <h3>📄 Materiales cargados</h3>
         <div id="materials-list"></div>
+      </div>
+      <div class="admin-card">
+        <h3>Materias y contenidos</h3>
+        <p class="admin-mini" style="margin-bottom:12px">Esta es la lista real, la misma que administrás en "Materias por unidad" arriba. Para cambiar un nombre, agregar o quitar una materia, hacelo ahí.</p>
+        <div style="overflow:auto">
+          <table class="admin-table">
+            <thead><tr><th>Materia</th><th>Unidad</th><th>Clases cargadas</th><th>Preguntas cargadas</th><th>Acceso por paquete</th></tr></thead>
+            <tbody id="subjects-table"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -2396,7 +2396,7 @@ function renderProfileClasses(){
   const given = givenClassesOf(s.id);
   const upcoming = studentUpcomingClasses(s).slice(0,8);
   const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
-  const givenRows = given.length ? given.slice(0,10).map(b=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${fmt(b.completedDate)}</strong></div><div style="display:flex;gap:6px;align-items:center"><span class="admin-badge">✅ ${b.auto?'Dada (auto)':'Dada'}</span><button type="button" class="admin-btn danger small" onclick="removeGivenClass('${b.id}','${s.id}')">✕</button></div></div>`).join('') : '<p class="admin-mini">Todavía no hay clases dadas cargadas.</p>';
+  const givenRows = given.length ? given.slice(0,10).map(b=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${fmt(b.completedDate)}</strong></div><div style="display:flex;gap:6px;align-items:center"><span class="admin-badge">✅ ${b.auto?'Dada (auto, 1h después)':'Dada'}</span><button type="button" class="admin-btn danger small" onclick="removeGivenClass('${b.id}','${s.id}')">✕</button></div></div>`).join('') : '<p class="admin-mini">Todavía no hay clases dadas cargadas.</p>';
   const upcomingRows = upcoming.length ? upcoming.map(o=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${fmt(o.dateISO)}</strong><div class="admin-mini">${escapeHtml(o.time)}</div></div><span class="admin-badge">Agendada</span></div>`).join('') : '<p class="admin-mini">No hay ninguna clase agendada todavía. Cargala desde "Clases y reservas".</p>';
   // Recordatorio del cupo del paquete: 4 clases mensuales (~1 por semana). Es solo informativo,
   // no bloquea la carga por si algún mes tiene una clase de más o de menos.
@@ -2404,7 +2404,7 @@ function renderProfileClasses(){
   const monthPrefix = now.toISOString().slice(0,7);
   const givenThisMonth = given.filter(b=>(b.completedDate||'').startsWith(monthPrefix)).length;
   card.innerHTML = `<h3>Clases particulares</h3>
-    <div class="admin-mini" style="margin-bottom:10px">Las clases que agendás en "Clases y reservas" se guardan solas como "dada" 1 hora después de su horario. Si falta alguna, cargala acá abajo. El paquete de mentoría son 4 clases mensuales (1 por semana) — este mes lleva <strong>${givenThisMonth}/4</strong>.</div>
+    <div class="admin-mini" style="margin-bottom:10px">Una clase queda como "dada" de dos formas: la cargás vos acá abajo, o se guarda sola cuando ya pasó 1 hora desde su horario agendado. El paquete de mentoría son 4 clases mensuales (1 por semana) — este mes lleva <strong>${givenThisMonth}/4</strong>.</div>
     <form class="admin-form" onsubmit="event.preventDefault();addGivenClass('${s.id}', document.getElementById('given-class-date-${s.id}').value)">
       <label>Fecha de la clase dada<input type="date" id="given-class-date-${s.id}" value="${todayISO()}" required></label>
       <div class="full"><button class="admin-btn" type="submit">+ Cargar clase dada</button></div>
@@ -2558,16 +2558,17 @@ function sortedScheduleEntries(s){
     .filter(slot=>slot.dateISO && slot.time)
     .sort((a,b)=>(a.dateISO+'T'+a.time).localeCompare(b.dateISO+'T'+b.time));
 }
-// Clases YA DADAS: quedan guardadas en la colección "bookings" con status 'Completada', ya sea
-// porque el profesor las cargó a mano o porque se auto-guardaron solas 1 hora después de su
-// horario agendado (ver autoSyncGivenClasses). Es el historial real que ve el alumno.
+// Clases YA DADAS: quedan guardadas en la colección "bookings" con status 'Completada'. Solo
+// pueden llegar acá de dos formas: el profesor las carga a mano, o ya pasó 1 hora desde su
+// horario agendado y se guardan solas (ver autoSyncGivenClasses). Es el historial real que ve
+// el alumno.
 function givenClassesOf(studentId){
   return adminData.bookings
     .filter(b=>b.studentId===studentId && b.status==='Completada')
     .sort((a,b)=>(b.completedDate||'').localeCompare(a.completedDate||''));
 }
 // "Próximas clases" = lo que el profesor agendó y todavía NO tiene un registro de clase dada
-// para esa fecha. En cuanto se auto-guarda (o se carga a mano) como dada, desaparece sola de
+// para esa fecha. En cuanto queda dada (a mano, o sola después de 1 hora), desaparece sola de
 // acá — no hace falta borrarla de la agenda a mano (aunque se puede, con el botón ✕).
 function studentUpcomingClasses(s){
   const givenDates = new Set(givenClassesOf(s.id).map(b=>b.completedDate));
@@ -2601,14 +2602,14 @@ function removeGivenClass(bookingId, studentId){
   }).catch(err=>alert('Error: '+err.message));
 }
 const autoGivenClassInFlight = new Set();
-// Recorre a todos los alumnos y, para cada clase agendada (fecha+hora concreta que cargó el
-// profesor) cuyo horario ya pasó hace más de 1 hora, la guarda sola como "dada" si todavía no
-// tenía un registro. No inventa ni proyecta fechas nuevas — solo mira lo que ya está cargado en
-// la agenda. Solo corre en la sesión del profesor (admin), que es quien tiene permiso para
-// crear clases dadas de cualquier alumno. Se llama automáticamente al llegar datos nuevos.
+// Una clase agendada (fecha+hora concreta que cargó el profesor) solo puede quedar como "dada"
+// de DOS formas: (1) el profesor la carga a mano, o (2) ya pasó 1 hora desde su horario y se
+// guarda sola. Nunca antes de eso, y nunca por ninguna otra vía. No inventa fechas nuevas: solo
+// mira lo que ya está cargado en la agenda de cada alumno. Solo corre en la sesión del profesor
+// (admin), que es quien tiene permiso para crear clases dadas de cualquier alumno.
 function autoSyncGivenClasses(){
   if(!window.__isAdmin) return;
-  const cutoff = Date.now() - 60*60*1000; // margen de 1 hora después del horario agendado
+  const cutoff = Date.now() - 60*60*1000; // 1 hora después del horario agendado
   adminData.students.forEach(s=>{
     if(!hasMentoria(s)) return;
     fixedScheduleSlotsOf(s).forEach(slot=>{
@@ -2616,7 +2617,7 @@ function autoSyncGivenClasses(){
       const dt = new Date(slot.dateISO+'T'+slot.time).getTime();
       if(Number.isNaN(dt) || dt > cutoff) return; // todavía no pasó la 1 hora de margen
       const docId = `${s.id}_${slot.dateISO}`;
-      if(adminData.bookings.some(b=>b.id===docId)) return;
+      if(adminData.bookings.some(b=>b.id===docId)) return; // ya está cargada (a mano o antes)
       if(autoGivenClassInFlight.has(docId)) return;
       autoGivenClassInFlight.add(docId);
       window.fsSet('bookings', docId, {studentId:s.id, status:'Completada', completedDate:slot.dateISO, auto:true})
@@ -3089,8 +3090,7 @@ function renderStudentBooking(){
     return;
   }
   // "Tus próximas clases" es lo que tu profesor agendó (fecha y hora concreta) y todavía no dio.
-  // "Clases que ya tuviste" viene de lo que tu profesor cargó como clase dada (a mano, o solo
-  // 1 hora después del horario agendado).
+  // "Clases que ya tuviste" es lo que tu profesor cargó a mano como clase dada.
   const given = givenClassesOf(s.id).slice(0,5);
   const future = studentUpcomingClasses(s).slice(0,5);
   const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
