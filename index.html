@@ -810,7 +810,7 @@
           <label style="flex-direction:row;align-items:center;gap:8px"><input id="new-student-exception" type="checkbox" style="width:auto"> Excepción: permitir varias clases en la misma semana</label>
           <label>Clases permitidas (excepción, dejar vacío = usar el paquete)<input id="new-student-exception-classes" type="number" min="0" placeholder="Ej: 5"></label>
           <label style="flex-direction:row;align-items:center;gap:8px"><input id="new-student-fixed-enabled" type="checkbox" style="width:auto"> Horario fijo (el alumno no reserva, ve su planilla de horarios)</label>
-          <p class="admin-mini full" style="margin:-8px 0 4px">Los días y horarios se cargan en la pestaña <strong>Clases y reservas → Horarios fijos</strong>.</p>
+          <p class="admin-mini full" style="margin:-8px 0 4px">Las fechas y horarios de cada clase se cargan en la pestaña <strong>Clases y reservas</strong>.</p>
           <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="student-submit-btn">Crear alumno</button><button class="admin-btn secondary" type="button" id="student-cancel-btn" style="display:none" onclick="cancelEditStudent()">Cancelar edición</button></div>
         </form>
       </div>
@@ -868,6 +868,23 @@
             <tbody id="subjects-table"></tbody>
           </table>
         </div>
+      </div>
+      <div class="admin-card">
+        <h3 id="material-form-title">Material de estudio (PDF / PPT / links)</h3>
+        <p class="admin-mini" style="margin-bottom:12px">Cargá acá el material de lectura de cada materia (apuntes, PDF, PowerPoint, o cualquier link). Se suma al material que ya tenía esa materia — el alumno lo ve al toque en "Material de estudio" dentro de la materia.</p>
+        <form class="admin-form" onsubmit="addMaterial(event)">
+          <input type="hidden" id="editing-material-id" value="">
+          <label class="full">Materia<select id="new-material-subject" required></select></label>
+          <label>Nombre del material<input id="new-material-name" placeholder="Ej.: Guía de Histología" required></label>
+          <label>Tipo<select id="new-material-type"><option value="pdf">PDF</option><option value="ppt">PPT</option></select></label>
+          <label class="full">Link (Google Drive, etc.)<input id="new-material-url" placeholder="https://drive.google.com/..." required></label>
+          <label>Orden<input id="new-material-order" type="number" min="1" value="1"></label>
+          <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="material-submit-btn">Agregar material</button><button class="admin-btn secondary" type="button" id="material-cancel-btn" style="display:none" onclick="cancelEditMaterial()">Cancelar edición</button></div>
+        </form>
+      </div>
+      <div class="admin-card">
+        <h3>Materiales cargados</h3>
+        <div id="materials-list"></div>
       </div>
     </section>
 
@@ -946,13 +963,13 @@
 
     <section id="admin-classes" class="admin-view">
       <div class="admin-card">
-        <h3>Horarios fijos</h3>
-        <p class="admin-mini" style="margin-top:-4px;margin-bottom:12px">Para alumnos con "Horario fijo" activado en su ficha: no reservan, ven directamente estos días y horarios. Recordá que suele ser ~1 horario por semana, es decir unas 4 clases al mes.</p>
+        <h3>Próxima clase (horario semanal)</h3>
+        <p class="admin-mini" style="margin-top:-4px;margin-bottom:12px">Para alumnos con "Horario fijo" activado en su ficha: acá cargás la fecha y hora exacta de su próxima clase, semana a semana. No se repite solo — si cambia el día de una semana a otra, simplemente cargás la fecha nueva. Recordá que el paquete de mentoría son ~4 clases al mes (una por semana).</p>
         <form class="admin-form" onsubmit="addFixedScheduleEntry(event)">
           <label>Alumno<select id="fixed-schedule-student"></select></label>
-          <label>Día<select id="fixed-schedule-day"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select></label>
+          <label>Fecha<input id="fixed-schedule-date" type="date" required></label>
           <label>Horario<input id="fixed-schedule-time" type="time" required></label>
-          <div class="full"><button class="admin-btn" type="submit">Agregar horario fijo</button></div>
+          <div class="full"><button class="admin-btn" type="submit">Agregar clase a la agenda</button></div>
         </form>
         <div id="fixed-schedule-list" style="margin-top:16px"></div>
       </div>
@@ -1109,6 +1126,18 @@ function findSubjectById(id){
   for(const u of currentModule.units){ const f = u.subjects.find(s=>s.id===id); if(f) return f; }
   return null;
 }
+// Combina el material "de base" (el que ya venía cargado en la materia) con los materiales que
+// el profesor va agregando desde el panel de administrador (colección "materials" en Firestore).
+// Se agregan siempre al final, así los que ya estaban no cambian de posición ni se resetea el
+// progreso que el alumno ya tenía marcado sobre ellos.
+function materialsForSubject(subject){
+  if(!subject) return [];
+  const base = subject.materials || [];
+  const extra = (adminData.materials||[])
+    .filter(m=>m.subjectId===subject.id)
+    .sort((a,b)=>(a.order||0)-(b.order||0) || (a.name||'').localeCompare(b.name||''));
+  return [...base, ...extra];
+}
 function tierColorVar(t){ return t==='green' ? '--forest' : (t==='gold' ? '--gold' : '--rust'); }
 
 // El peso de "visto" ya no es todo o nada: cada clase/material/evaluación suma según cuántos puntitos
@@ -1132,7 +1161,7 @@ function realSubjectProgressFor(studentId, subject){
   const lessonsWatched = lessons.filter(l=>getViewCountFor(studentId, l.id)>=1).length; // para el cartel "X vistas"
   const lessonsCredit = lessons.reduce((sum,l)=>sum+creditForViews(getViewCountFor(studentId, l.id)), 0);
 
-  const materials = subject.materials || [];
+  const materials = materialsForSubject(subject);
   const materialsTotal = materials.length;
   const materialsViewed = materials.filter((m,idx)=>getViewCountFor(studentId, `${subject.id}-mat-${idx}`)>=1).length;
   const materialsCredit = materials.reduce((sum,m,idx)=>sum+creditForViews(getViewCountFor(studentId, `${subject.id}-mat-${idx}`)), 0);
@@ -1308,12 +1337,13 @@ function renderSubjectContent(){
 
   /* ---- materiales de lectura / powerpoint ---- */
   const matList = document.getElementById('subject-materials-list');
+  const materialsList = materialsForSubject(subject);
   if(!access){
     matList.innerHTML = '';
-  }else if(!subject.materials.length){
+  }else if(!materialsList.length){
     matList.innerHTML = '<p class="admin-mini">Tu profesor todavía no cargó material de lectura para esta materia.</p>';
   }else{
-    matList.innerHTML = subject.materials.map((m,idx)=>{
+    matList.innerHTML = materialsList.map((m,idx)=>{
       const matId = `${subject.id}-mat-${idx}`;
       const count = getViewCount(matId);
       return `<div class="video-item"><div class="vi-thumb">${m.type==='pdf'?'PDF':'PPT'}</div><div class="vi-info"><div class="vi-title">${escapeHtml(m.name)}</div><div class="vi-sub">Material descargable</div></div>${renderDots(count)}<span class="vi-status pending" style="cursor:pointer" onclick="event.stopPropagation();openMaterial('${matId}','${escapeHtml(m.name)}','${m.url||''}')">${m.url?'Ver':'Descargar'}</span></div>`;
@@ -1632,6 +1662,7 @@ const adminData = {
   subjects: [],
   bookings: [],
   lessons: [],
+  materials: [],
   itemViews: [],
   updates: [],
   quizQuestions: [],
@@ -2225,6 +2256,12 @@ function renderAdmin(){
     quizSubjectSelect.innerHTML=flatSubjects.map(s=>`<option value="${s.id}">${escapeHtml(s.unitName)} · ${escapeHtml(s.name)}</option>`).join('');
     if(prevQuizSubj && flatSubjects.some(s=>s.id===prevQuizSubj)) quizSubjectSelect.value=prevQuizSubj;
   }
+  const materialSubjectSelect=document.getElementById('new-material-subject');
+  if(materialSubjectSelect){
+    const prevMaterialSubj=materialSubjectSelect.value;
+    materialSubjectSelect.innerHTML=flatSubjects.map(s=>`<option value="${s.id}">${escapeHtml(s.unitName)} · ${escapeHtml(s.name)}</option>`).join('');
+    if(prevMaterialSubj && flatSubjects.some(s=>s.id===prevMaterialSubj)) materialSubjectSelect.value=prevMaterialSubj;
+  }
   renderAdminQuizzes();
   const ll=document.getElementById('lessons-list');
   if(ll){
@@ -2241,6 +2278,68 @@ function renderAdmin(){
     }
   }
   const fixedCount=document.getElementById('stat-fixed-schedules');if(fixedCount)fixedCount.textContent=adminData.students.filter(s=>fixedScheduleSlotsOf(s).length>0).length;
+  renderMaterialsList();
+}
+// Muestra los materiales de estudio agregados desde el panel (no los que ya venían de base en
+// la materia, esos no se editan desde acá). Agrupados por materia, igual que las clases.
+function renderMaterialsList(){
+  const ml = document.getElementById('materials-list');
+  if(!ml) return;
+  if(!adminData.materials.length){
+    ml.innerHTML = '<p class="admin-mini">Todavía no cargaste material adicional. El que ya tenía cada materia de base se sigue viendo igual.</p>';
+    return;
+  }
+  const bySubject={};
+  adminData.materials.forEach(m=>{(bySubject[m.subjectId]=bySubject[m.subjectId]||[]).push(m)});
+  ml.innerHTML = Object.entries(bySubject).map(([subjectId,arr])=>{
+    const sub=flatSubjects.find(s=>s.id===subjectId);
+    const rows=arr.slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(m=>`<div class="reserve-card"><div><strong>${escapeHtml(m.name)}</strong><div class="admin-mini">${m.type==='pdf'?'PDF':'PPT'} · Orden ${m.order||1}</div></div><div><button class="admin-btn small" onclick="editMaterial('${m.id}')">Editar</button> <button class="admin-btn danger small" onclick="removeMaterial('${m.id}')">Eliminar</button></div></div>`).join('');
+    return `<div class="package-card"><strong>${escapeHtml(sub?sub.unitName+' · '+sub.name:'Materia eliminada')}</strong><div style="margin-top:8px">${rows}</div></div>`;
+  }).join('');
+}
+function addMaterial(e){
+  e.preventDefault();
+  const editingId=document.getElementById('editing-material-id').value;
+  const subjectId=document.getElementById('new-material-subject').value;
+  const name=document.getElementById('new-material-name').value.trim();
+  const type=document.getElementById('new-material-type').value;
+  const url=document.getElementById('new-material-url').value.trim();
+  const order=Number(document.getElementById('new-material-order').value)||1;
+  if(!name||!url){ alert('Completá el nombre y el link del material.'); return; }
+  const sub=flatSubjects.find(s=>s.id===subjectId);
+  const data={subjectId, unitId:sub?.unitId||'', name, type, url, order};
+  if(editingId){
+    window.fsUpdate('materials',editingId,data).then(()=>{cancelEditMaterial(); renderAdmin();}).catch(err=>alert('Error al guardar: '+err.message));
+  }else{
+    window.fsAdd('materials',data).then(()=>{ e.target.reset(); document.getElementById('new-material-order').value=1; }).catch(err=>alert('Error al guardar: '+err.message));
+  }
+}
+function editMaterial(id){
+  const m=adminData.materials.find(x=>x.id===id);
+  if(!m) return;
+  document.getElementById('editing-material-id').value=id;
+  document.getElementById('new-material-subject').value=m.subjectId;
+  document.getElementById('new-material-name').value=m.name;
+  document.getElementById('new-material-type').value=m.type||'pdf';
+  document.getElementById('new-material-url').value=m.url||'';
+  document.getElementById('new-material-order').value=m.order||1;
+  document.getElementById('material-form-title').textContent='Editar material';
+  document.getElementById('material-submit-btn').textContent='Guardar cambios';
+  document.getElementById('material-cancel-btn').style.display='';
+  document.querySelector('#material-form-title').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelEditMaterial(){
+  document.getElementById('editing-material-id').value='';
+  document.getElementById('new-material-name').value='';
+  document.getElementById('new-material-url').value='';
+  document.getElementById('new-material-order').value=1;
+  document.getElementById('material-form-title').textContent='Material de estudio (PDF / PPT / links)';
+  document.getElementById('material-submit-btn').textContent='Agregar material';
+  document.getElementById('material-cancel-btn').style.display='none';
+}
+function removeMaterial(id){
+  if(!confirm('¿Eliminar este material? Los alumnos van a dejar de verlo.')) return;
+  window.fsDelete('materials', id).then(()=>renderAdmin()).catch(err=>alert('Error: '+err.message));
 }
 /* ================= PERFIL DE ALUMNO (progreso + exámenes) ================= */
 let profileStudentIndex = null;
@@ -2283,35 +2382,36 @@ function openStudentProfile(i){
   renderProfileClasses();
   renderProfileUnits();
 }
-// Historial de clases particulares del alumno (horario fijo): se marca "Realizada" solo cuando
-// el horario ya pasó, y se listan también las próximas. No requiere ninguna acción del profesor.
+// Historial de clases particulares del alumno: las "dadas" están guardadas en bookings (auto o
+// cargadas a mano); las "agendadas" son fecha+hora concretas que cargó el profesor y todavía no
+// pasaron a estar dadas. Acá también se pueden agregar clases dadas que falten en el historial.
 function renderProfileClasses(){
   const s = adminData.students[profileStudentIndex];
   const card = document.getElementById('profile-classes-card');
   if(!s || !card) return;
-  if(!hasMentoria(s) || !fixedScheduleSlotsOf(s).length){
-    card.innerHTML = `<h3>Clases particulares</h3><p class="admin-mini">Este alumno no tiene un horario fijo de mentoría asignado.</p>`;
+  if(!hasMentoria(s)){
+    card.innerHTML = `<h3>Clases particulares</h3><p class="admin-mini">Este alumno no tiene mentoría en su paquete.</p>`;
     return;
   }
   const given = givenClassesOf(s.id);
-  const upcoming = studentUpcomingClasses(s, 8).slice(0,8);
+  const upcoming = studentUpcomingClasses(s).slice(0,8);
   const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
   const givenRows = given.length ? given.slice(0,10).map(b=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${fmt(b.completedDate)}</strong></div><div style="display:flex;gap:6px;align-items:center"><span class="admin-badge">✅ ${b.auto?'Dada (auto)':'Dada'}</span><button type="button" class="admin-btn danger small" onclick="removeGivenClass('${b.id}','${s.id}')">✕</button></div></div>`).join('') : '<p class="admin-mini">Todavía no hay clases dadas cargadas.</p>';
-  const upcomingRows = upcoming.length ? upcoming.map(o=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${fmt(o.dateISO)}</strong><div class="admin-mini">${escapeHtml(o.time)}</div></div><span class="admin-badge">Prevista</span></div>`).join('') : '<p class="admin-mini">No hay próximas clases previstas.</p>';
+  const upcomingRows = upcoming.length ? upcoming.map(o=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${fmt(o.dateISO)}</strong><div class="admin-mini">${escapeHtml(o.time)}</div></div><span class="admin-badge">Agendada</span></div>`).join('') : '<p class="admin-mini">No hay ninguna clase agendada todavía. Cargala desde "Clases y reservas".</p>';
   // Recordatorio del cupo del paquete: 4 clases mensuales (~1 por semana). Es solo informativo,
   // no bloquea la carga por si algún mes tiene una clase de más o de menos.
   const now = new Date();
   const monthPrefix = now.toISOString().slice(0,7);
   const givenThisMonth = given.filter(b=>(b.completedDate||'').startsWith(monthPrefix)).length;
   card.innerHTML = `<h3>Clases particulares</h3>
-    <div class="admin-mini" style="margin-bottom:10px">Las clases del horario fijo se guardan solas como "dada" 1 hora después de su horario. Si falta alguna (por ejemplo de antes de esta actualización), cargala acá abajo. El paquete de mentoría son 4 clases mensuales (1 por semana) — este mes lleva <strong>${givenThisMonth}/4</strong>.</div>
+    <div class="admin-mini" style="margin-bottom:10px">Las clases que agendás en "Clases y reservas" se guardan solas como "dada" 1 hora después de su horario. Si falta alguna, cargala acá abajo. El paquete de mentoría son 4 clases mensuales (1 por semana) — este mes lleva <strong>${givenThisMonth}/4</strong>.</div>
     <form class="admin-form" onsubmit="event.preventDefault();addGivenClass('${s.id}', document.getElementById('given-class-date-${s.id}').value)">
       <label>Fecha de la clase dada<input type="date" id="given-class-date-${s.id}" value="${todayISO()}" required></label>
       <div class="full"><button class="admin-btn" type="submit">+ Cargar clase dada</button></div>
     </form>
     <div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:14px">
       <div style="flex:1;min-width:240px"><span class="section-label">Clases ya dadas</span>${givenRows}</div>
-      <div style="flex:1;min-width:240px"><span class="section-label">Próximas previstas</span>${upcomingRows}</div>
+      <div style="flex:1;min-width:240px"><span class="section-label">Clases agendadas</span>${upcomingRows}</div>
     </div>`;
 }
 function closeStudentProfile(){
@@ -2438,61 +2538,40 @@ function openProfileSubject(subjectId){
     </div>
     <span class="section-label">Material de estudio</span>
     <div class="video-list">
-      ${subject.materials.map(m=>`<div class="video-item"><div class="vi-thumb">${m.type==='pdf'?'PDF':'PPT'}</div><div class="vi-info"><div class="vi-title">${escapeHtml(m.name)}</div><div class="vi-sub">Material descargable</div></div><span class="vi-status pending">Disponible</span></div>`).join('')}
+      ${materialsForSubject(subject).map(m=>`<div class="video-item"><div class="vi-thumb">${m.type==='pdf'?'PDF':'PPT'}</div><div class="vi-info"><div class="vi-title">${escapeHtml(m.name)}</div><div class="vi-sub">Material descargable</div></div><span class="vi-status pending">Disponible</span></div>`).join('')}
     </div>
     ${examResultHtml}
   `;
 }
 
-const WEEKDAY_ORDER = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-// Cada horario fijo asignado es un {día, horario}. Se administran desde la pestaña
-// "Clases y reservas → Horarios fijos" (ver addFixedScheduleEntry/removeFixedScheduleEntry
-// más abajo), no desde el formulario de Alumnos.
+// Cada clase agendada es una fecha y horario CONCRETOS que carga el profesor a mano, semana a
+// semana (no se repite sola ni se proyecta a futuro). Se administran desde la pestaña
+// "Clases y reservas" (ver addFixedScheduleEntry/removeFixedScheduleEntry más abajo).
 function fixedScheduleSlotsOf(s){
   return Array.isArray(s?.fixedSchedule) ? s.fixedSchedule : (s?.fixedSchedule ? [s.fixedSchedule] : []);
 }
-// Índice de día de JS Date.getDay() (0=Domingo..6=Sábado) para cada nombre de día usado en la planilla.
-const WEEKDAY_JS_INDEX = {Domingo:0, Lunes:1, Martes:2, Miércoles:3, Jueves:4, Viernes:5, Sábado:6};
-// A partir de un horario fijo semanal ({día, horario}) calcula las próximas fechas concretas de
-// esa clase (solo a futuro: desde hoy en adelante). Esto es solo una previsión automática de
-// "cuándo tocaría la próxima clase" según el día/horario asignado — NO marca nada como dada.
-// Las clases YA DADAS las carga el profesor a mano (ver addGivenClass), porque a veces una
-// clase se suspende, se cambia de día, o directamente no se da, y el sistema no puede saberlo solo.
-function upcomingOccurrencesForSlot(slot, weeksAhead){
-  const [hh, mm] = (slot.time||'00:00').split(':').map(Number);
-  const targetDow = WEEKDAY_JS_INDEX[slot.day];
-  if(targetDow===undefined) return [];
-  const now = new Date();
-  const cursor = new Date(now);
-  cursor.setHours(hh||0, mm||0, 0, 0);
-  const diff = (targetDow - cursor.getDay() + 7) % 7;
-  cursor.setDate(cursor.getDate()+diff);
-  if(cursor < now){ cursor.setDate(cursor.getDate()+7); } // si hoy es el día pero ya pasó el horario, arranca la próxima semana
-  const limit = new Date();
-  limit.setDate(limit.getDate() + (weeksAhead||8)*7);
-  const occurrences = [];
-  let guard = 0;
-  while(cursor <= limit && guard < 60){
-    occurrences.push({ day: slot.day, time: slot.time, dateISO: cursor.toISOString().slice(0,10), datetime: new Date(cursor) });
-    cursor.setDate(cursor.getDate()+7);
-    guard++;
-  }
-  return occurrences;
+// Devuelve las clases agendadas de un alumno ordenadas por fecha+hora, con su índice original
+// (para poder borrarlas por índice con removeFixedScheduleEntry).
+function sortedScheduleEntries(s){
+  return fixedScheduleSlotsOf(s)
+    .map((slot,i)=>({...slot, i}))
+    .filter(slot=>slot.dateISO && slot.time)
+    .sort((a,b)=>(a.dateISO+'T'+a.time).localeCompare(b.dateISO+'T'+b.time));
 }
-// Junta las próximas clases (a futuro) de todos los horarios fijos de un alumno, ordenadas de
-// la más cercana a la más lejana.
-function studentUpcomingClasses(student, weeksAhead){
-  const slots = fixedScheduleSlotsOf(student);
-  const all = slots.flatMap(slot=>upcomingOccurrencesForSlot(slot, weeksAhead||8));
-  return all.sort((a,b)=>a.datetime-b.datetime);
-}
-// Clases YA DADAS: se cargan a mano desde el panel de administrador (ver addGivenClass) y
-// quedan guardadas en la colección "bookings" con status 'Completada'. Es lo que se muestra
-// como historial real de clases, tanto al alumno como en su perfil de administrador.
+// Clases YA DADAS: quedan guardadas en la colección "bookings" con status 'Completada', ya sea
+// porque el profesor las cargó a mano o porque se auto-guardaron solas 1 hora después de su
+// horario agendado (ver autoSyncGivenClasses). Es el historial real que ve el alumno.
 function givenClassesOf(studentId){
   return adminData.bookings
     .filter(b=>b.studentId===studentId && b.status==='Completada')
     .sort((a,b)=>(b.completedDate||'').localeCompare(a.completedDate||''));
+}
+// "Próximas clases" = lo que el profesor agendó y todavía NO tiene un registro de clase dada
+// para esa fecha. En cuanto se auto-guarda (o se carga a mano) como dada, desaparece sola de
+// acá — no hace falta borrarla de la agenda a mano (aunque se puede, con el botón ✕).
+function studentUpcomingClasses(s){
+  const givenDates = new Set(givenClassesOf(s.id).map(b=>b.completedDate));
+  return sortedScheduleEntries(s).filter(slot=>!givenDates.has(slot.dateISO));
 }
 // Agrega una clase ya dada para un alumno (la carga el profesor). Usa como ID studentId+fecha
 // para que cargar la misma fecha dos veces no duplique el registro, solo lo actualice.
@@ -2521,51 +2600,29 @@ function removeGivenClass(bookingId, studentId){
     renderProfileHeader(); renderProfileClasses(); renderFixedScheduleList();
   }).catch(err=>alert('Error: '+err.message));
 }
-// Genera, para un horario fijo, las fechas cuyo horario ya pasó hace más de 1 hora (el margen
-// que definió el profesor para dar la clase por terminada). Sirve para auto-guardarlas solas.
-function dueOccurrencesForSlot(slot, sinceFallbackISO){
-  const since = slot.since || sinceFallbackISO || todayISO();
-  const [hh, mm] = (slot.time||'00:00').split(':').map(Number);
-  const targetDow = WEEKDAY_JS_INDEX[slot.day];
-  if(targetDow===undefined) return [];
-  const sinceDate = new Date(since+'T00:00:00');
-  const firstOccurrence = new Date(sinceDate);
-  const diff = (targetDow - firstOccurrence.getDay() + 7) % 7;
-  firstOccurrence.setDate(firstOccurrence.getDate()+diff);
-  firstOccurrence.setHours(hh||0, mm||0, 0, 0);
-  const cutoff = new Date(Date.now() - 60*60*1000); // margen de 1 hora después del horario
-  const occurrences = [];
-  const cursor = new Date(firstOccurrence);
-  let guard = 0;
-  while(cursor <= cutoff && guard < 400){
-    occurrences.push({dateISO: cursor.toISOString().slice(0,10)});
-    cursor.setDate(cursor.getDate()+7);
-    guard++;
-  }
-  return occurrences;
-}
 const autoGivenClassInFlight = new Set();
-// Recorre a todos los alumnos con horario fijo y guarda solas las clases que ya pasaron su
-// horario + 1 hora de margen, sin pisar lo que el profesor ya cargó a mano. Solo corre en la
-// sesión del profesor (admin), porque es quien tiene permiso para crear clases de cualquier
-// alumno. Se llama automáticamente cada vez que llegan datos nuevos de alumnos o de clases.
+// Recorre a todos los alumnos y, para cada clase agendada (fecha+hora concreta que cargó el
+// profesor) cuyo horario ya pasó hace más de 1 hora, la guarda sola como "dada" si todavía no
+// tenía un registro. No inventa ni proyecta fechas nuevas — solo mira lo que ya está cargado en
+// la agenda. Solo corre en la sesión del profesor (admin), que es quien tiene permiso para
+// crear clases dadas de cualquier alumno. Se llama automáticamente al llegar datos nuevos.
 function autoSyncGivenClasses(){
   if(!window.__isAdmin) return;
+  const cutoff = Date.now() - 60*60*1000; // margen de 1 hora después del horario agendado
   adminData.students.forEach(s=>{
     if(!hasMentoria(s)) return;
-    const slots = fixedScheduleSlotsOf(s);
-    if(!slots.length) return;
-    slots.forEach(slot=>{
-      dueOccurrencesForSlot(slot, s.startDate).forEach(o=>{
-        const docId = `${s.id}_${o.dateISO}`;
-        if(autoGivenClassInFlight.has(docId)) return;
-        if(adminData.bookings.some(b=>b.id===docId)) return;
-        autoGivenClassInFlight.add(docId);
-        window.fsSet('bookings', docId, {studentId:s.id, status:'Completada', completedDate:o.dateISO, auto:true})
-          .then(()=>window.fsIncrementField('students', s.id, 'classesUsed', 1))
-          .catch(err=>console.error('No se pudo auto-guardar la clase dada:', err))
-          .finally(()=>{ autoGivenClassInFlight.delete(docId); });
-      });
+    fixedScheduleSlotsOf(s).forEach(slot=>{
+      if(!slot.dateISO || !slot.time) return;
+      const dt = new Date(slot.dateISO+'T'+slot.time).getTime();
+      if(Number.isNaN(dt) || dt > cutoff) return; // todavía no pasó la 1 hora de margen
+      const docId = `${s.id}_${slot.dateISO}`;
+      if(adminData.bookings.some(b=>b.id===docId)) return;
+      if(autoGivenClassInFlight.has(docId)) return;
+      autoGivenClassInFlight.add(docId);
+      window.fsSet('bookings', docId, {studentId:s.id, status:'Completada', completedDate:slot.dateISO, auto:true})
+        .then(()=>window.fsIncrementField('students', s.id, 'classesUsed', 1))
+        .catch(err=>console.error('No se pudo auto-guardar la clase dada:', err))
+        .finally(()=>{ autoGivenClassInFlight.delete(docId); });
     });
   });
 }
@@ -2579,16 +2636,15 @@ function populateFixedScheduleStudentSelect(){
 function addFixedScheduleEntry(e){
   e.preventDefault();
   const studentId = document.getElementById('fixed-schedule-student').value;
-  const day = document.getElementById('fixed-schedule-day').value;
+  const dateISO = document.getElementById('fixed-schedule-date').value;
   const time = document.getElementById('fixed-schedule-time').value;
   const s = adminData.students.find(x=>x.id===studentId);
-  if(!s || !time){ alert('Elegí un alumno y un horario.'); return; }
-  if(!s.fixedSchedule){ if(!confirm(`${s.name} no tiene activado "Horario fijo" en su ficha. ¿Activarlo y agregar este horario?`)) return; }
-  // "since" marca desde cuándo rige este horario, para calcular el historial de clases
-  // (pasadas y futuras) sin tener que guardar una reserva por cada semana.
-  const newSlots = [...fixedScheduleSlotsOf(s), {day, time, since: todayISO()}];
+  if(!s || !dateISO || !time){ alert('Elegí un alumno, una fecha y un horario.'); return; }
+  if(!s.fixedSchedule){ if(!confirm(`${s.name} no tiene activado "Horario fijo" en su ficha. ¿Activarlo y agregar esta clase?`)) return; }
+  const newSlots = [...fixedScheduleSlotsOf(s), {dateISO, time}];
   window.fsUpdate('students', studentId, {fixedSchedule:newSlots}).then(()=>{
-    adminData.recent.unshift(`Se agregó el horario fijo ${day} ${time} para ${s.name}.`);
+    adminData.recent.unshift(`Se agendó la clase del ${dateISO} ${time} para ${s.name}.`);
+    document.getElementById('fixed-schedule-date').value='';
     document.getElementById('fixed-schedule-time').value='';
     renderAdmin();
   }).catch(err=>alert('Error al guardar: '+err.message));
@@ -2599,7 +2655,7 @@ function removeFixedScheduleEntry(studentId, index){
   const slots = fixedScheduleSlotsOf(s);
   const newSlots = slots.filter((_,i)=>i!==index);
   window.fsUpdate('students', studentId, {fixedSchedule: newSlots.length ? newSlots : null}).then(()=>{
-    adminData.recent.unshift(`Se quitó un horario fijo de ${s.name}.`);
+    adminData.recent.unshift(`Se quitó una clase agendada de ${s.name}.`);
     renderAdmin();
   }).catch(err=>alert('Error al guardar: '+err.message));
 }
@@ -2607,18 +2663,18 @@ function renderFixedScheduleList(){
   const el = document.getElementById('fixed-schedule-list');
   if(!el) return;
   const withSlots = adminData.students.filter(s=>fixedScheduleSlotsOf(s).length>0);
-  if(!withSlots.length){ el.innerHTML = '<p class="admin-mini">Todavía no asignaste ningún horario fijo.</p>'; return; }
+  if(!withSlots.length){ el.innerHTML = '<p class="admin-mini">Todavía no cargaste ninguna clase en la agenda.</p>'; return; }
+  const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
   el.innerHTML = withSlots.map(s=>{
-    const slots = fixedScheduleSlotsOf(s);
-    const sorted = slots.map((slot,i)=>({...slot, i})).sort((a,b)=>WEEKDAY_ORDER.indexOf(a.day)-WEEKDAY_ORDER.indexOf(b.day) || (a.time||'').localeCompare(b.time||''));
-    const rows = sorted.map(slot=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${escapeHtml(slot.day)}</strong><div class="admin-mini">${escapeHtml(slot.time)}</div></div><button type="button" class="admin-btn danger small" onclick="removeFixedScheduleEntry('${s.id}', ${slot.i})">✕</button></div>`).join('');
-    // Última clase dada (la que vos cargaste) y próxima clase prevista según la planilla.
+    const sorted = sortedScheduleEntries(s);
+    const rows = sorted.map(slot=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${fmt(slot.dateISO)}</strong><div class="admin-mini">${escapeHtml(slot.time)}</div></div><button type="button" class="admin-btn danger small" onclick="removeFixedScheduleEntry('${s.id}', ${slot.i})">✕</button></div>`).join('');
+    // Última clase dada (auto o cargada a mano) y próxima clase agendada pendiente.
     const given = givenClassesOf(s.id);
     const lastGiven = given[0];
-    const nextOne = studentUpcomingClasses(s, 8)[0];
+    const nextOne = studentUpcomingClasses(s)[0];
     const summary = `<div class="admin-mini" style="margin-top:6px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
-      <span>Última clase dada: ${lastGiven?`${new Date(lastGiven.completedDate+'T00:00:00').toLocaleDateString('es-AR')} ✅`:'Todavía no cargaste ninguna'}</span>
-      <span>Próxima clase prevista: ${nextOne?`${new Date(nextOne.dateISO+'T00:00:00').toLocaleDateString('es-AR')} · ${escapeHtml(nextOne.time)}`:'—'}</span>
+      <span>Última clase dada: ${lastGiven?`${fmt(lastGiven.completedDate)} ✅`:'Todavía no cargaste ninguna'}</span>
+      <span>Próxima clase agendada: ${nextOne?`${fmt(nextOne.dateISO)} · ${escapeHtml(nextOne.time)}`:'—'}</span>
       <button type="button" class="admin-btn small" onclick="openStudentProfileById('${s.id}')">Ver / cargar clases →</button>
     </div>`;
     return `<div style="margin-bottom:14px"><strong>${escapeHtml(s.name)}</strong>${summary}${rows}</div>`;
@@ -3032,22 +3088,15 @@ function renderStudentBooking(){
     el.innerHTML=`<div class="access-panel"><strong>Clases particulares</strong><div class="admin-mini" style="margin-top:8px">Esta función es exclusiva de los paquetes con mentoría / acompañamiento. Tu paquete actual (${escapeHtml(s.package)}) no la incluye. Consultá con C.A.E.R. si querés sumar mentoría a tu plan.</div></div>`;
     return;
   }
-  const slots = fixedScheduleSlotsOf(s);
-  if(!slots.length){
-    el.innerHTML=`<div class="access-panel"><strong>Tus horarios de clase</strong><div class="admin-mini" style="margin-top:8px">Todavía no tenés un horario fijo asignado. Consultá con C.A.E.R. para coordinar tu día y horario semanal de mentoría.</div></div>`;
-    return;
-  }
-  const sortedSlots = [...slots].sort((a,b)=>WEEKDAY_ORDER.indexOf(a.day)-WEEKDAY_ORDER.indexOf(b.day) || (a.time||'').localeCompare(b.time||''));
-  const rows = sortedSlots.map(slot=>`<div class="reserve-card" style="margin-top:8px"><div><strong>${escapeHtml(slot.day)}</strong><div class="admin-mini">${escapeHtml(slot.time)}</div></div><span class="admin-badge">Horario fijo</span></div>`).join('');
-  // "Clases que ya tuviste" viene de lo que tu profesor cargó como clase dada. "Tus próximas
-  // clases" es solo una previsión automática según tu horario fijo semanal.
+  // "Tus próximas clases" es lo que tu profesor agendó (fecha y hora concreta) y todavía no dio.
+  // "Clases que ya tuviste" viene de lo que tu profesor cargó como clase dada (a mano, o solo
+  // 1 hora después del horario agendado).
   const given = givenClassesOf(s.id).slice(0,5);
-  const future = studentUpcomingClasses(s, 8).slice(0,5);
+  const future = studentUpcomingClasses(s).slice(0,5);
   const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
   const pastRows = given.length ? given.map(b=>`<div class="reserve-card" style="margin-top:8px"><div><strong>${fmt(b.completedDate)}</strong></div><span class="admin-badge">✅ Dada</span></div>`).join('') : '<p class="admin-mini">Tu profesor todavía no cargó ninguna clase dada.</p>';
-  const futureRows = future.length ? future.map(o=>`<div class="reserve-card" style="margin-top:8px"><div><strong>${fmt(o.dateISO)}</strong><div class="admin-mini">${escapeHtml(o.time)}</div></div><span class="admin-badge">Prevista</span></div>`).join('') : '<p class="admin-mini">No hay próximas clases calculadas todavía.</p>';
-  el.innerHTML=`<div class="access-panel"><strong>Tus horarios de clase</strong><div class="admin-mini" style="margin-top:8px">Estos son los días y horarios que te asignó tu profesor:</div>${rows}<div class="admin-mini" style="margin-top:10px">Si necesitás cambiar algún día, consultá con C.A.E.R.</div></div>
-  <div class="access-panel" style="margin-top:16px"><strong>Tus próximas clases</strong>${futureRows}</div>
+  const futureRows = future.length ? future.map(o=>`<div class="reserve-card" style="margin-top:8px"><div><strong>${fmt(o.dateISO)}</strong><div class="admin-mini">${escapeHtml(o.time)}</div></div><span class="admin-badge">Agendada</span></div>`).join('') : '<p class="admin-mini">Todavía no tenés ninguna clase agendada. Consultá con C.A.E.R. para coordinar tu próxima clase.</p>';
+  el.innerHTML=`<div class="access-panel"><strong>Tus próximas clases</strong>${futureRows}</div>
   <div class="access-panel" style="margin-top:16px"><strong>Clases que ya tuviste</strong>${pastRows}</div>`;
 }
 function renderStudentDashboard(){renderStudentAccess();renderStudentBooking();renderStudentUpdates();renderStudentWellness()}
@@ -3828,7 +3877,7 @@ window.seedInitialData = async function(){
 };
 
 /* ---------- listeners en tiempo real de las colecciones compartidas ---------- */
-let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubCommitments=null, unsubSleepCheckins=null, unsubMonthlySummaries=null;
+let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubMaterials=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubCommitments=null, unsubSleepCheckins=null, unsubMonthlySummaries=null;
 
 function startCollectionListeners(){
   stopCollectionListeners();
@@ -3852,6 +3901,11 @@ function startCollectionListeners(){
   });
   unsubLessons = onSnapshot(collection(db,'lessons'), snap=>{
     window.adminData.lessons = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
+    if(typeof window.renderSubjectContent==='function') window.renderSubjectContent();
+  });
+  unsubMaterials = onSnapshot(collection(db,'materials'), snap=>{
+    window.adminData.materials = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
     if(typeof window.renderSubjectContent==='function') window.renderSubjectContent();
   });
@@ -3905,8 +3959,8 @@ function startCollectionListeners(){
   });
 }
 function stopCollectionListeners(){
-  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubCommitments,unsubSleepCheckins,unsubMonthlySummaries].forEach(u=>{ if(u) u(); });
-  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubCommitments=unsubSleepCheckins=unsubMonthlySummaries=null;
+  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubMaterials,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubCommitments,unsubSleepCheckins,unsubMonthlySummaries].forEach(u=>{ if(u) u(); });
+  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubMaterials=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubCommitments=unsubSleepCheckins=unsubMonthlySummaries=null;
 }
 function safeRenderAdmin(){ if(typeof window.renderAdmin==='function') window.renderAdmin(); }
 function safeAutoSyncGivenClasses(){ if(typeof window.autoSyncGivenClasses==='function') window.autoSyncGivenClasses(); }
