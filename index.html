@@ -804,11 +804,8 @@
           <label>Estado<select id="new-student-status"><option>Activo</option><option>Pendiente</option><option>Inactivo</option></select></label>
           <label style="flex-direction:row;align-items:center;gap:8px"><input id="new-student-exception" type="checkbox" style="width:auto"> Excepción: permitir varias clases en la misma semana</label>
           <label>Clases permitidas (excepción, dejar vacío = usar el paquete)<input id="new-student-exception-classes" type="number" min="0" placeholder="Ej: 5"></label>
-          <label style="flex-direction:row;align-items:center;gap:8px"><input id="new-student-fixed-enabled" type="checkbox" style="width:auto" onchange="toggleFixedScheduleFields()"> Horario fijo (el alumno no reserva, ve su planilla de horarios)</label>
-          <div id="new-student-fixed-wrap" class="full" style="display:none">
-            <div id="new-student-fixed-slots" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
-            <button type="button" class="admin-btn secondary small" onclick="addFixedScheduleSlotRow()">+ Agregar horario a la planilla</button>
-          </div>
+          <label style="flex-direction:row;align-items:center;gap:8px"><input id="new-student-fixed-enabled" type="checkbox" style="width:auto"> Horario fijo (el alumno no reserva, ve su planilla de horarios)</label>
+          <p class="admin-mini full" style="margin:-8px 0 4px">Los días y horarios se cargan en la pestaña <strong>Clases y reservas → Horarios fijos</strong>.</p>
           <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="student-submit-btn">Crear alumno</button><button class="admin-btn secondary" type="button" id="student-cancel-btn" style="display:none" onclick="cancelEditStudent()">Cancelar edición</button></div>
         </form>
       </div>
@@ -942,6 +939,17 @@
     </section>
 
     <section id="admin-classes" class="admin-view">
+      <div class="admin-card">
+        <h3>Horarios fijos</h3>
+        <p class="admin-mini" style="margin-top:-4px;margin-bottom:12px">Para alumnos con "Horario fijo" activado en su ficha: no reservan, ven directamente estos días y horarios. Recordá que suele ser ~1 horario por semana, es decir unas 4 clases al mes.</p>
+        <form class="admin-form" onsubmit="addFixedScheduleEntry(event)">
+          <label>Alumno<select id="fixed-schedule-student"></select></label>
+          <label>Día<select id="fixed-schedule-day"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select></label>
+          <label>Horario<input id="fixed-schedule-time" type="time" required></label>
+          <div class="full"><button class="admin-btn" type="submit">Agregar horario fijo</button></div>
+        </form>
+        <div id="fixed-schedule-list" style="margin-top:16px"></div>
+      </div>
       <div class="admin-card">
         <h3>Disponibilidad para clases particulares</h3>
         <form class="admin-form" onsubmit="addAvailability(event)">
@@ -2144,6 +2152,8 @@ function renderAdmin(){
   renderAdminUpdates();
   const pkgSelect=document.getElementById('new-student-package');if(pkgSelect)pkgSelect.innerHTML=adminData.packages.map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
   const avStudentSelect=document.getElementById('availability-student');if(avStudentSelect){const prev=avStudentSelect.value;avStudentSelect.innerHTML=adminData.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');if(prev)avStudentSelect.value=prev;}
+  populateFixedScheduleStudentSelect();
+  renderFixedScheduleList();
   const st=document.getElementById('students-table');
   if(st)st.innerHTML=adminData.students.map((s,i)=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s);const hasGoal=adminData.commitments.some(c=>c.studentId===s.id);const goalBtn=hasGoal?'':`<button class="admin-btn secondary small" onclick="inviteGoalSetup(${i})">${s.goalInviteSent?'🔁 Reenviar meta':'📨 Enviar meta'}</button>`;return `<tr><td><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${p?p.classes:0} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td>
     <div class="admin-actions">
@@ -2381,35 +2391,64 @@ function openProfileSubject(subjectId){
 }
 
 const WEEKDAY_ORDER = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-function toggleFixedScheduleFields(){
-  const on=document.getElementById('new-student-fixed-enabled').checked;
-  document.getElementById('new-student-fixed-wrap').style.display = on ? '' : 'none';
-  if(on && !document.getElementById('new-student-fixed-slots').children.length) addFixedScheduleSlotRow();
+// Cada horario fijo asignado es un {día, horario}. Se administran desde la pestaña
+// "Clases y reservas → Horarios fijos" (ver addFixedScheduleEntry/removeFixedScheduleEntry
+// más abajo), no desde el formulario de Alumnos.
+function fixedScheduleSlotsOf(s){
+  return Array.isArray(s?.fixedSchedule) ? s.fixedSchedule : (s?.fixedSchedule ? [s.fixedSchedule] : []);
 }
-// Cada fila de la planilla es un {día, horario}. El admin puede agregar tantas
-// como necesite (por ejemplo, lunes y miércoles a la misma hora, o distintos
-// horarios cada día), en vez de un único día/horario fijo para toda la semana.
-function addFixedScheduleSlotRow(day, time){
-  const wrap = document.getElementById('new-student-fixed-slots');
-  if(!wrap) return;
-  const row = document.createElement('div');
-  row.className = 'fixed-slot-row';
-  row.style.cssText = 'display:flex;gap:8px;align-items:center';
-  const dayOptions = WEEKDAY_ORDER.map(d=>`<option ${d===day?'selected':''}>${d}</option>`).join('');
-  row.innerHTML = `<select class="fixed-slot-day" style="flex:1">${dayOptions}</select><input class="fixed-slot-time" type="time" value="${time||''}" style="flex:1"><button type="button" class="admin-btn danger small" onclick="this.closest('.fixed-slot-row').remove()">✕</button>`;
-  wrap.appendChild(row);
+function populateFixedScheduleStudentSelect(){
+  const sel = document.getElementById('fixed-schedule-student');
+  if(!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = adminData.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}${s.fixedSchedule?' — Horario fijo activado':' — Horario fijo desactivado'}</option>`).join('');
+  if(prev && adminData.students.some(s=>s.id===prev)) sel.value = prev;
 }
-function readFixedScheduleSlots(){
-  return [...document.querySelectorAll('#new-student-fixed-slots .fixed-slot-row')].map(row=>({
-    day: row.querySelector('.fixed-slot-day').value,
-    time: row.querySelector('.fixed-slot-time').value
-  })).filter(slot=>slot.time); // descarta filas sin horario cargado
+function addFixedScheduleEntry(e){
+  e.preventDefault();
+  const studentId = document.getElementById('fixed-schedule-student').value;
+  const day = document.getElementById('fixed-schedule-day').value;
+  const time = document.getElementById('fixed-schedule-time').value;
+  const s = adminData.students.find(x=>x.id===studentId);
+  if(!s || !time){ alert('Elegí un alumno y un horario.'); return; }
+  if(!s.fixedSchedule){ if(!confirm(`${s.name} no tiene activado "Horario fijo" en su ficha. ¿Activarlo y agregar este horario?`)) return; }
+  const newSlots = [...fixedScheduleSlotsOf(s), {day, time}];
+  window.fsUpdate('students', studentId, {fixedSchedule:newSlots}).then(()=>{
+    adminData.recent.unshift(`Se agregó el horario fijo ${day} ${time} para ${s.name}.`);
+    document.getElementById('fixed-schedule-time').value='';
+    renderAdmin();
+  }).catch(err=>alert('Error al guardar: '+err.message));
+}
+function removeFixedScheduleEntry(studentId, index){
+  const s = adminData.students.find(x=>x.id===studentId);
+  if(!s) return;
+  const slots = fixedScheduleSlotsOf(s);
+  const newSlots = slots.filter((_,i)=>i!==index);
+  window.fsUpdate('students', studentId, {fixedSchedule: newSlots.length ? newSlots : null}).then(()=>{
+    adminData.recent.unshift(`Se quitó un horario fijo de ${s.name}.`);
+    renderAdmin();
+  }).catch(err=>alert('Error al guardar: '+err.message));
+}
+function renderFixedScheduleList(){
+  const el = document.getElementById('fixed-schedule-list');
+  if(!el) return;
+  const withSlots = adminData.students.filter(s=>fixedScheduleSlotsOf(s).length>0);
+  if(!withSlots.length){ el.innerHTML = '<p class="admin-mini">Todavía no asignaste ningún horario fijo.</p>'; return; }
+  el.innerHTML = withSlots.map(s=>{
+    const slots = fixedScheduleSlotsOf(s);
+    const sorted = slots.map((slot,i)=>({...slot, i})).sort((a,b)=>WEEKDAY_ORDER.indexOf(a.day)-WEEKDAY_ORDER.indexOf(b.day) || (a.time||'').localeCompare(b.time||''));
+    const rows = sorted.map(slot=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${escapeHtml(slot.day)}</strong><div class="admin-mini">${escapeHtml(slot.time)}</div></div><button type="button" class="admin-btn danger small" onclick="removeFixedScheduleEntry('${s.id}', ${slot.i})">✕</button></div>`).join('');
+    return `<div style="margin-bottom:14px"><strong>${escapeHtml(s.name)}</strong>${rows}</div>`;
+  }).join('');
 }
 function addStudent(e){e.preventDefault();const editingId=document.getElementById('editing-student-id').value;const pkg=document.getElementById('new-student-package').value;const name=document.getElementById('new-student-name').value.trim();const email=document.getElementById('new-student-email').value.trim();const status=document.getElementById('new-student-status').value;const bookingException=document.getElementById('new-student-exception').checked;const exClassesRaw=document.getElementById('new-student-exception-classes').value;const bookingExceptionClasses=exClassesRaw===''?null:Number(exClassesRaw);if(!name||!email){alert('Completá nombre y email.');return}
   const fixedEnabled=document.getElementById('new-student-fixed-enabled').checked;
-  const fixedSlots = fixedEnabled ? readFixedScheduleSlots() : [];
-  if(fixedEnabled && !fixedSlots.length){alert('Agregá al menos un horario a la planilla del alumno.');return}
-  const fixedSchedule = fixedEnabled ? fixedSlots : null;
+  // El checkbox solo prende/apaga el modo. Si lo apagás, se borra la planilla que tuviera.
+  // Si lo prendés, se conserva lo que ya tenía cargado (o queda vacío hasta que le
+  // agregues horarios desde Clases y reservas).
+  const existingStudent = editingId ? adminData.students.find(x=>x.id===editingId) : null;
+  const existingSlots = fixedScheduleSlotsOf(existingStudent);
+  const fixedSchedule = fixedEnabled ? existingSlots : null;
   if(editingId){
     window.fsUpdate('students',editingId,{name,email,package:pkg,status,bookingException,bookingExceptionClasses,fixedSchedule}).then(()=>{adminData.recent.unshift(`Se editó el alumno ${name}.`);cancelEditStudent();renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
     return;
@@ -2423,8 +2462,6 @@ function addStudent(e){e.preventDefault();const editingId=document.getElementByI
   }
   window.fsAdd('students',{name,email,package:pkg,status,startDate:todayISO(),classesUsed:0,bookingException,bookingExceptionClasses,fixedSchedule}).then(()=>{adminData.recent.unshift(`Se agregó el alumno ${name} con el paquete ${pkg}.`);renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
   e.target.reset();
-  document.getElementById('new-student-fixed-slots').innerHTML='';
-  document.getElementById('new-student-fixed-wrap').style.display='none';
 }
 function editStudent(i){
   const s=adminData.students[i];
@@ -2436,16 +2473,7 @@ function editStudent(i){
   document.getElementById('new-student-status').value=s.status;
   document.getElementById('new-student-exception').checked=!!s.bookingException;
   document.getElementById('new-student-exception-classes').value=(s.bookingExceptionClasses??'');
-  // Compatibilidad: si el alumno todavía tiene el formato viejo (un solo {day,time}
-  // en vez de una lista), lo convertimos a planilla de un renglón.
-  const slots = Array.isArray(s.fixedSchedule) ? s.fixedSchedule : (s.fixedSchedule ? [s.fixedSchedule] : []);
-  document.getElementById('new-student-fixed-enabled').checked = slots.length>0;
-  document.getElementById('new-student-fixed-wrap').style.display = slots.length>0 ? '' : 'none';
-  const slotsWrap = document.getElementById('new-student-fixed-slots');
-  slotsWrap.innerHTML='';
-  slots.forEach(slot=>addFixedScheduleSlotRow(slot.day, slot.time));
-  if(!slots.length) addFixedScheduleSlotRow();
-  toggleFixedScheduleFields();
+  document.getElementById('new-student-fixed-enabled').checked = fixedScheduleSlotsOf(s).length>0;
   document.getElementById('student-form-title').textContent='Editar alumno';
   document.getElementById('student-submit-btn').textContent='Guardar cambios';
   document.getElementById('student-cancel-btn').style.display='';
@@ -2457,8 +2485,6 @@ function cancelEditStudent(){
   document.getElementById('student-submit-btn').textContent='Crear alumno';
   document.getElementById('student-cancel-btn').style.display='none';
   document.getElementById('new-student-name').closest('form').reset();
-  document.getElementById('new-student-fixed-slots').innerHTML='';
-  toggleFixedScheduleFields();
 }
 async function removeStudent(i){
   const s = adminData.students[i];
