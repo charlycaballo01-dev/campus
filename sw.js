@@ -3,7 +3,11 @@
    No reemplaza a firebase-messaging-sw.js (ese sigue encargándose de las notificaciones push);
    los dos conviven sin problema. */
 
-const CACHE_NAME = 'mi-campus-virtual-v1';
+// IMPORTANTE: cambiá este número cada vez que subas una versión nueva del sitio (v2, v3, v4...).
+// Es lo que hace que el teléfono de cada alumno se olvide de la versión vieja que tenía guardada
+// y purgue esa caché en cuanto activa la nueva. Si dejás el mismo número, la caché vieja queda
+// pegada para siempre y algunos alumnos pueden seguir viendo contenido antiguo.
+const CACHE_NAME = 'mi-campus-virtual-v2';
 
 const PRECACHE_URLS = [
   './index.html',
@@ -31,12 +35,15 @@ self.addEventListener('activate', (event) => {
 });
 
 // Estrategia: red primero, si falla usa caché (así los alumnos siempre ven
-// la versión más nueva cuando hay internet, pero la app no se rompe sin señal)
+// la versión más nueva cuando hay internet, pero la app no se rompe sin señal).
+// "cache: no-store" hace que el pedido a la red ignore también la caché HTTP normal del
+// navegador (no solo la de este Service Worker), para que con internet SIEMPRE se traiga el
+// archivo más nuevo del servidor.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-store' })
       .then((response) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
