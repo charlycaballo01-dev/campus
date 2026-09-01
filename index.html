@@ -875,15 +875,15 @@
       <div class="admin-card" style="border:2px solid var(--gold)">
         <h3>📄 Materiales cargados</h3>
         <div id="materials-list"></div>
-      </div>
-      <div class="admin-card">
-        <h3>Materias y contenidos</h3>
-        <p class="admin-mini" style="margin-bottom:12px">Esta es la lista real, la misma que administrás en "Materias por unidad" arriba. Para cambiar un nombre, agregar o quitar una materia, hacelo ahí.</p>
-        <div style="overflow:auto">
-          <table class="admin-table">
-            <thead><tr><th>Materia</th><th>Unidad</th><th>Clases cargadas</th><th>Preguntas cargadas</th><th>Acceso por paquete</th></tr></thead>
-            <tbody id="subjects-table"></tbody>
-          </table>
+        <div style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px">
+          <h3>Materias y contenidos</h3>
+          <p class="admin-mini" style="margin-bottom:12px">Esta es la lista real, la misma que administrás en "Materias por unidad" arriba. Para cambiar un nombre, agregar o quitar una materia, hacelo ahí.</p>
+          <div style="overflow:auto">
+            <table class="admin-table">
+              <thead><tr><th>Materia</th><th>Unidad</th><th>Clases cargadas</th><th>Preguntas cargadas</th><th>Acceso por paquete</th></tr></thead>
+              <tbody id="subjects-table"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -2928,10 +2928,20 @@ function renderUnitSubjectsEditor(){
     return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--line)">
       <input type="text" value="${escapeHtml(s.name)}" id="unit-subj-name-${s.id}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-family:var(--font-body)">
       <button class="admin-btn small" type="button" onclick="renameUnitSubject('${unit.id}','${s.id}')">Guardar</button>
+      <button class="admin-btn secondary small" type="button" onclick="jumpToMaterialForm('${s.id}')">Editar</button>
       <button class="admin-btn danger small" type="button" onclick="removeUnitSubject('${unit.id}','${s.id}')">Eliminar</button>
       <span class="admin-mini">${lessonsCount} clases · ${quizCount} preguntas cargadas</span>
     </div>`;
   }).join('');
+}
+// Lleva directo al formulario de "Material de estudio" con esta materia ya elegida, para no
+// tener que buscarla de nuevo en el desplegable. Lo usa el botón "Editar" de cada materia.
+function jumpToMaterialForm(subjectId){
+  const sel = document.getElementById('new-material-subject');
+  if(sel && [...sel.options].some(o=>o.value===subjectId)) sel.value = subjectId;
+  cancelEditMaterial();
+  const card = document.getElementById('material-form-title');
+  if(card) card.scrollIntoView({behavior:'smooth', block:'center'});
 }
 function renameUnitSubject(unitId, subjectId){
   const input=document.getElementById(`unit-subj-name-${subjectId}`);
