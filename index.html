@@ -505,7 +505,7 @@
       <button class="tab-btn" data-tab="booking" id="nav-booking-btn" onclick="showTab('booking')">Reservas</button>
     </div>
     <button type="button" class="admin-btn secondary small" id="pomodoro-topbar-btn" onclick="togglePomodoroPanel()" title="Temporizador de estudio" style="display:flex;align-items:center;gap:6px;margin-right:8px">⏱ <span id="pomodoro-topbar-label">Tiempo</span></button>
-    <button type="button" class="admin-btn secondary small" id="wellness-topbar-btn" onclick="toggleWellnessPanel()" title="Mi ritmo de estudio" style="display:flex;align-items:center;gap:6px;margin-right:8px">🌱 <span id="wellness-topbar-label">Ritmo</span></button>
+    <button type="button" class="admin-btn secondary small" id="wellness-topbar-btn" onclick="toggleWellnessPanel()" title="Mi ritmo de estudio" style="display:none;align-items:center;gap:6px;margin-right:8px">🌱 <span id="wellness-topbar-label">Ritmo</span></button>
     <button type="button" class="admin-btn secondary small" id="sound-topbar-btn" onclick="toggleSoundPanel()" title="Sonido para estudiar" style="display:flex;align-items:center;gap:6px">🎧 <span id="sound-topbar-label">Sonido</span></button>
     <div class="user-chip" id="user-chip"><span class="avatar">--</span> Cargando…</div>
   </div>
@@ -1686,6 +1686,19 @@ function attendanceStats(studentId){
 function sleepCheckinFor(studentId, date){ return adminData.sleepCheckins.find(c=>c.studentId===studentId && c.date===date); }
 function sleepEmoji(quality){ return quality==='bien' ? '😊' : quality==='regular' ? '😐' : quality==='mal' ? '😔' : '—'; }
 function sleepLabel(quality){ return quality==='bien'?'Bien':quality==='regular'?'Regular':quality==='mal'?'Mal':'Sin registrar'; }
+// Para un día ya cerrado (no es hoy) sin registro de sueño, mostramos una carita
+// congelada: representa que ese día no hubo actividad de estudio. El día de hoy,
+// mientras todavía no respondió, se muestra neutro (el día no terminó todavía).
+function sleepEmojiForDay(studentId, date){
+  const c = sleepCheckinFor(studentId, date);
+  if(c) return sleepEmoji(c.quality);
+  return date < todayISO() ? '🥶' : '—';
+}
+function sleepLabelForDay(studentId, date){
+  const c = sleepCheckinFor(studentId, date);
+  if(c) return sleepLabel(c.quality);
+  return date < todayISO() ? 'No estudió' : 'Sin registrar';
+}
 // Mini gráfico de barras (sin librerías) para mostrar minutos estudiados por día.
 // `goalMin` (si existe) se usa como techo de referencia; si no, se usa el máximo del propio rango.
 function renderMinutesBarChart(dates, studentId, goalMin){
@@ -1731,12 +1744,12 @@ function maybeShowSleepCheckin(){
   const today=todayISO();
   if(sleepCheckinFor(DEMO_STUDENT_ID, today)){ overlay.classList.remove('active'); return; }
   const seenKey='sleepCheckinDismissed_'+DEMO_STUDENT_ID+'_'+today;
-  if(sessionStorage.getItem(seenKey)) return; // ya lo cerró esta sesión sin responder, no insistir
+  if(localStorage.getItem(seenKey)) return; // ya lo cerró hoy sin responder, no insistir hasta mañana
   overlay.classList.add('active');
 }
 function closeSleepCheckin(){
   document.getElementById('sleep-checkin-overlay')?.classList.remove('active');
-  if(DEMO_STUDENT_ID) sessionStorage.setItem('sleepCheckinDismissed_'+DEMO_STUDENT_ID+'_'+todayISO(), '1');
+  if(DEMO_STUDENT_ID) localStorage.setItem('sleepCheckinDismissed_'+DEMO_STUDENT_ID+'_'+todayISO(), '1');
 }
 function submitSleepCheckin(quality){
   if(!DEMO_STUDENT_ID) return;
@@ -1761,10 +1774,11 @@ function saveStudentCommitment(e){
     weeklyMinutes: Math.round(weeklyH*60),
     monthlyMinutes: Math.round(monthlyH*60),
     createdAt: new Date().toISOString(),
-    sentByAdmin: false
+    sentByAdmin: true
   }).then(()=>{
     studentGoalEditing = false;
-    alert('¡Guardamos tu meta! Avisale a tu profesor para que te la confirme.');
+    queuePush(DEMO_STUDENT_ID, 'Tu meta de estudio quedó activa 🎯', `Guardamos tu meta: ${fmtCredit(dailyH)}h por día, ${fmtCredit(weeklyH)}h por semana, ${fmtCredit(monthlyH)}h por mes. ¡Vamos con todo!`);
+    alert('¡Guardamos tu meta! Ya está activa.');
     renderStudentWellness();
   }).catch(warnSaveError);
 }
@@ -1775,11 +1789,12 @@ function renderStudentWellness(){
   const stats = attendanceStats(DEMO_STUDENT_ID);
   const commitment = latestCommitmentFor(DEMO_STUDENT_ID);
   const canSetGoal = !!(student?.goalInviteSent || commitment); // el admin habilita esto con "Enviar meta"
+  const topbarBtn = document.getElementById('wellness-topbar-btn');
+  if(topbarBtn) topbarBtn.style.display = canSetGoal ? 'flex' : 'none';
   const todayCheckin = sleepCheckinFor(DEMO_STUDENT_ID, todayISO());
   const last7 = lastNDatesISO(7).map(d=>{
-    const c = sleepCheckinFor(DEMO_STUDENT_ID, d);
     const dayLabel = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short'});
-    return `<div style="text-align:center;flex:1;min-width:0"><div style="font-size:1.2rem">${sleepEmoji(c?.quality)}</div><div class="admin-mini" style="text-transform:capitalize;font-size:.62rem">${dayLabel}</div></div>`;
+    return `<div style="text-align:center;flex:1;min-width:0"><div style="font-size:1.2rem">${sleepEmojiForDay(DEMO_STUDENT_ID, d)}</div><div class="admin-mini" style="text-transform:capitalize;font-size:.62rem">${dayLabel}</div></div>`;
   }).join('');
   const goalRow=(label, actualMin, goalMin)=>{
     if(!goalMin) return '';
@@ -1804,7 +1819,6 @@ function renderStudentWellness(){
   let goalSection;
   if(commitment){
     goalSection = `${goalRow('Meta diaria', stats.today, commitment.dailyMinutes)}${goalRow('Meta semanal', stats.week, commitment.weeklyMinutes)}${goalRow('Meta mensual', stats.month, commitment.monthlyMinutes)}
-      ${!commitment.sentByAdmin ? '<p class="admin-mini" style="margin-top:8px">⏳ Tu profesor todavía no confirmó esta meta.</p>' : '<p class="admin-mini" style="margin-top:8px">✅ Meta confirmada por tu profesor.</p>'}
       ${studentGoalEditing ? goalForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">Cambiar mi meta</button>`}`;
   }else if(canSetGoal){
     goalSection = `<p class="admin-mini" style="margin-top:12px">Tu profesor te invitó a elegir tu meta de estudio.</p>
@@ -1859,9 +1873,8 @@ function renderProfileAttendance(){
   const stats = attendanceStats(s.id);
   const commitment = latestCommitmentFor(s.id);
   const last7 = lastNDatesISO(7).map(d=>{
-    const c = sleepCheckinFor(s.id, d);
     const dayLabel = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short'});
-    return `<div style="text-align:center;flex:1;min-width:0"><div style="font-size:1.2rem">${sleepEmoji(c?.quality)}</div><div class="admin-mini" style="text-transform:capitalize;font-size:.62rem">${dayLabel}</div></div>`;
+    return `<div style="text-align:center;flex:1;min-width:0"><div style="font-size:1.2rem">${sleepEmojiForDay(s.id, d)}</div><div class="admin-mini" style="text-transform:capitalize;font-size:.62rem">${dayLabel}</div></div>`;
   }).join('');
   card.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px">
@@ -1871,9 +1884,7 @@ function renderProfileAttendance(){
     <div class="admin-actions" style="margin-bottom:14px">
       ${!commitment
         ? `<button type="button" class="admin-btn secondary small" onclick="inviteGoalSetup(${profileStudentIndex})">${s.goalInviteSent?'🔁 Reenviar meta':'📨 Enviar meta'}</button>`
-        : !commitment.sentByAdmin
-          ? `<button type="button" class="admin-btn small" onclick="confirmAndSendCommitment('${s.id}')">✅ Confirmar y enviar meta</button>`
-          : `<button type="button" class="admin-btn secondary small" onclick="sendCommitmentReminder('${s.id}')">🔔 Enviar recordatorio</button>`
+        : `<button type="button" class="admin-btn secondary small" onclick="sendCommitmentReminder('${s.id}')">🔔 Enviar recordatorio</button>`
       }
     </div>
     <div class="access-grid">
@@ -1883,9 +1894,7 @@ function renderProfileAttendance(){
     </div>
     ${!commitment
       ? `<p class="admin-mini" style="margin-top:12px">${s.goalInviteSent ? 'Ya lo invitaste a elegir su meta de estudio — todavía no la definió.' : 'Este alumno todavía no puede elegir su meta. Tocá "Enviar meta" para invitarlo.'}</p>`
-      : !commitment.sentByAdmin
-        ? `<div class="admin-mini" style="margin-top:12px;background:var(--rust-dim);color:var(--rust-text);padding:8px 10px;border-radius:var(--radius-md)">📩 El alumno propuso: <strong>${formatMinutes(commitment.dailyMinutes)}/día</strong> · <strong>${formatMinutes(commitment.weeklyMinutes)}/semana</strong> · <strong>${formatMinutes(commitment.monthlyMinutes)}/mes</strong> — todavía no se la confirmaste.</div>`
-        : `<div class="admin-mini" style="margin-top:12px">Meta confirmada: <strong>${formatMinutes(commitment.dailyMinutes)}/día</strong> · <strong>${formatMinutes(commitment.weeklyMinutes)}/semana</strong> · <strong>${formatMinutes(commitment.monthlyMinutes)}/mes</strong></div>`
+      : `<div class="admin-mini" style="margin-top:12px">Meta activa: <strong>${formatMinutes(commitment.dailyMinutes)}/día</strong> · <strong>${formatMinutes(commitment.weeklyMinutes)}/semana</strong> · <strong>${formatMinutes(commitment.monthlyMinutes)}/mes</strong></div>`
     }
     <div style="margin-top:16px">
       <div class="admin-mini" style="margin-bottom:6px">Tiempo de estudio · últimos 7 días</div>
@@ -1897,17 +1906,6 @@ function renderProfileAttendance(){
     </div>`;
 }
 
-function confirmAndSendCommitment(studentId){
-  const commitment = latestCommitmentFor(studentId);
-  const s = adminData.students.find(x=>x.id===studentId);
-  if(!commitment){ alert('El alumno todavía no eligió su meta de estudio.'); return; }
-  window.fsUpdate('commitments', commitment.id, { sentByAdmin:true, sentAt:new Date().toISOString() }).then(()=>{
-    queuePush(studentId, 'Tu profesor confirmó tu meta 🎯', `Confirmamos tu meta de estudio: ${formatMinutes(commitment.dailyMinutes)}/día · ${formatMinutes(commitment.weeklyMinutes)}/semana · ${formatMinutes(commitment.monthlyMinutes)}/mes. ¡Vamos con todo!`);
-    adminData.recent.unshift(`Se confirmó y envió la meta de estudio de ${s?s.name:'un alumno'}.`);
-    renderProfileAttendance();
-    renderAdmin();
-  }).catch(warnSaveError);
-}
 function sendCommitmentReminder(studentId){
   const commitment = latestCommitmentFor(studentId);
   const s = adminData.students.find(x=>x.id===studentId);
@@ -1949,9 +1947,8 @@ function renderWeeklyReportContent(){
   const commitment = latestCommitmentFor(s.id);
   const rows = dates.map(d=>{
     const mins = attendanceMinutesInRange(s.id, d, d);
-    const checkin = sleepCheckinFor(s.id, d);
     const label = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'long', day:'numeric', month:'short'});
-    return `<tr><td style="text-transform:capitalize;padding:6px 4px;border-bottom:1px solid var(--line)">${label}</td><td style="padding:6px 4px;border-bottom:1px solid var(--line)">${formatMinutes(mins)}</td><td style="padding:6px 4px;border-bottom:1px solid var(--line)">${sleepEmoji(checkin?.quality)} ${sleepLabel(checkin?.quality)}</td></tr>`;
+    return `<tr><td style="text-transform:capitalize;padding:6px 4px;border-bottom:1px solid var(--line)">${label}</td><td style="padding:6px 4px;border-bottom:1px solid var(--line)">${formatMinutes(mins)}</td><td style="padding:6px 4px;border-bottom:1px solid var(--line)">${sleepEmojiForDay(s.id, d)} ${sleepLabelForDay(s.id, d)}</td></tr>`;
   }).join('');
   const totalWeekMin = dates.reduce((sum,d)=>sum+attendanceMinutesInRange(s.id,d,d),0);
   const fromLabel = new Date(dates[0]+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'});
@@ -3706,7 +3703,7 @@ function startCollectionListeners(){
   });
   unsubSleepCheckins = onSnapshot(collection(db,'sleepCheckins'), snap=>{
     window.adminData.sleepCheckins = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance(); safeMaybeShowSleepCheckin();
+    safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance();
   });
   unsubMonthlySummaries = onSnapshot(collection(db,'monthlySummaries'), snap=>{
     window.adminData.monthlySummaries = snap.docs.map(d=>({id:d.id, ...d.data()}));
