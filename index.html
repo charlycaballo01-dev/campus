@@ -909,9 +909,10 @@
     <section id="admin-quizzes" class="admin-view">
       <div class="admin-card" id="quiz-import-card">
         <h3>Importar preguntas en tandas de 30</h3>
-        <p class="admin-mini" style="margin-bottom:12px">Pegá acá un array JSON de preguntas (mismo formato que usás siempre: subjectId, question, options, correctIndex, explainOk, explainBad, order). Cada vez que apretás el botón se publican las próximas 30 preguntas nuevas (no duplica las que ya estén cargadas), así podés ir soltándolas de a poco.</p>
+        <p class="admin-mini" style="margin-bottom:12px">Pegá acá un array JSON de preguntas (mismo formato que usás siempre: subjectId, question, options, correctIndex, explainOk, explainBad, order). Cada vez que apretás el botón se publican las próximas 30 preguntas nuevas (no duplica las que ya estén cargadas), así podés ir soltándolas de a poco. Si lo que pegás es para preguntas que <strong>ya existen</strong> y solo trae explainOk/explainBad, usá "Actualizar explicaciones" — busca la pregunta por materia + texto exacto y le agrega la explicación, sin tocar el resto.</p>
         <textarea id="bulk-quiz-json" rows="6" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:.8rem;padding:10px;border-radius:8px;border:1px solid var(--line)" placeholder='[{"subjectId":"s1-histologia","question":"...","options":["A","B","C","D"],"correctIndex":1,"explainOk":"","explainBad":"","order":1}, ...]'></textarea>
         <button class="admin-btn" style="margin-top:10px" onclick="window.publishNextQuizBatch()">Publicar siguiente tanda de 30 preguntas</button>
+        <button class="admin-btn secondary" style="margin-top:10px" onclick="window.publishNextExplainBatch()">Actualizar explicaciones (30)</button>
         <button class="admin-btn secondary" style="margin-top:10px" onclick="window.removeDuplicateQuizQuestions()">Eliminar preguntas duplicadas</button>
         <p class="admin-mini" id="bulk-quiz-status" style="margin-top:10px"></p>
       </div>
@@ -3524,6 +3525,39 @@ window.publishNextQuizBatch = async function(){
     if(statusEl) statusEl.textContent = `Listo, se publicaron ${batch.length} preguntas. Quedan ${remaining} por publicar en la próxima tanda.`;
   }catch(err){
     if(statusEl) statusEl.textContent = 'Error al importar: ' + err.message;
+  }
+};
+// Actualiza explainOk/explainBad de preguntas que YA EXISTEN (busca coincidencia exacta
+// por subjectId + texto de la pregunta). No crea preguntas nuevas ni toca options/correctIndex.
+window.publishNextExplainBatch = async function(){
+  const statusEl = document.getElementById('bulk-quiz-status');
+  const textarea = document.getElementById('bulk-quiz-json');
+  const raw = textarea ? textarea.value.trim() : '';
+  if(!raw){ if(statusEl) statusEl.textContent = 'Pegá primero el JSON con las explicaciones.'; return; }
+  let parsed;
+  try{
+    parsed = JSON.parse(raw);
+    if(!Array.isArray(parsed)) throw new Error('El JSON tiene que ser un array.');
+  }catch(err){
+    if(statusEl) statusEl.textContent = 'Error en el JSON: ' + err.message;
+    return;
+  }
+  const matches = [];
+  parsed.forEach(item=>{
+    const existingQ = window.adminData.quizQuestions.find(q=>q.subjectId===item.subjectId && q.question===item.question);
+    if(existingQ && (item.explainOk || item.explainBad)){
+      matches.push({id:existingQ.id, explainOk:item.explainOk||'', explainBad:item.explainBad||''});
+    }
+  });
+  if(!matches.length){ if(statusEl) statusEl.textContent = 'No encontré preguntas ya cargadas que coincidan (revisá que subjectId y el texto de la pregunta sean idénticos).'; return; }
+  const batch = matches.slice(0,30);
+  if(!confirm(`Se van a actualizar las explicaciones de ${batch.length} pregunta(s) ya cargada(s). ¿Continuar?`)) return;
+  try{
+    for(const m of batch){ await window.fsUpdate('quizQuestions', m.id, {explainOk:m.explainOk, explainBad:m.explainBad}); }
+    const remaining = matches.length - batch.length;
+    if(statusEl) statusEl.textContent = `Listo, se actualizaron ${batch.length} explicaciones. Quedan ${remaining} por actualizar en la próxima tanda.`;
+  }catch(err){
+    if(statusEl) statusEl.textContent = 'Error al actualizar: ' + err.message;
   }
 };
 
