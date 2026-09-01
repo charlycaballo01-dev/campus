@@ -1686,18 +1686,28 @@ function attendanceStats(studentId){
 function sleepCheckinFor(studentId, date){ return adminData.sleepCheckins.find(c=>c.studentId===studentId && c.date===date); }
 function sleepEmoji(quality){ return quality==='bien' ? '😊' : quality==='regular' ? '😐' : quality==='mal' ? '😔' : '—'; }
 function sleepLabel(quality){ return quality==='bien'?'Bien':quality==='regular'?'Regular':quality==='mal'?'Mal':'Sin registrar'; }
-// Para un día ya cerrado (no es hoy) sin registro de sueño, mostramos una carita
-// congelada: representa que ese día no hubo actividad de estudio. El día de hoy,
-// mientras todavía no respondió, se muestra neutro (el día no terminó todavía).
+// La carita congelada representa "ese día no estudió" (0 minutos de asistencia),
+// no la falta de respuesta a la pregunta de sueño. Solo aplica desde el día en
+// que el profesor le envió el botón de meta (antes de eso no cuenta), y solo
+// para días ya cerrados (no el de hoy, que todavía puede tener actividad).
+function countsFromInviteDate(studentId, date){
+  const student = adminData.students.find(x=>x.id===studentId);
+  const invitedDate = student?.goalInviteSentAt ? student.goalInviteSentAt.slice(0,10) : null;
+  return !!(invitedDate && date >= invitedDate);
+}
 function sleepEmojiForDay(studentId, date){
+  if(countsFromInviteDate(studentId, date) && date < todayISO()){
+    if(attendanceMinutesInRange(studentId, date, date) === 0) return '🥶';
+  }
   const c = sleepCheckinFor(studentId, date);
-  if(c) return sleepEmoji(c.quality);
-  return date < todayISO() ? '🥶' : '—';
+  return c ? sleepEmoji(c.quality) : '—';
 }
 function sleepLabelForDay(studentId, date){
+  if(countsFromInviteDate(studentId, date) && date < todayISO()){
+    if(attendanceMinutesInRange(studentId, date, date) === 0) return 'No estudió';
+  }
   const c = sleepCheckinFor(studentId, date);
-  if(c) return sleepLabel(c.quality);
-  return date < todayISO() ? 'No estudió' : 'Sin registrar';
+  return c ? sleepLabel(c.quality) : 'Sin registrar';
 }
 // Mini gráfico de barras (sin librerías) para mostrar minutos estudiados por día.
 // `goalMin` (si existe) se usa como techo de referencia; si no, se usa el máximo del propio rango.
