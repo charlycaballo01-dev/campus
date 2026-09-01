@@ -4091,3 +4091,63 @@ window.addEventListener('appinstalled', () => {
 </script>
 </body>
 </html>
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /students/{studentId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (request.auth.uid == studentId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    match /admins/{adminId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /itemViews/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (docId.matches(request.auth.uid + '_.*') || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    match /quizAttempts/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (docId.matches(request.auth.uid + '_.*') || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // --- Ritmo de estudio: asistencia, sueño y compromisos ---
+    match /attendance/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (docId.matches(request.auth.uid + '_.*') || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    match /sleepCheckins/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (docId.matches(request.auth.uid + '_.*') || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    match /commitments/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && (request.resource.data.studentId == request.auth.uid || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow update, delete: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    // monthlySummaries NO tiene regla propia a propósito: cae en la regla general
+    // de abajo (solo admin puede escribir), que es correcto porque solo el
+    // profesor envía resúmenes; el alumno únicamente los lee.
+
+    match /bookings/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.studentId == request.auth.uid;
+      allow update, delete: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    match /avisos/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    match /pushQueue/{docId} {
+      allow read: if false;
+      allow create: if request.auth != null && request.resource.data.studentId == request.auth.uid;
+      allow update, delete: if false;
+    }
+    match /{collection}/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+  }
+}
