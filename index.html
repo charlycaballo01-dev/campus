@@ -710,15 +710,11 @@
       </div>
 
       <div class="quiz-card" id="quiz-active-card">
-        <div class="back-link" onclick="backToQuizPicker()">← Elegir otra materia</div>
         <div class="quiz-q-count">Cargando…</div>
         <div class="quiz-question" id="quiz-question-text"></div>
         <div class="quiz-options" id="quiz-options"></div>
         <div class="feedback" id="quiz-feedback"></div>
-        <div style="display:flex;gap:10px;margin-top:20px">
-          <button class="quiz-next" id="quiz-back" style="margin-top:0">← Anterior</button>
-          <button class="quiz-next" id="quiz-next" style="margin-top:0">Siguiente pregunta →</button>
-        </div>
+        <button class="quiz-next" id="quiz-next">Siguiente pregunta →</button>
       </div>
     </div>
   </div>
@@ -776,7 +772,6 @@
       <div class="back-link" onclick="closeStudentProfile()">← Volver a alumnos</div>
       <div class="admin-card" id="profile-header-card"></div>
       <div class="admin-card" id="profile-attendance-card"></div>
-      <div class="admin-card" id="profile-classes-card"></div>
       <div id="profile-body"></div>
     </section>
 
@@ -810,7 +805,7 @@
           <label style="flex-direction:row;align-items:center;gap:8px"><input id="new-student-exception" type="checkbox" style="width:auto"> Excepción: permitir varias clases en la misma semana</label>
           <label>Clases permitidas (excepción, dejar vacío = usar el paquete)<input id="new-student-exception-classes" type="number" min="0" placeholder="Ej: 5"></label>
           <label style="flex-direction:row;align-items:center;gap:8px"><input id="new-student-fixed-enabled" type="checkbox" style="width:auto"> Horario fijo (el alumno no reserva, ve su planilla de horarios)</label>
-          <p class="admin-mini full" style="margin:-8px 0 4px">Las fechas y horarios de cada clase se cargan en la pestaña <strong>Clases y reservas</strong>.</p>
+          <p class="admin-mini full" style="margin:-8px 0 4px">Los días y horarios se cargan en la pestaña <strong>Clases y reservas → Horarios fijos</strong>.</p>
           <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="student-submit-btn">Crear alumno</button><button class="admin-btn secondary" type="button" id="student-cancel-btn" style="display:none" onclick="cancelEditStudent()">Cancelar edición</button></div>
         </form>
       </div>
@@ -859,32 +854,14 @@
           <div class="full"><button class="admin-btn" type="submit">Agregar materia a la unidad</button></div>
         </form>
       </div>
-      <div class="admin-card" style="border:2px solid var(--gold)">
-        <h3 id="material-form-title">📄 Material de estudio (PDF / PPT / links)</h3>
-        <p class="admin-mini" style="margin-bottom:12px">Cargá, editá o borrá el material de lectura de cada materia (apuntes, PDF, PowerPoint, o cualquier link) — incluido el que ya venía cargado de base.</p>
-        <form class="admin-form" onsubmit="addMaterial(event)">
-          <input type="hidden" id="editing-material-id" value="">
-          <input type="hidden" id="editing-material-basekey" value="">
-          <label class="full">Materia<select id="new-material-subject" required></select></label>
-          <label>Nombre del material<input id="new-material-name" placeholder="Ej.: Guía de Histología" required></label>
-          <label>Tipo<select id="new-material-type"><option value="pdf">PDF</option><option value="ppt">PPT</option></select></label>
-          <label class="full">Link (Google Drive, etc.)<input id="new-material-url" placeholder="https://drive.google.com/..." required></label>
-          <label>Orden<input id="new-material-order" type="number" min="1" value="1"></label>
-          <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="material-submit-btn">Agregar material</button><button class="admin-btn secondary" type="button" id="material-cancel-btn" style="display:none" onclick="cancelEditMaterial()">Cancelar edición</button></div>
-        </form>
-      </div>
-      <div class="admin-card" style="border:2px solid var(--gold)">
-        <h3>📄 Materiales cargados</h3>
-        <div id="materials-list"></div>
-        <div style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px">
-          <h3>Materias y contenidos</h3>
-          <p class="admin-mini" style="margin-bottom:12px">Esta es la lista real, la misma que administrás en "Materias por unidad" arriba. Para cambiar un nombre, agregar o quitar una materia, hacelo ahí.</p>
-          <div style="overflow:auto">
-            <table class="admin-table">
-              <thead><tr><th>Materia</th><th>Unidad</th><th>Clases cargadas</th><th>Preguntas cargadas</th><th>Acceso por paquete</th></tr></thead>
-              <tbody id="subjects-table"></tbody>
-            </table>
-          </div>
+      <div class="admin-card">
+        <h3>Materias y contenidos</h3>
+        <p class="admin-mini" style="margin-bottom:12px">Esta es la lista real, la misma que administrás en "Materias por unidad" arriba. Para cambiar un nombre, agregar o quitar una materia, hacelo ahí.</p>
+        <div style="overflow:auto">
+          <table class="admin-table">
+            <thead><tr><th>Materia</th><th>Unidad</th><th>Clases cargadas</th><th>Preguntas cargadas</th><th>Acceso por paquete</th></tr></thead>
+            <tbody id="subjects-table"></tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -964,13 +941,13 @@
 
     <section id="admin-classes" class="admin-view">
       <div class="admin-card">
-        <h3>Próxima clase (horario semanal)</h3>
-        <p class="admin-mini" style="margin-top:-4px;margin-bottom:12px">Para alumnos con "Horario fijo" activado en su ficha: acá cargás la fecha y hora exacta de su próxima clase, semana a semana. No se repite solo — si cambia el día de una semana a otra, simplemente cargás la fecha nueva. Recordá que el paquete de mentoría son ~4 clases al mes (una por semana).</p>
+        <h3>Horarios fijos</h3>
+        <p class="admin-mini" style="margin-top:-4px;margin-bottom:12px">Para alumnos con "Horario fijo" activado en su ficha: no reservan, ven directamente estos días y horarios. Recordá que suele ser ~1 horario por semana, es decir unas 4 clases al mes.</p>
         <form class="admin-form" onsubmit="addFixedScheduleEntry(event)">
           <label>Alumno<select id="fixed-schedule-student"></select></label>
-          <label>Fecha<input id="fixed-schedule-date" type="date" required></label>
+          <label>Día<select id="fixed-schedule-day"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select></label>
           <label>Horario<input id="fixed-schedule-time" type="time" required></label>
-          <div class="full"><button class="admin-btn" type="submit">Agregar clase a la agenda</button></div>
+          <div class="full"><button class="admin-btn" type="submit">Agregar horario fijo</button></div>
         </form>
         <div id="fixed-schedule-list" style="margin-top:16px"></div>
       </div>
@@ -1002,9 +979,9 @@
     <span class="eyebrow">Antes de arrancar</span>
     <h3 style="font-family:var(--font-display);font-weight:600;color:var(--forest);margin:8px 0 18px;font-size:1.4rem">¿Cómo dormiste esta noche?</h3>
     <div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px;flex-wrap:wrap">
-      <button type="button" class="admin-btn secondary sleep-choice-btn" onclick="submitSleepCheckin('bien')">😊<br>Bien</button>
-      <button type="button" class="admin-btn secondary sleep-choice-btn" onclick="submitSleepCheckin('regular')">😐<br>Regular</button>
-      <button type="button" class="admin-btn secondary sleep-choice-btn" onclick="submitSleepCheckin('mal')">😔<br>Mal</button>
+      <button type="button" class="admin-btn secondary sleep-choice-btn" onclick="submitSleepCheckin('bien')">😀<br>Bien</button>
+      <button type="button" class="admin-btn secondary sleep-choice-btn" onclick="submitSleepCheckin('regular')">😑<br>Regular</button>
+      <button type="button" class="admin-btn secondary sleep-choice-btn" onclick="submitSleepCheckin('mal')">🫩<br>Mal</button>
     </div>
     <button type="button" class="admin-btn secondary small" style="width:100%" onclick="closeSleepCheckin()">Ahora no</button>
   </div>
@@ -1127,30 +1104,6 @@ function findSubjectById(id){
   for(const u of currentModule.units){ const f = u.subjects.find(s=>s.id===id); if(f) return f; }
   return null;
 }
-// Combina el material "de base" (el que ya venía cargado en la materia, hardcodeado en
-// curriculumData) con los materiales que el profesor va agregando/editando/borrando desde el
-// panel de administrador (colección "materials" en Firestore). Cada material de base tiene una
-// baseKey estable (subjectId + índice). Si en Firestore existe un doc con esa baseKey, ese doc
-// "pisa" al material de base (edición) — y si tiene deleted:true, el material desaparece
-// (borrado). Los materiales sin baseKey son material nuevo agregado desde el panel.
-function materialsForSubject(subject){
-  if(!subject) return [];
-  const base = (subject.materials||[]).map((m,idx)=>({...m, baseKey:`${subject.id}-b${idx}`}));
-  const overridesByKey={};
-  const extra=[];
-  (adminData.materials||[]).forEach(m=>{
-    if(m.subjectId!==subject.id) return;
-    if(m.baseKey) overridesByKey[m.baseKey]=m; else extra.push(m);
-  });
-  const merged = base.map(b=>{
-    const ov=overridesByKey[b.baseKey];
-    if(ov) return ov.deleted ? null : ov;
-    return b;
-  }).filter(Boolean);
-  const extraVisible = extra.filter(m=>!m.deleted)
-    .sort((a,b)=>(a.order||0)-(b.order||0) || (a.name||'').localeCompare(b.name||''));
-  return [...merged, ...extraVisible];
-}
 function tierColorVar(t){ return t==='green' ? '--forest' : (t==='gold' ? '--gold' : '--rust'); }
 
 // El peso de "visto" ya no es todo o nada: cada clase/material/evaluación suma según cuántos puntitos
@@ -1174,7 +1127,7 @@ function realSubjectProgressFor(studentId, subject){
   const lessonsWatched = lessons.filter(l=>getViewCountFor(studentId, l.id)>=1).length; // para el cartel "X vistas"
   const lessonsCredit = lessons.reduce((sum,l)=>sum+creditForViews(getViewCountFor(studentId, l.id)), 0);
 
-  const materials = materialsForSubject(subject);
+  const materials = subject.materials || [];
   const materialsTotal = materials.length;
   const materialsViewed = materials.filter((m,idx)=>getViewCountFor(studentId, `${subject.id}-mat-${idx}`)>=1).length;
   const materialsCredit = materials.reduce((sum,m,idx)=>sum+creditForViews(getViewCountFor(studentId, `${subject.id}-mat-${idx}`)), 0);
@@ -1350,13 +1303,12 @@ function renderSubjectContent(){
 
   /* ---- materiales de lectura / powerpoint ---- */
   const matList = document.getElementById('subject-materials-list');
-  const materialsList = materialsForSubject(subject);
   if(!access){
     matList.innerHTML = '';
-  }else if(!materialsList.length){
+  }else if(!subject.materials.length){
     matList.innerHTML = '<p class="admin-mini">Tu profesor todavía no cargó material de lectura para esta materia.</p>';
   }else{
-    matList.innerHTML = materialsList.map((m,idx)=>{
+    matList.innerHTML = subject.materials.map((m,idx)=>{
       const matId = `${subject.id}-mat-${idx}`;
       const count = getViewCount(matId);
       return `<div class="video-item"><div class="vi-thumb">${m.type==='pdf'?'PDF':'PPT'}</div><div class="vi-info"><div class="vi-title">${escapeHtml(m.name)}</div><div class="vi-sub">Material descargable</div></div>${renderDots(count)}<span class="vi-status pending" style="cursor:pointer" onclick="event.stopPropagation();openMaterial('${matId}','${escapeHtml(m.name)}','${m.url||''}')">${m.url?'Ver':'Descargar'}</span></div>`;
@@ -1442,9 +1394,7 @@ function startSubjectQuiz(){
     return;
   }
   const questions = adminData.quizQuestions.filter(q=>q.subjectId===currentSubjectId).sort((a,b)=>(a.order||0)-(b.order||0));
-  // answers[i] guarda {selectedIndex, correct} de cada pregunta ya respondida, para poder
-  // volver atrás con el botón "Anterior" sin perder lo que ya contestó ni duplicar el puntaje.
-  quizSession = {subjectId: currentSubjectId, questions, index: 0, answers: []};
+  quizSession = {subjectId: currentSubjectId, questions, index: 0, correct: 0};
   showTab('quiz');
   const picker = document.getElementById('quiz-subject-picker');
   const active = document.getElementById('quiz-active-card');
@@ -1480,25 +1430,10 @@ function renderQuizSubjectPicker(){
 }
 
 function selectQuizSubject(subjectId){
-  // Si ya había una sesión empezada para esta misma materia, la retoma tal cual estaba
-  // (no pierde las respuestas ya dadas). Si es una materia distinta, arranca una nueva.
-  if(quizSession && quizSession.subjectId === subjectId){
-    currentSubjectId = subjectId;
-    document.getElementById('quiz-subject-picker').style.display='none';
-    document.getElementById('quiz-active-card').style.display='';
-    renderQuizQuestion();
-    return;
-  }
   currentSubjectId = subjectId;
   document.getElementById('quiz-subject-picker').style.display='none';
   document.getElementById('quiz-active-card').style.display='';
   startSubjectQuiz();
-}
-
-// Deja la sesión actual guardada en memoria (con lo que ya respondió) y vuelve al listado
-// de materias, para poder practicar otra sin perder el avance de la que estaba haciendo.
-function backToQuizPicker(){
-  renderQuizSubjectPicker();
 }
 
 function renderQuizQuestion(){
@@ -1508,7 +1443,6 @@ function renderQuizQuestion(){
   const optsEl = document.getElementById('quiz-options');
   const fb = document.getElementById('quiz-feedback');
   const nextBtn = document.getElementById('quiz-next');
-  const backBtn = document.getElementById('quiz-back');
   fb.className = 'feedback'; fb.innerHTML = '';
   nextBtn.classList.remove('show');
   if(!quizSession.questions.length){
@@ -1516,62 +1450,20 @@ function renderQuizQuestion(){
     if(qTextEl) qTextEl.textContent = '';
     optsEl.innerHTML = '<p class="admin-mini">Tu profesor todavía no cargó preguntas para esta materia. En cuanto las suba, las vas a ver acá.</p>';
     nextBtn.style.display = 'none';
-    if(backBtn) backBtn.style.display = 'none';
     return;
   }
   nextBtn.style.display = '';
   const q = quizSession.questions[quizSession.index];
   if(countEl) countEl.textContent = `Pregunta ${quizSession.index+1} de ${quizSession.questions.length} · ${subject?.name||''}`;
   if(qTextEl) qTextEl.textContent = q.question;
-  // Si ya había una respuesta guardada para esta pregunta (volvió con "Anterior"), el orden de las
-  // opciones se mantiene fijo por pregunta para no confundir al alumno al volver a verla.
-  const prevAnswer = quizSession.answers[quizSession.index];
-  let shuffledOrder = quizSession.optionOrders && quizSession.optionOrders[quizSession.index];
-  if(!shuffledOrder){
-    shuffledOrder = q.options.map((_,i)=>i);
-    for(let i=shuffledOrder.length-1;i>0;i--){
-      const j=Math.floor(Math.random()*(i+1));
-      [shuffledOrder[i],shuffledOrder[j]]=[shuffledOrder[j],shuffledOrder[i]];
-    }
-    if(!quizSession.optionOrders) quizSession.optionOrders = [];
-    quizSession.optionOrders[quizSession.index] = shuffledOrder;
+  const shuffledOrder = q.options.map((_,i)=>i);
+  for(let i=shuffledOrder.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [shuffledOrder[i],shuffledOrder[j]]=[shuffledOrder[j],shuffledOrder[i]];
   }
   optsEl.innerHTML = shuffledOrder.map(i=>`<button class="quiz-opt" data-idx="${i}" onclick="answerQuiz(this,${i})">${escapeHtml(q.options[i])}</button>`).join('');
-
-  if(backBtn){
-    backBtn.style.display = '';
-    backBtn.disabled = quizSession.index === 0;
-    backBtn.style.opacity = quizSession.index === 0 ? '0.4' : '1';
-    backBtn.style.cursor = quizSession.index === 0 ? 'default' : 'pointer';
-    backBtn.onclick = goBackQuiz;
-  }
-
-  if(prevAnswer){
-    // Ya la había respondido: mostramos el resultado guardado en vez de dejarla en blanco.
-    document.querySelectorAll('.quiz-opt').forEach(b=>{
-      b.disabled = true;
-      const idx = Number(b.dataset.idx);
-      if(idx === q.correctIndex) b.classList.add('correct');
-      if(idx === prevAnswer.selectedIndex && !prevAnswer.correct) b.classList.add('incorrect');
-    });
-    if(prevAnswer.correct){
-      fb.className = 'feedback show ok';
-      fb.innerHTML = `<strong>Correcto</strong>${escapeHtml(q.explainOk||'')}`;
-    }else{
-      fb.className = 'feedback show';
-      fb.innerHTML = `<strong>Por qué está mal</strong>${escapeHtml(q.explainBad||'')}`;
-    }
-    nextBtn.classList.add('show');
-  }
-
   nextBtn.textContent = (quizSession.index < quizSession.questions.length-1) ? 'Siguiente pregunta →' : 'Ver resultado →';
   nextBtn.onclick = advanceQuiz;
-}
-
-function goBackQuiz(){
-  if(quizSession.index === 0) return;
-  quizSession.index--;
-  renderQuizQuestion();
 }
 
 function answerQuiz(btn, selectedIndex){
@@ -1579,10 +1471,8 @@ function answerQuiz(btn, selectedIndex){
   const q = quizSession.questions[quizSession.index];
   const fb = document.getElementById('quiz-feedback');
   const isCorrect = selectedIndex === q.correctIndex;
-  // Se guarda por índice de pregunta (no se acumula en un contador suelto) para que ir para
-  // atrás y volver a responder no duplique ni pierda el puntaje real.
-  quizSession.answers[quizSession.index] = {selectedIndex, correct: isCorrect};
   if(isCorrect){
+    quizSession.correct++;
     btn.classList.add('correct');
     fb.className = 'feedback show ok';
     fb.innerHTML = `<strong>Correcto</strong>${escapeHtml(q.explainOk||'')}`;
@@ -1607,10 +1497,7 @@ function advanceQuiz(){
 
 function finishQuiz(){
   const total = quizSession.questions.length;
-  // El progreso (porcentaje) solo se guarda acá, cuando ya respondió las 30 preguntas de la
-  // materia (todas tienen answers[i] cargado). Si le faltara alguna, no se llega a este punto
-  // porque "Ver resultado" solo aparece después de responder la última pregunta.
-  const score = quizSession.answers.filter(a=>a && a.correct).length;
+  const score = quizSession.correct;
   const subjectId = quizSession.subjectId;
   if(DEMO_STUDENT_ID && total>0){
     // El contador de "rendición completa" se guarda independiente del puntaje, para que si el guardado
@@ -1675,7 +1562,6 @@ const adminData = {
   subjects: [],
   bookings: [],
   lessons: [],
-  materials: [],
   itemViews: [],
   updates: [],
   quizQuestions: [],
@@ -1762,7 +1648,7 @@ function attendanceStats(studentId){
   };
 }
 function sleepCheckinFor(studentId, date){ return adminData.sleepCheckins.find(c=>c.studentId===studentId && c.date===date); }
-function sleepEmoji(quality){ return quality==='bien' ? '😊' : quality==='regular' ? '😐' : quality==='mal' ? '😔' : '—'; }
+function sleepEmoji(quality){ return quality==='bien' ? '😀' : quality==='regular' ? '😑' : quality==='mal' ? '🫩' : '—'; }
 function sleepLabel(quality){ return quality==='bien'?'Bien':quality==='regular'?'Regular':quality==='mal'?'Mal':'Sin registrar'; }
 // La carita congelada representa "ese día no estudió" (0 minutos de asistencia),
 // no la falta de respuesta a la pregunta de sueño. Solo aplica desde el día en
@@ -1880,10 +1766,29 @@ function renderStudentWellness(){
   const topbarBtn = document.getElementById('wellness-topbar-btn');
   if(topbarBtn) topbarBtn.style.display = canSetGoal ? 'flex' : 'none';
   const todayCheckin = sleepCheckinFor(DEMO_STUDENT_ID, todayISO());
-  const last7 = lastNDatesISO(7).map(d=>{
+  const dates7 = lastNDatesISO(7);
+  const last7 = dates7.map(d=>{
     const dayLabel = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short'});
     return `<div style="text-align:center;flex:1;min-width:0"><div style="font-size:1.2rem">${sleepEmojiForDay(DEMO_STUDENT_ID, d)}</div><div class="admin-mini" style="text-transform:capitalize;font-size:.62rem">${dayLabel}</div></div>`;
   }).join('');
+  const sleepCounts = sleepSummaryForRange(DEMO_STUDENT_ID, dates7);
+  const attendanceRow = dates7.map(d=>{
+    const letter = WEEKDAY_LETTER[new Date(d+'T00:00:00').getDay()];
+    return `<div style="text-align:center;flex:1;min-width:0"><div>${attendanceBadge(attendanceStatusForDay(DEMO_STUDENT_ID, d))}</div><div class="admin-mini" style="font-size:.62rem;margin-top:4px">${letter}</div></div>`;
+  }).join('');
+  const dailyGoalBar = commitment?.dailyMinutes ? `<div style="margin-top:12px">
+    <div class="admin-mini" style="font-weight:600;margin-bottom:6px">Meta diaria</div>
+    <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">
+      <span>Progreso de hoy</span><span>${stats.today} / ${commitment.dailyMinutes} min</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:1.1rem">🚩</span>
+      <div style="flex:1;background:var(--line);border-radius:8px;height:10px;overflow:hidden">
+        <div style="background:linear-gradient(90deg,var(--gold),var(--forest));height:100%;width:${Math.max(0,Math.min(100,Math.round(stats.today/commitment.dailyMinutes*100)))}%"></div>
+      </div>
+      <span style="font-size:1.1rem">🏛️</span>
+    </div>
+  </div>` : '';
   const goalRow=(label, actualMin, goalMin)=>{
     if(!goalMin) return '';
     const pct=Math.max(0, Math.min(100, Math.round(actualMin/goalMin*100)));
@@ -1906,7 +1811,7 @@ function renderStudentWellness(){
   </form>`;
   let goalSection;
   if(commitment){
-    goalSection = `${goalRow('Meta diaria', stats.today, commitment.dailyMinutes)}${goalRow('Meta semanal', stats.week, commitment.weeklyMinutes)}${goalRow('Meta mensual', stats.month, commitment.monthlyMinutes)}
+    goalSection = `${dailyGoalBar}${studentGoalEditing ? '' : goalRow('Meta semanal', stats.week, commitment.weeklyMinutes)}${studentGoalEditing ? '' : goalRow('Meta mensual', stats.month, commitment.monthlyMinutes)}
       ${studentGoalEditing ? goalForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">Cambiar mi meta</button>`}`;
   }else if(canSetGoal){
     goalSection = `<p class="admin-mini" style="margin-top:12px">Tu profesor te invitó a elegir tu meta de estudio.</p>
@@ -1914,22 +1819,45 @@ function renderStudentWellness(){
   }else{
     goalSection = `<p class="admin-mini" style="margin-top:12px">Todavía no podés elegir tu meta de estudio. Tu profesor te va a habilitar esta opción.</p>`;
   }
+  const fullProgressSection = wellnessFullProgressOpen ? `<div style="margin-top:16px">
+      <div class="admin-mini" style="margin-bottom:6px">Tiempo de estudio · últimos 7 días</div>
+      ${renderMinutesBarChart(dates7, DEMO_STUDENT_ID, commitment?.dailyMinutes)}
+    </div>` : '';
   el.innerHTML = `<div class="admin-card" style="margin-bottom:18px">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div><span class="eyebrow">Mi ritmo de estudio</span><h3 style="margin:5px 0">Hoy estudiaste ${formatMinutes(stats.today)}</h3></div>
-      <div style="text-align:right">
-        <div class="admin-mini">Sueño de hoy</div>
-        <div style="font-size:1.5rem">${todayCheckin?sleepEmoji(todayCheckin.quality):'—'}</div>
-      </div>
     </div>
     ${goalSection}
     <div style="margin-top:16px">
+      <div class="admin-mini" style="margin-bottom:6px">Asistencia · últimos 7 días</div>
+      <div style="display:flex;gap:4px">${attendanceRow}</div>
+    </div>
+    <div style="margin-top:16px">
       <div class="admin-mini" style="margin-bottom:6px">Sueño · últimos 7 días</div>
       <div style="display:flex;gap:4px">${last7}</div>
+      <div class="admin-mini" style="margin-top:8px;display:flex;gap:14px">
+        <span>😀${sleepCounts.bien}</span><span>😑${sleepCounts.regular}</span><span>🫩${sleepCounts.mal}</span>
+      </div>
     </div>
     ${!todayCheckin ? `<button type="button" class="admin-btn secondary small" style="margin-top:14px" onclick="document.getElementById('sleep-checkin-overlay').classList.add('active')">Registrar cómo dormí hoy</button>` : ''}
+    ${fullProgressSection}
+    <button type="button" class="admin-btn" style="margin-top:16px;width:100%" onclick="toggleFullProgress()">${wellnessFullProgressOpen?'Ocultar mi progreso completo':'Ver mi progreso completo'}</button>
     ${renderStudentMonthlySummaries()}
   </div>`;
+}
+let wellnessFullProgressOpen = false;
+function toggleFullProgress(){ wellnessFullProgressOpen = !wellnessFullProgressOpen; renderStudentWellness(); }
+// Ícono de asistencia del día: ✓ verde si estudió, ✕ rojo si el día ya cerró y no
+// estudió, "!" naranja si es hoy y todavía puede estudiar (día en curso).
+function attendanceStatusForDay(studentId, date){
+  const mins = attendanceMinutesInRange(studentId, date, date);
+  if(mins>0) return 'yes';
+  return date===todayISO() ? 'pending' : 'no';
+}
+function attendanceBadge(status){
+  const map = { yes:{bg:'#2f8f5b', icon:'✓'}, no:{bg:'#d9534f', icon:'✕'}, pending:{bg:'#e8a33d', icon:'!'} };
+  const s = map[status];
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:${s.bg};color:#fff;font-size:.75rem;font-weight:700">${s.icon}</span>`;
 }
 // Lista de resúmenes mensuales que el profesor le fue enviando (quedan guardados acá,
 // no solo como notificación pasajera).
@@ -1945,7 +1873,7 @@ function renderStudentMonthlySummaries(){
         <strong style="text-transform:capitalize;font-size:.86rem">${escapeHtml(m.monthLabel||m.monthKey)}</strong>
         <span class="admin-mini">${formatMinutes(m.totalMinutes)} · ${m.daysWithActivity}/${m.totalDays} días</span>
       </div>
-      <div class="admin-mini" style="margin-top:4px">😊${m.sleepBien||0} · 😐${m.sleepRegular||0} · 😔${m.sleepMal||0}${m.monthlyGoalMinutes?` · Meta: ${formatMinutes(m.monthlyGoalMinutes)} ${m.goalMet?'✅':''}`:''}</div>
+      <div class="admin-mini" style="margin-top:4px">😀${m.sleepBien||0} · 😑${m.sleepRegular||0} · 🫩${m.sleepMal||0}${m.monthlyGoalMinutes?` · Meta: ${formatMinutes(m.monthlyGoalMinutes)} ${m.goalMet?'✅':''}`:''}</div>
     </div>`).join('');
   return `<div style="margin-top:18px">
     <div class="admin-mini" style="margin-bottom:6px">📊 Resúmenes mensuales de tu profesor</div>
@@ -2121,9 +2049,9 @@ function renderMonthlyReportContent(){
     <div style="margin-top:16px">
       <div class="admin-mini" style="margin-bottom:6px">Sueño del mes</div>
       <div style="display:flex;gap:16px;font-size:.86rem">
-        <span>😊 Bien: <strong>${sleep.bien}</strong></span>
-        <span>😐 Regular: <strong>${sleep.regular}</strong></span>
-        <span>😔 Mal: <strong>${sleep.mal}</strong></span>
+        <span>😀 Bien: <strong>${sleep.bien}</strong></span>
+        <span>😑 Regular: <strong>${sleep.regular}</strong></span>
+        <span>🫩 Mal: <strong>${sleep.mal}</strong></span>
       </div>
     </div>
     ${commitment?.monthlyMinutes?`<div class="admin-mini" style="margin-top:14px"><strong>Meta mensual:</strong> ${formatMinutes(commitment.monthlyMinutes)} — ${totalMonthMin>=commitment.monthlyMinutes?'✅ cumplida':'todavía en camino'}</div>`:''}`;
@@ -2142,7 +2070,7 @@ function sendMonthlySummary(studentId){
   const goalMet = !!(commitment?.monthlyMinutes && totalMonthMin>=commitment.monthlyMinutes);
   let body = `Estudiaste ${formatMinutes(totalMonthMin)} en ${daysWithActivity} de ${dates.length} días de ${monthLabel}.`;
   if(commitment?.monthlyMinutes) body += ` Meta mensual: ${formatMinutes(commitment.monthlyMinutes)} (${goalMet?'¡cumplida! 🎉':'todavía en camino'}).`;
-  body += ` Sueño del mes: 😊${sleep.bien} · 😐${sleep.regular} · 😔${sleep.mal}.`;
+  body += ` Sueño del mes: 😀${sleep.bien} · 😑${sleep.regular} · 🫩${sleep.mal}.`;
   // Guardamos el resumen en Firestore para que quede disponible en el panel del alumno
   // (el push es solo el aviso; esto es lo que le permite volver a verlo después).
   window.fsSet('monthlySummaries', `${studentId}_${monthKey}`, {
@@ -2222,13 +2150,7 @@ function renderAdmin(){
   populateFixedScheduleStudentSelect();
   renderFixedScheduleList();
   const st=document.getElementById('students-table');
-  // Se ordena de mayor a menor % de avance para la tabla, pero conservando el índice original
-  // "i" de adminData.students (no el de la lista ordenada) para que Ver perfil/Editar/Renovar/
-  // Eliminar/Enviar meta sigan apuntando al alumno correcto.
-  const studentsSortedByPct = adminData.students
-    .map((s,i)=>({s,i}))
-    .sort((a,b)=>(typeof b.s.overallPct==='number'?b.s.overallPct:0)-(typeof a.s.overallPct==='number'?a.s.overallPct:0));
-  if(st)st.innerHTML=studentsSortedByPct.map(({s,i})=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s);const hasGoal=adminData.commitments.some(c=>c.studentId===s.id);const goalBtn=hasGoal?'':`<button class="admin-btn secondary small" onclick="inviteGoalSetup(${i})">${s.goalInviteSent?'🔁 Reenviar meta':'📨 Enviar meta'}</button>`;return `<tr><td><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${p?p.classes:0} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td>
+  if(st)st.innerHTML=adminData.students.map((s,i)=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s);const hasGoal=adminData.commitments.some(c=>c.studentId===s.id);const goalBtn=hasGoal?'':`<button class="admin-btn secondary small" onclick="inviteGoalSetup(${i})">${s.goalInviteSent?'🔁 Reenviar meta':'📨 Enviar meta'}</button>`;return `<tr><td><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${p?p.classes:0} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td>
     <div class="admin-actions">
       <button class="admin-btn small" onclick="openStudentProfile(${i})">Ver perfil</button>
       <button class="admin-btn small" onclick="editStudent(${i})">Editar</button>
@@ -2269,12 +2191,6 @@ function renderAdmin(){
     quizSubjectSelect.innerHTML=flatSubjects.map(s=>`<option value="${s.id}">${escapeHtml(s.unitName)} · ${escapeHtml(s.name)}</option>`).join('');
     if(prevQuizSubj && flatSubjects.some(s=>s.id===prevQuizSubj)) quizSubjectSelect.value=prevQuizSubj;
   }
-  const materialSubjectSelect=document.getElementById('new-material-subject');
-  if(materialSubjectSelect){
-    const prevMaterialSubj=materialSubjectSelect.value;
-    materialSubjectSelect.innerHTML=flatSubjects.map(s=>`<option value="${s.id}">${escapeHtml(s.unitName)} · ${escapeHtml(s.name)}</option>`).join('');
-    if(prevMaterialSubj && flatSubjects.some(s=>s.id===prevMaterialSubj)) materialSubjectSelect.value=prevMaterialSubj;
-  }
   renderAdminQuizzes();
   const ll=document.getElementById('lessons-list');
   if(ll){
@@ -2291,123 +2207,6 @@ function renderAdmin(){
     }
   }
   const fixedCount=document.getElementById('stat-fixed-schedules');if(fixedCount)fixedCount.textContent=adminData.students.filter(s=>fixedScheduleSlotsOf(s).length>0).length;
-  renderMaterialsList();
-}
-// Muestra TODOS los materiales de estudio de cada materia — tanto el material de base (el que ya
-// venía cargado) como el agregado desde el panel — y permite editar/borrar cualquiera de los dos.
-// Los de base se identifican por su "baseKey"; editarlos o borrarlos crea/actualiza un doc en
-// Firestore que los pisa (edición) u oculta (borrado), sin tocar el resto.
-function renderMaterialsList(){
-  const ml = document.getElementById('materials-list');
-  if(!ml) return;
-  const bySubject={};
-  flatSubjects.forEach(s=>{
-    const subjObj=findSubjectById(s.id);
-    const items=materialsForSubject(subjObj);
-    if(items.length) bySubject[s.id]=items;
-  });
-  const entries=Object.entries(bySubject);
-  if(!entries.length){
-    ml.innerHTML = '<p class="admin-mini">Todavía no hay material cargado.</p>';
-    return;
-  }
-  ml.innerHTML = entries.map(([subjectId,arr])=>{
-    const sub=flatSubjects.find(s=>s.id===subjectId);
-    const rows=arr.slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(m=>{
-      const key=m.id||m.baseKey;
-      return `<div class="reserve-card"><div><strong>${escapeHtml(m.name)}</strong><div class="admin-mini">${m.type==='pdf'?'PDF':'PPT'} · Orden ${m.order||1}${m.baseKey&&!m.id?' · base':''}</div></div><div><button class="admin-btn small" onclick="editMaterial('${key}')">Editar</button> <button class="admin-btn danger small" onclick="removeMaterial('${key}')">Eliminar</button></div></div>`;
-    }).join('');
-    return `<div class="package-card"><strong>${escapeHtml(sub?sub.unitName+' · '+sub.name:'Materia eliminada')}</strong><div style="margin-top:8px">${rows}</div></div>`;
-  }).join('');
-}
-function addMaterial(e){
-  e.preventDefault();
-  const editingId=document.getElementById('editing-material-id').value;
-  const editingBaseKey=document.getElementById('editing-material-basekey').value;
-  const subjectId=document.getElementById('new-material-subject').value;
-  const name=document.getElementById('new-material-name').value.trim();
-  const type=document.getElementById('new-material-type').value;
-  const url=document.getElementById('new-material-url').value.trim();
-  const order=Number(document.getElementById('new-material-order').value)||1;
-  if(!name||!url){ alert('Completá el nombre y el link del material.'); return; }
-  const sub=flatSubjects.find(s=>s.id===subjectId);
-  const data={subjectId, unitId:sub?.unitId||'', name, type, url, order};
-  if(editingBaseKey) data.baseKey=editingBaseKey;
-  if(editingId){
-    window.fsUpdate('materials',editingId,data).then(()=>{cancelEditMaterial(); renderAdmin();}).catch(err=>alert('Error al guardar: '+err.message));
-  }else if(editingBaseKey){
-    // Material de base editado por primera vez: crea el doc override en Firestore.
-    window.fsAdd('materials',data).then(()=>{cancelEditMaterial(); renderAdmin();}).catch(err=>alert('Error al guardar: '+err.message));
-  }else{
-    window.fsAdd('materials',data).then(()=>{ e.target.reset(); document.getElementById('new-material-order').value=1; }).catch(err=>alert('Error al guardar: '+err.message));
-  }
-}
-function editMaterial(key){
-  const m=adminData.materials.find(x=>x.id===key);
-  if(m){
-    document.getElementById('editing-material-id').value=m.id;
-    document.getElementById('editing-material-basekey').value='';
-    fillMaterialForm(m);
-    return;
-  }
-  // No hay doc en Firestore todavía: es un material de base puro, buscarlo por su baseKey.
-  for(const s of flatSubjects){
-    const subjObj=findSubjectById(s.id);
-    const items=materialsForSubject(subjObj);
-    const base=items.find(x=>x.baseKey===key && !x.id);
-    if(base){
-      document.getElementById('editing-material-id').value='';
-      document.getElementById('editing-material-basekey').value=key;
-      fillMaterialForm(base);
-      return;
-    }
-  }
-}
-function fillMaterialForm(m){
-  document.getElementById('new-material-subject').value=m.subjectId;
-  document.getElementById('new-material-name').value=m.name;
-  document.getElementById('new-material-type').value=m.type||'pdf';
-  document.getElementById('new-material-url').value=m.url||'';
-  document.getElementById('new-material-order').value=m.order||1;
-  document.getElementById('material-form-title').textContent='Editar material';
-  document.getElementById('material-submit-btn').textContent='Guardar cambios';
-  document.getElementById('material-cancel-btn').style.display='';
-  document.querySelector('#material-form-title').scrollIntoView({behavior:'smooth', block:'center'});
-}
-function cancelEditMaterial(){
-  document.getElementById('editing-material-id').value='';
-  document.getElementById('editing-material-basekey').value='';
-  document.getElementById('new-material-name').value='';
-  document.getElementById('new-material-url').value='';
-  document.getElementById('new-material-order').value=1;
-  document.getElementById('material-form-title').textContent='Material de estudio (PDF / PPT / links)';
-  document.getElementById('material-submit-btn').textContent='Agregar material';
-  document.getElementById('material-cancel-btn').style.display='none';
-}
-function removeMaterial(key){
-  if(!confirm('¿Eliminar este material? Los alumnos van a dejar de verlo.')) return;
-  const m=adminData.materials.find(x=>x.id===key);
-  if(m){
-    // Doc real en Firestore: si es un override de un material base, lo marcamos deleted en vez
-    // de borrarlo (tombstone), así no reaparece. Si es material nuevo (sin baseKey), se borra.
-    if(m.baseKey){
-      window.fsUpdate('materials', key, {deleted:true}).then(()=>renderAdmin()).catch(err=>alert('Error: '+err.message));
-    }else{
-      window.fsDelete('materials', key).then(()=>renderAdmin()).catch(err=>alert('Error: '+err.message));
-    }
-    return;
-  }
-  // Material de base puro (todavía sin doc en Firestore): crear un tombstone.
-  for(const s of flatSubjects){
-    const subjObj=findSubjectById(s.id);
-    const items=materialsForSubject(subjObj);
-    const base=items.find(x=>x.baseKey===key && !x.id);
-    if(base){
-      window.fsAdd('materials',{subjectId:s.id, unitId:s.unitId||'', baseKey:key, deleted:true})
-        .then(()=>renderAdmin()).catch(err=>alert('Error: '+err.message));
-      return;
-    }
-  }
 }
 /* ================= PERFIL DE ALUMNO (progreso + exámenes) ================= */
 let profileStudentIndex = null;
@@ -2435,10 +2234,6 @@ function studentUnitStats(studentId, unit){
   return totalL ? Math.round(totalW/totalL*100) : 0;
 }
 
-function openStudentProfileById(studentId){
-  const i = adminData.students.findIndex(x=>x.id===studentId);
-  if(i>-1) openStudentProfile(i);
-}
 function openStudentProfile(i){
   profileStudentIndex = i;
   profileUnitId = null;
@@ -2447,40 +2242,7 @@ function openStudentProfile(i){
   document.querySelectorAll('.admin-nav button').forEach(b=>b.classList.remove('active'));
   renderProfileHeader();
   renderProfileAttendance();
-  renderProfileClasses();
   renderProfileUnits();
-}
-// Historial de clases particulares del alumno: las "dadas" están guardadas en bookings (auto o
-// cargadas a mano); las "agendadas" son fecha+hora concretas que cargó el profesor y todavía no
-// pasaron a estar dadas. Acá también se pueden agregar clases dadas que falten en el historial.
-function renderProfileClasses(){
-  const s = adminData.students[profileStudentIndex];
-  const card = document.getElementById('profile-classes-card');
-  if(!s || !card) return;
-  if(!hasMentoria(s)){
-    card.innerHTML = `<h3>Clases particulares</h3><p class="admin-mini">Este alumno no tiene mentoría en su paquete.</p>`;
-    return;
-  }
-  const given = givenClassesOf(s.id);
-  const upcoming = studentUpcomingClasses(s).slice(0,8);
-  const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
-  const givenRows = given.length ? given.slice(0,10).map(b=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${fmt(b.completedDate)}</strong></div><div style="display:flex;gap:6px;align-items:center"><span class="admin-badge">✅ ${b.auto?'Dada (auto, 1h después)':'Dada'}</span><button type="button" class="admin-btn danger small" onclick="removeGivenClass('${b.id}','${s.id}')">✕</button></div></div>`).join('') : '<p class="admin-mini">Todavía no hay clases dadas cargadas.</p>';
-  const upcomingRows = upcoming.length ? upcoming.map(o=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${fmt(o.dateISO)}</strong><div class="admin-mini">${escapeHtml(o.time)}</div></div><span class="admin-badge">Agendada</span></div>`).join('') : '<p class="admin-mini">No hay ninguna clase agendada todavía. Cargala desde "Clases y reservas".</p>';
-  // Recordatorio del cupo del paquete: 4 clases mensuales (~1 por semana). Es solo informativo,
-  // no bloquea la carga por si algún mes tiene una clase de más o de menos.
-  const now = new Date();
-  const monthPrefix = now.toISOString().slice(0,7);
-  const givenThisMonth = given.filter(b=>(b.completedDate||'').startsWith(monthPrefix)).length;
-  card.innerHTML = `<h3>Clases particulares</h3>
-    <div class="admin-mini" style="margin-bottom:10px">Una clase queda como "dada" de dos formas: la cargás vos acá abajo, o se guarda sola cuando ya pasó 1 hora desde su horario agendado. El paquete de mentoría son 4 clases mensuales (1 por semana) — este mes lleva <strong>${givenThisMonth}/4</strong>.</div>
-    <form class="admin-form" onsubmit="event.preventDefault();addGivenClass('${s.id}', document.getElementById('given-class-date-${s.id}').value)">
-      <label>Fecha de la clase dada<input type="date" id="given-class-date-${s.id}" value="${todayISO()}" required></label>
-      <div class="full"><button class="admin-btn" type="submit">+ Cargar clase dada</button></div>
-    </form>
-    <div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:14px">
-      <div style="flex:1;min-width:240px"><span class="section-label">Clases ya dadas</span>${givenRows}</div>
-      <div style="flex:1;min-width:240px"><span class="section-label">Clases agendadas</span>${upcomingRows}</div>
-    </div>`;
 }
 function closeStudentProfile(){
   profileStudentIndex = null;
@@ -2606,94 +2368,20 @@ function openProfileSubject(subjectId){
     </div>
     <span class="section-label">Material de estudio</span>
     <div class="video-list">
-      ${materialsForSubject(subject).map(m=>`<div class="video-item"><div class="vi-thumb">${m.type==='pdf'?'PDF':'PPT'}</div><div class="vi-info"><div class="vi-title">${escapeHtml(m.name)}</div><div class="vi-sub">Material descargable</div></div><span class="vi-status pending">Disponible</span></div>`).join('')}
+      ${subject.materials.map(m=>`<div class="video-item"><div class="vi-thumb">${m.type==='pdf'?'PDF':'PPT'}</div><div class="vi-info"><div class="vi-title">${escapeHtml(m.name)}</div><div class="vi-sub">Material descargable</div></div><span class="vi-status pending">Disponible</span></div>`).join('')}
     </div>
     ${examResultHtml}
   `;
 }
 
-// Cada clase agendada es una fecha y horario CONCRETOS que carga el profesor a mano, semana a
-// semana (no se repite sola ni se proyecta a futuro). Se administran desde la pestaña
-// "Clases y reservas" (ver addFixedScheduleEntry/removeFixedScheduleEntry más abajo).
+const WEEKDAY_ORDER = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+// Letra corta por día, indexada por Date.getDay() (0=Domingo … 6=Sábado).
+const WEEKDAY_LETTER = ['D','L','M','M','J','V','S'];
+// Cada horario fijo asignado es un {día, horario}. Se administran desde la pestaña
+// "Clases y reservas → Horarios fijos" (ver addFixedScheduleEntry/removeFixedScheduleEntry
+// más abajo), no desde el formulario de Alumnos.
 function fixedScheduleSlotsOf(s){
   return Array.isArray(s?.fixedSchedule) ? s.fixedSchedule : (s?.fixedSchedule ? [s.fixedSchedule] : []);
-}
-// Devuelve las clases agendadas de un alumno ordenadas por fecha+hora, con su índice original
-// (para poder borrarlas por índice con removeFixedScheduleEntry).
-function sortedScheduleEntries(s){
-  return fixedScheduleSlotsOf(s)
-    .map((slot,i)=>({...slot, i}))
-    .filter(slot=>slot.dateISO && slot.time)
-    .sort((a,b)=>(a.dateISO+'T'+a.time).localeCompare(b.dateISO+'T'+b.time));
-}
-// Clases YA DADAS: quedan guardadas en la colección "bookings" con status 'Completada'. Solo
-// pueden llegar acá de dos formas: el profesor las carga a mano, o ya pasó 1 hora desde su
-// horario agendado y se guardan solas (ver autoSyncGivenClasses). Es el historial real que ve
-// el alumno.
-function givenClassesOf(studentId){
-  return adminData.bookings
-    .filter(b=>b.studentId===studentId && b.status==='Completada')
-    .sort((a,b)=>(b.completedDate||'').localeCompare(a.completedDate||''));
-}
-// "Próximas clases" = lo que el profesor agendó y todavía NO tiene un registro de clase dada
-// para esa fecha. En cuanto queda dada (a mano, o sola después de 1 hora), desaparece sola de
-// acá — no hace falta borrarla de la agenda a mano (aunque se puede, con el botón ✕).
-function studentUpcomingClasses(s){
-  const givenDates = new Set(givenClassesOf(s.id).map(b=>b.completedDate));
-  return sortedScheduleEntries(s).filter(slot=>!givenDates.has(slot.dateISO));
-}
-// Agrega una clase ya dada para un alumno (la carga el profesor). Usa como ID studentId+fecha
-// para que cargar la misma fecha dos veces no duplique el registro, solo lo actualice.
-function addGivenClass(studentId, dateISO){
-  const s = adminData.students.find(x=>x.id===studentId);
-  if(!s || !dateISO){ alert('Elegí una fecha.'); return; }
-  const docId = `${studentId}_${dateISO}`;
-  const alreadyExists = adminData.bookings.some(b=>b.id===docId);
-  window.fsSet('bookings', docId, {studentId, status:'Completada', completedDate:dateISO})
-    .then(()=>{
-      if(!alreadyExists) return window.fsIncrementField('students', studentId, 'classesUsed', 1);
-    })
-    .then(()=>{
-      adminData.recent.unshift(`Se cargó una clase dada (${dateISO}) para ${s.name}.`);
-      renderProfileHeader(); renderProfileClasses(); renderFixedScheduleList();
-    })
-    .catch(err=>alert('Error al guardar: '+err.message));
-}
-// Saca del historial una clase que se cargó por error.
-function removeGivenClass(bookingId, studentId){
-  if(!confirm('¿Eliminar esta clase del historial?')) return;
-  const s = adminData.students.find(x=>x.id===studentId);
-  window.fsDelete('bookings', bookingId).then(()=>{
-    if(s) return window.fsIncrementField('students', studentId, 'classesUsed', -1);
-  }).then(()=>{
-    renderProfileHeader(); renderProfileClasses(); renderFixedScheduleList();
-  }).catch(err=>alert('Error: '+err.message));
-}
-const autoGivenClassInFlight = new Set();
-// Una clase agendada (fecha+hora concreta que cargó el profesor) solo puede quedar como "dada"
-// de DOS formas: (1) el profesor la carga a mano, o (2) ya pasó 1 hora desde su horario y se
-// guarda sola. Nunca antes de eso, y nunca por ninguna otra vía. No inventa fechas nuevas: solo
-// mira lo que ya está cargado en la agenda de cada alumno. Solo corre en la sesión del profesor
-// (admin), que es quien tiene permiso para crear clases dadas de cualquier alumno.
-function autoSyncGivenClasses(){
-  if(!window.__isAdmin) return;
-  const cutoff = Date.now() - 60*60*1000; // 1 hora después del horario agendado
-  adminData.students.forEach(s=>{
-    if(!hasMentoria(s)) return;
-    fixedScheduleSlotsOf(s).forEach(slot=>{
-      if(!slot.dateISO || !slot.time) return;
-      const dt = new Date(slot.dateISO+'T'+slot.time).getTime();
-      if(Number.isNaN(dt) || dt > cutoff) return; // todavía no pasó la 1 hora de margen
-      const docId = `${s.id}_${slot.dateISO}`;
-      if(adminData.bookings.some(b=>b.id===docId)) return; // ya está cargada (a mano o antes)
-      if(autoGivenClassInFlight.has(docId)) return;
-      autoGivenClassInFlight.add(docId);
-      window.fsSet('bookings', docId, {studentId:s.id, status:'Completada', completedDate:slot.dateISO, auto:true})
-        .then(()=>window.fsIncrementField('students', s.id, 'classesUsed', 1))
-        .catch(err=>console.error('No se pudo auto-guardar la clase dada:', err))
-        .finally(()=>{ autoGivenClassInFlight.delete(docId); });
-    });
-  });
 }
 function populateFixedScheduleStudentSelect(){
   const sel = document.getElementById('fixed-schedule-student');
@@ -2705,15 +2393,14 @@ function populateFixedScheduleStudentSelect(){
 function addFixedScheduleEntry(e){
   e.preventDefault();
   const studentId = document.getElementById('fixed-schedule-student').value;
-  const dateISO = document.getElementById('fixed-schedule-date').value;
+  const day = document.getElementById('fixed-schedule-day').value;
   const time = document.getElementById('fixed-schedule-time').value;
   const s = adminData.students.find(x=>x.id===studentId);
-  if(!s || !dateISO || !time){ alert('Elegí un alumno, una fecha y un horario.'); return; }
-  if(!s.fixedSchedule){ if(!confirm(`${s.name} no tiene activado "Horario fijo" en su ficha. ¿Activarlo y agregar esta clase?`)) return; }
-  const newSlots = [...fixedScheduleSlotsOf(s), {dateISO, time}];
+  if(!s || !time){ alert('Elegí un alumno y un horario.'); return; }
+  if(!s.fixedSchedule){ if(!confirm(`${s.name} no tiene activado "Horario fijo" en su ficha. ¿Activarlo y agregar este horario?`)) return; }
+  const newSlots = [...fixedScheduleSlotsOf(s), {day, time}];
   window.fsUpdate('students', studentId, {fixedSchedule:newSlots}).then(()=>{
-    adminData.recent.unshift(`Se agendó la clase del ${dateISO} ${time} para ${s.name}.`);
-    document.getElementById('fixed-schedule-date').value='';
+    adminData.recent.unshift(`Se agregó el horario fijo ${day} ${time} para ${s.name}.`);
     document.getElementById('fixed-schedule-time').value='';
     renderAdmin();
   }).catch(err=>alert('Error al guardar: '+err.message));
@@ -2724,7 +2411,7 @@ function removeFixedScheduleEntry(studentId, index){
   const slots = fixedScheduleSlotsOf(s);
   const newSlots = slots.filter((_,i)=>i!==index);
   window.fsUpdate('students', studentId, {fixedSchedule: newSlots.length ? newSlots : null}).then(()=>{
-    adminData.recent.unshift(`Se quitó una clase agendada de ${s.name}.`);
+    adminData.recent.unshift(`Se quitó un horario fijo de ${s.name}.`);
     renderAdmin();
   }).catch(err=>alert('Error al guardar: '+err.message));
 }
@@ -2732,21 +2419,12 @@ function renderFixedScheduleList(){
   const el = document.getElementById('fixed-schedule-list');
   if(!el) return;
   const withSlots = adminData.students.filter(s=>fixedScheduleSlotsOf(s).length>0);
-  if(!withSlots.length){ el.innerHTML = '<p class="admin-mini">Todavía no cargaste ninguna clase en la agenda.</p>'; return; }
-  const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
+  if(!withSlots.length){ el.innerHTML = '<p class="admin-mini">Todavía no asignaste ningún horario fijo.</p>'; return; }
   el.innerHTML = withSlots.map(s=>{
-    const sorted = sortedScheduleEntries(s);
-    const rows = sorted.map(slot=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${fmt(slot.dateISO)}</strong><div class="admin-mini">${escapeHtml(slot.time)}</div></div><button type="button" class="admin-btn danger small" onclick="removeFixedScheduleEntry('${s.id}', ${slot.i})">✕</button></div>`).join('');
-    // Última clase dada (auto o cargada a mano) y próxima clase agendada pendiente.
-    const given = givenClassesOf(s.id);
-    const lastGiven = given[0];
-    const nextOne = studentUpcomingClasses(s)[0];
-    const summary = `<div class="admin-mini" style="margin-top:6px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
-      <span>Última clase dada: ${lastGiven?`${fmt(lastGiven.completedDate)} ✅`:'Todavía no cargaste ninguna'}</span>
-      <span>Próxima clase agendada: ${nextOne?`${fmt(nextOne.dateISO)} · ${escapeHtml(nextOne.time)}`:'—'}</span>
-      <button type="button" class="admin-btn small" onclick="openStudentProfileById('${s.id}')">Ver / cargar clases →</button>
-    </div>`;
-    return `<div style="margin-bottom:14px"><strong>${escapeHtml(s.name)}</strong>${summary}${rows}</div>`;
+    const slots = fixedScheduleSlotsOf(s);
+    const sorted = slots.map((slot,i)=>({...slot, i})).sort((a,b)=>WEEKDAY_ORDER.indexOf(a.day)-WEEKDAY_ORDER.indexOf(b.day) || (a.time||'').localeCompare(b.time||''));
+    const rows = sorted.map(slot=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${escapeHtml(slot.day)}</strong><div class="admin-mini">${escapeHtml(slot.time)}</div></div><button type="button" class="admin-btn danger small" onclick="removeFixedScheduleEntry('${s.id}', ${slot.i})">✕</button></div>`).join('');
+    return `<div style="margin-bottom:14px"><strong>${escapeHtml(s.name)}</strong>${rows}</div>`;
   }).join('');
 }
 function addStudent(e){e.preventDefault();const editingId=document.getElementById('editing-student-id').value;const pkg=document.getElementById('new-student-package').value;const name=document.getElementById('new-student-name').value.trim();const email=document.getElementById('new-student-email').value.trim();const status=document.getElementById('new-student-status').value;const bookingException=document.getElementById('new-student-exception').checked;const exClassesRaw=document.getElementById('new-student-exception-classes').value;const bookingExceptionClasses=exClassesRaw===''?null:Number(exClassesRaw);if(!name||!email){alert('Completá nombre y email.');return}
@@ -2996,20 +2674,10 @@ function renderUnitSubjectsEditor(){
     return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--line)">
       <input type="text" value="${escapeHtml(s.name)}" id="unit-subj-name-${s.id}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-family:var(--font-body)">
       <button class="admin-btn small" type="button" onclick="renameUnitSubject('${unit.id}','${s.id}')">Guardar</button>
-      <button class="admin-btn secondary small" type="button" onclick="jumpToMaterialForm('${s.id}')">Editar</button>
       <button class="admin-btn danger small" type="button" onclick="removeUnitSubject('${unit.id}','${s.id}')">Eliminar</button>
       <span class="admin-mini">${lessonsCount} clases · ${quizCount} preguntas cargadas</span>
     </div>`;
   }).join('');
-}
-// Lleva directo al formulario de "Material de estudio" con esta materia ya elegida, para no
-// tener que buscarla de nuevo en el desplegable. Lo usa el botón "Editar" de cada materia.
-function jumpToMaterialForm(subjectId){
-  const sel = document.getElementById('new-material-subject');
-  if(sel && [...sel.options].some(o=>o.value===subjectId)) sel.value = subjectId;
-  cancelEditMaterial();
-  const card = document.getElementById('material-form-title');
-  if(card) card.scrollIntoView({behavior:'smooth', block:'center'});
 }
 function renameUnitSubject(unitId, subjectId){
   const input=document.getElementById(`unit-subj-name-${subjectId}`);
@@ -3167,15 +2835,14 @@ function renderStudentBooking(){
     el.innerHTML=`<div class="access-panel"><strong>Clases particulares</strong><div class="admin-mini" style="margin-top:8px">Esta función es exclusiva de los paquetes con mentoría / acompañamiento. Tu paquete actual (${escapeHtml(s.package)}) no la incluye. Consultá con C.A.E.R. si querés sumar mentoría a tu plan.</div></div>`;
     return;
   }
-  // "Tus próximas clases" es lo que tu profesor agendó (fecha y hora concreta) y todavía no dio.
-  // "Clases que ya tuviste" es lo que tu profesor cargó a mano como clase dada.
-  const given = givenClassesOf(s.id).slice(0,5);
-  const future = studentUpcomingClasses(s).slice(0,5);
-  const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
-  const pastRows = given.length ? given.map(b=>`<div class="reserve-card" style="margin-top:8px"><div><strong>${fmt(b.completedDate)}</strong></div><span class="admin-badge">✅ Dada</span></div>`).join('') : '<p class="admin-mini">Tu profesor todavía no cargó ninguna clase dada.</p>';
-  const futureRows = future.length ? future.map(o=>`<div class="reserve-card" style="margin-top:8px"><div><strong>${fmt(o.dateISO)}</strong><div class="admin-mini">${escapeHtml(o.time)}</div></div><span class="admin-badge">Agendada</span></div>`).join('') : '<p class="admin-mini">Todavía no tenés ninguna clase agendada. Consultá con C.A.E.R. para coordinar tu próxima clase.</p>';
-  el.innerHTML=`<div class="access-panel"><strong>Tus próximas clases</strong>${futureRows}</div>
-  <div class="access-panel" style="margin-top:16px"><strong>Clases que ya tuviste</strong>${pastRows}</div>`;
+  const slots = fixedScheduleSlotsOf(s);
+  if(!slots.length){
+    el.innerHTML=`<div class="access-panel"><strong>Tus horarios de clase</strong><div class="admin-mini" style="margin-top:8px">Todavía no tenés un horario fijo asignado. Consultá con C.A.E.R. para coordinar tu día y horario semanal de mentoría.</div></div>`;
+    return;
+  }
+  const sortedSlots = [...slots].sort((a,b)=>WEEKDAY_ORDER.indexOf(a.day)-WEEKDAY_ORDER.indexOf(b.day) || (a.time||'').localeCompare(b.time||''));
+  const rows = sortedSlots.map(slot=>`<div class="reserve-card" style="margin-top:8px"><div><strong>${escapeHtml(slot.day)}</strong><div class="admin-mini">${escapeHtml(slot.time)}</div></div><span class="admin-badge">Horario fijo</span></div>`).join('');
+  el.innerHTML=`<div class="access-panel"><strong>Tus horarios de clase</strong><div class="admin-mini" style="margin-top:8px">Estos son los días y horarios que te asignó tu profesor:</div>${rows}<div class="admin-mini" style="margin-top:10px">Si necesitás cambiar algún día, consultá con C.A.E.R.</div></div>`;
 }
 function renderStudentDashboard(){renderStudentAccess();renderStudentBooking();renderStudentUpdates();renderStudentWellness()}
 renderAdmin();
@@ -3713,10 +3380,6 @@ window.fsDelete = (col, id) => deleteDoc(doc(db, col, id));
 window.fsIncrementAttendance = (studentId, date) => setDoc(doc(db,'attendance', studentId+'_'+date), { studentId, date, minutes: increment(1) }, { merge:true }).catch(()=>{});
 window.fsSet = (col, id, data) => setDoc(doc(db, col, id), data, { merge: true });
 window.fsIncrement = (col, id, baseData) => setDoc(doc(db, col, id), {...baseData, count: increment(1)}, { merge: true });
-// Suma (o resta, con delta negativo) atómicamente un campo numérico de un documento existente.
-// Se usa para "classesUsed" de los alumnos, para que sumar/restar clases dadas nunca pise otra
-// escritura que haya pasado casi al mismo tiempo (por ejemplo, dos clases vencidas juntas).
-window.fsIncrementField = (col, id, field, delta) => setDoc(doc(db, col, id), {[field]: increment(delta===undefined?1:delta)}, { merge:true });
 
 /* ---------- notificaciones push (estilo Duolingo) ---------- */
 const messaging = (() => { try{ return getMessaging(fbApp); }catch(e){ return null; } })();
@@ -3955,14 +3618,13 @@ window.seedInitialData = async function(){
 };
 
 /* ---------- listeners en tiempo real de las colecciones compartidas ---------- */
-let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubMaterials=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubCommitments=null, unsubSleepCheckins=null, unsubMonthlySummaries=null;
+let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubCommitments=null, unsubSleepCheckins=null, unsubMonthlySummaries=null;
 
 function startCollectionListeners(){
   stopCollectionListeners();
   unsubStudents = onSnapshot(collection(db,'students'), snap=>{
     window.adminData.students = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); updateUserChip();
-    safeAutoSyncGivenClasses();
   });
   unsubPackages = onSnapshot(collection(db,'packages'), snap=>{
     window.adminData.packages = snap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -3975,15 +3637,9 @@ function startCollectionListeners(){
   unsubBookings = onSnapshot(collection(db,'bookings'), snap=>{
     window.adminData.bookings = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard();
-    safeAutoSyncGivenClasses();
   });
   unsubLessons = onSnapshot(collection(db,'lessons'), snap=>{
     window.adminData.lessons = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
-    if(typeof window.renderSubjectContent==='function') window.renderSubjectContent();
-  });
-  unsubMaterials = onSnapshot(collection(db,'materials'), snap=>{
-    window.adminData.materials = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
     if(typeof window.renderSubjectContent==='function') window.renderSubjectContent();
   });
@@ -4037,11 +3693,10 @@ function startCollectionListeners(){
   });
 }
 function stopCollectionListeners(){
-  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubMaterials,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubCommitments,unsubSleepCheckins,unsubMonthlySummaries].forEach(u=>{ if(u) u(); });
-  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubMaterials=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubCommitments=unsubSleepCheckins=unsubMonthlySummaries=null;
+  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubCommitments,unsubSleepCheckins,unsubMonthlySummaries].forEach(u=>{ if(u) u(); });
+  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubCommitments=unsubSleepCheckins=unsubMonthlySummaries=null;
 }
 function safeRenderAdmin(){ if(typeof window.renderAdmin==='function') window.renderAdmin(); }
-function safeAutoSyncGivenClasses(){ if(typeof window.autoSyncGivenClasses==='function') window.autoSyncGivenClasses(); }
 function safeRenderStudentDashboard(){ if(window.__currentUid && typeof window.renderStudentDashboard==='function') window.renderStudentDashboard(); }
 function safeRenderUnits(){ if(typeof renderUnits==='function') renderUnits(); }
 function safeRenderProfileAttendance(){ if(typeof window.renderProfileAttendance==='function') window.renderProfileAttendance(); }
@@ -4081,7 +3736,6 @@ async function routeUser(user){
   try{
     window.__currentUid = user.uid;
     const adminSnap = await getDoc(doc(db,'admins',user.uid));
-    window.__isAdmin = adminSnap.exists();
     startCollectionListeners();
     if(adminSnap.exists()){
       setCurrentStudentId(null);
@@ -4113,7 +3767,6 @@ onAuthStateChanged(auth, async (user) => {
     await routeUser(user);
   }else{
     window.__currentUid = null;
-    window.__isAdmin = false;
     setCurrentStudentId(null);
     stopCollectionListeners();
     stopAttendanceTracking();
@@ -4131,32 +3784,7 @@ onAuthStateChanged(auth, async (user) => {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      // Fuerza a chequear si hay una versión nueva del Service Worker apenas carga la página,
-      // en vez de esperar a que el navegador lo revise solo (a veces tarda horas o días en
-      // darse cuenta de que hay una versión nueva, y la app queda mostrando contenido viejo).
-      reg.update().catch(()=>{});
-      // Si se activa una versión nueva del Service Worker mientras la página ya estaba
-      // abierta, recargamos una sola vez para que se vea el contenido actualizado al toque.
-      // OJO: esta bandera se guarda en sessionStorage (no en una variable JS común) porque una
-      // variable normal se resetea en cada recarga — si el navegador detecta "versión nueva" en
-      // cada carga, eso generaba un bucle de recargas seguidas (la pantalla "parpadeando").
-      // Con sessionStorage, como mucho se recarga una vez por pestaña; a los 8s de calma se
-      // libera la bandera para permitir una recarga futura si de verdad se publica algo nuevo.
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (sessionStorage.getItem('sw-reload-pending')) return;
-        sessionStorage.setItem('sw-reload-pending', '1');
-        window.location.reload();
-      });
-      setTimeout(()=>{ sessionStorage.removeItem('sw-reload-pending'); }, 8000);
-    }).catch(err => console.warn('SW error:', err));
-  });
-  // Vuelve a chequear si hay una versión nueva cada vez que el alumno vuelve a la pestaña o
-  // reabre la app (por si se publicó algo mientras la tenía en segundo plano).
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible'){
-      navigator.serviceWorker.getRegistration().then(reg => { if(reg) reg.update().catch(()=>{}); });
-    }
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW error:', err));
   });
 }
 let deferredInstallPrompt = null;
