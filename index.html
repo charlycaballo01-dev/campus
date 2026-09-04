@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -4139,12 +4138,17 @@ if ('serviceWorker' in navigator) {
       reg.update().catch(()=>{});
       // Si se activa una versión nueva del Service Worker mientras la página ya estaba
       // abierta, recargamos una sola vez para que se vea el contenido actualizado al toque.
-      let refreshedForNewSW = false;
+      // OJO: esta bandera se guarda en sessionStorage (no en una variable JS común) porque una
+      // variable normal se resetea en cada recarga — si el navegador detecta "versión nueva" en
+      // cada carga, eso generaba un bucle de recargas seguidas (la pantalla "parpadeando").
+      // Con sessionStorage, como mucho se recarga una vez por pestaña; a los 8s de calma se
+      // libera la bandera para permitir una recarga futura si de verdad se publica algo nuevo.
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (refreshedForNewSW) return;
-        refreshedForNewSW = true;
+        if (sessionStorage.getItem('sw-reload-pending')) return;
+        sessionStorage.setItem('sw-reload-pending', '1');
         window.location.reload();
       });
+      setTimeout(()=>{ sessionStorage.removeItem('sw-reload-pending'); }, 8000);
     }).catch(err => console.warn('SW error:', err));
   });
   // Vuelve a chequear si hay una versión nueva cada vez que el alumno vuelve a la pestaña o
