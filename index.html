@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -861,9 +862,10 @@
       </div>
       <div class="admin-card" style="border:2px solid var(--gold)">
         <h3 id="material-form-title">📄 Material de estudio (PDF / PPT / links)</h3>
-        <p class="admin-mini" style="margin-bottom:12px">Cargá acá el material de lectura de cada materia (apuntes, PDF, PowerPoint, o cualquier link). Se suma al material que ya tenía esa materia — el alumno lo ve al toque en "Material de estudio" dentro de la materia.</p>
+        <p class="admin-mini" style="margin-bottom:12px">Cargá, editá o borrá el material de lectura de cada materia (apuntes, PDF, PowerPoint, o cualquier link) — incluido el que ya venía cargado de base.</p>
         <form class="admin-form" onsubmit="addMaterial(event)">
           <input type="hidden" id="editing-material-id" value="">
+          <input type="hidden" id="editing-material-basekey" value="">
           <label class="full">Materia<select id="new-material-subject" required></select></label>
           <label>Nombre del material<input id="new-material-name" placeholder="Ej.: Guía de Histología" required></label>
           <label>Tipo<select id="new-material-type"><option value="pdf">PDF</option><option value="ppt">PPT</option></select></label>
@@ -1126,17 +1128,29 @@ function findSubjectById(id){
   for(const u of currentModule.units){ const f = u.subjects.find(s=>s.id===id); if(f) return f; }
   return null;
 }
-// Combina el material "de base" (el que ya venía cargado en la materia) con los materiales que
-// el profesor va agregando desde el panel de administrador (colección "materials" en Firestore).
-// Se agregan siempre al final, así los que ya estaban no cambian de posición ni se resetea el
-// progreso que el alumno ya tenía marcado sobre ellos.
+// Combina el material "de base" (el que ya venía cargado en la materia, hardcodeado en
+// curriculumData) con los materiales que el profesor va agregando/editando/borrando desde el
+// panel de administrador (colección "materials" en Firestore). Cada material de base tiene una
+// baseKey estable (subjectId + índice). Si en Firestore existe un doc con esa baseKey, ese doc
+// "pisa" al material de base (edición) — y si tiene deleted:true, el material desaparece
+// (borrado). Los materiales sin baseKey son material nuevo agregado desde el panel.
 function materialsForSubject(subject){
   if(!subject) return [];
-  const base = subject.materials || [];
-  const extra = (adminData.materials||[])
-    .filter(m=>m.subjectId===subject.id)
+  const base = (subject.materials||[]).map((m,idx)=>({...m, baseKey:`${subject.id}-b${idx}`}));
+  const overridesByKey={};
+  const extra=[];
+  (adminData.materials||[]).forEach(m=>{
+    if(m.subjectId!==subject.id) return;
+    if(m.baseKey) overridesByKey[m.baseKey]=m; else extra.push(m);
+  });
+  const merged = base.map(b=>{
+    const ov=overridesByKey[b.baseKey];
+    if(ov) return ov.deleted ? null : ov;
+    return b;
+  }).filter(Boolean);
+  const extraVisible = extra.filter(m=>!m.deleted)
     .sort((a,b)=>(a.order||0)-(b.order||0) || (a.name||'').localeCompare(b.name||''));
-  return [...base, ...extra];
+  return [...merged, ...extraVisible];
 }
 function tierColorVar(t){ return t==='green' ? '--forest' : (t==='gold' ? '--gold' : '--rust'); }
 
@@ -2280,26 +2294,37 @@ function renderAdmin(){
   const fixedCount=document.getElementById('stat-fixed-schedules');if(fixedCount)fixedCount.textContent=adminData.students.filter(s=>fixedScheduleSlotsOf(s).length>0).length;
   renderMaterialsList();
 }
-// Muestra los materiales de estudio agregados desde el panel (no los que ya venían de base en
-// la materia, esos no se editan desde acá). Agrupados por materia, igual que las clases.
+// Muestra TODOS los materiales de estudio de cada materia — tanto el material de base (el que ya
+// venía cargado) como el agregado desde el panel — y permite editar/borrar cualquiera de los dos.
+// Los de base se identifican por su "baseKey"; editarlos o borrarlos crea/actualiza un doc en
+// Firestore que los pisa (edición) u oculta (borrado), sin tocar el resto.
 function renderMaterialsList(){
   const ml = document.getElementById('materials-list');
   if(!ml) return;
-  if(!adminData.materials.length){
-    ml.innerHTML = '<p class="admin-mini">Todavía no cargaste material adicional. El que ya tenía cada materia de base se sigue viendo igual.</p>';
+  const bySubject={};
+  flatSubjects.forEach(s=>{
+    const subjObj=findSubjectById(s.id);
+    const items=materialsForSubject(subjObj);
+    if(items.length) bySubject[s.id]=items;
+  });
+  const entries=Object.entries(bySubject);
+  if(!entries.length){
+    ml.innerHTML = '<p class="admin-mini">Todavía no hay material cargado.</p>';
     return;
   }
-  const bySubject={};
-  adminData.materials.forEach(m=>{(bySubject[m.subjectId]=bySubject[m.subjectId]||[]).push(m)});
-  ml.innerHTML = Object.entries(bySubject).map(([subjectId,arr])=>{
+  ml.innerHTML = entries.map(([subjectId,arr])=>{
     const sub=flatSubjects.find(s=>s.id===subjectId);
-    const rows=arr.slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(m=>`<div class="reserve-card"><div><strong>${escapeHtml(m.name)}</strong><div class="admin-mini">${m.type==='pdf'?'PDF':'PPT'} · Orden ${m.order||1}</div></div><div><button class="admin-btn small" onclick="editMaterial('${m.id}')">Editar</button> <button class="admin-btn danger small" onclick="removeMaterial('${m.id}')">Eliminar</button></div></div>`).join('');
+    const rows=arr.slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(m=>{
+      const key=m.id||m.baseKey;
+      return `<div class="reserve-card"><div><strong>${escapeHtml(m.name)}</strong><div class="admin-mini">${m.type==='pdf'?'PDF':'PPT'} · Orden ${m.order||1}${m.baseKey&&!m.id?' · base':''}</div></div><div><button class="admin-btn small" onclick="editMaterial('${key}')">Editar</button> <button class="admin-btn danger small" onclick="removeMaterial('${key}')">Eliminar</button></div></div>`;
+    }).join('');
     return `<div class="package-card"><strong>${escapeHtml(sub?sub.unitName+' · '+sub.name:'Materia eliminada')}</strong><div style="margin-top:8px">${rows}</div></div>`;
   }).join('');
 }
 function addMaterial(e){
   e.preventDefault();
   const editingId=document.getElementById('editing-material-id').value;
+  const editingBaseKey=document.getElementById('editing-material-basekey').value;
   const subjectId=document.getElementById('new-material-subject').value;
   const name=document.getElementById('new-material-name').value.trim();
   const type=document.getElementById('new-material-type').value;
@@ -2308,16 +2333,38 @@ function addMaterial(e){
   if(!name||!url){ alert('Completá el nombre y el link del material.'); return; }
   const sub=flatSubjects.find(s=>s.id===subjectId);
   const data={subjectId, unitId:sub?.unitId||'', name, type, url, order};
+  if(editingBaseKey) data.baseKey=editingBaseKey;
   if(editingId){
     window.fsUpdate('materials',editingId,data).then(()=>{cancelEditMaterial(); renderAdmin();}).catch(err=>alert('Error al guardar: '+err.message));
+  }else if(editingBaseKey){
+    // Material de base editado por primera vez: crea el doc override en Firestore.
+    window.fsAdd('materials',data).then(()=>{cancelEditMaterial(); renderAdmin();}).catch(err=>alert('Error al guardar: '+err.message));
   }else{
     window.fsAdd('materials',data).then(()=>{ e.target.reset(); document.getElementById('new-material-order').value=1; }).catch(err=>alert('Error al guardar: '+err.message));
   }
 }
-function editMaterial(id){
-  const m=adminData.materials.find(x=>x.id===id);
-  if(!m) return;
-  document.getElementById('editing-material-id').value=id;
+function editMaterial(key){
+  const m=adminData.materials.find(x=>x.id===key);
+  if(m){
+    document.getElementById('editing-material-id').value=m.id;
+    document.getElementById('editing-material-basekey').value='';
+    fillMaterialForm(m);
+    return;
+  }
+  // No hay doc en Firestore todavía: es un material de base puro, buscarlo por su baseKey.
+  for(const s of flatSubjects){
+    const subjObj=findSubjectById(s.id);
+    const items=materialsForSubject(subjObj);
+    const base=items.find(x=>x.baseKey===key && !x.id);
+    if(base){
+      document.getElementById('editing-material-id').value='';
+      document.getElementById('editing-material-basekey').value=key;
+      fillMaterialForm(base);
+      return;
+    }
+  }
+}
+function fillMaterialForm(m){
   document.getElementById('new-material-subject').value=m.subjectId;
   document.getElementById('new-material-name').value=m.name;
   document.getElementById('new-material-type').value=m.type||'pdf';
@@ -2330,6 +2377,7 @@ function editMaterial(id){
 }
 function cancelEditMaterial(){
   document.getElementById('editing-material-id').value='';
+  document.getElementById('editing-material-basekey').value='';
   document.getElementById('new-material-name').value='';
   document.getElementById('new-material-url').value='';
   document.getElementById('new-material-order').value=1;
@@ -2337,9 +2385,30 @@ function cancelEditMaterial(){
   document.getElementById('material-submit-btn').textContent='Agregar material';
   document.getElementById('material-cancel-btn').style.display='none';
 }
-function removeMaterial(id){
+function removeMaterial(key){
   if(!confirm('¿Eliminar este material? Los alumnos van a dejar de verlo.')) return;
-  window.fsDelete('materials', id).then(()=>renderAdmin()).catch(err=>alert('Error: '+err.message));
+  const m=adminData.materials.find(x=>x.id===key);
+  if(m){
+    // Doc real en Firestore: si es un override de un material base, lo marcamos deleted en vez
+    // de borrarlo (tombstone), así no reaparece. Si es material nuevo (sin baseKey), se borra.
+    if(m.baseKey){
+      window.fsUpdate('materials', key, {deleted:true}).then(()=>renderAdmin()).catch(err=>alert('Error: '+err.message));
+    }else{
+      window.fsDelete('materials', key).then(()=>renderAdmin()).catch(err=>alert('Error: '+err.message));
+    }
+    return;
+  }
+  // Material de base puro (todavía sin doc en Firestore): crear un tombstone.
+  for(const s of flatSubjects){
+    const subjObj=findSubjectById(s.id);
+    const items=materialsForSubject(subjObj);
+    const base=items.find(x=>x.baseKey===key && !x.id);
+    if(base){
+      window.fsAdd('materials',{subjectId:s.id, unitId:s.unitId||'', baseKey:key, deleted:true})
+        .then(()=>renderAdmin()).catch(err=>alert('Error: '+err.message));
+      return;
+    }
+  }
 }
 /* ================= PERFIL DE ALUMNO (progreso + exámenes) ================= */
 let profileStudentIndex = null;
