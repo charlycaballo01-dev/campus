@@ -1771,7 +1771,6 @@ function renderStudentWellness(){
     const dayLabel = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short'});
     return `<div style="text-align:center;flex:1;min-width:0"><div style="font-size:1.2rem">${sleepEmojiForDay(DEMO_STUDENT_ID, d)}</div><div class="admin-mini" style="text-transform:capitalize;font-size:.62rem">${dayLabel}</div></div>`;
   }).join('');
-  const sleepCounts = sleepSummaryForRange(DEMO_STUDENT_ID, dates7);
   const attendanceRow = dates7.map(d=>{
     const letter = WEEKDAY_LETTER[new Date(d+'T00:00:00').getDay()];
     return `<div style="text-align:center;flex:1;min-width:0"><div>${attendanceBadge(attendanceStatusForDay(DEMO_STUDENT_ID, d))}</div><div class="admin-mini" style="font-size:.62rem;margin-top:4px">${letter}</div></div>`;
@@ -1822,27 +1821,28 @@ function renderStudentWellness(){
   const fullProgressSection = wellnessFullProgressOpen ? `<div style="margin-top:16px">
       <div class="admin-mini" style="margin-bottom:6px">Tiempo de estudio · últimos 7 días</div>
       ${renderMinutesBarChart(dates7, DEMO_STUDENT_ID, commitment?.dailyMinutes)}
-    </div>` : '';
+    </div>
+    ${renderStudentMonthlySummaries()}` : '';
   el.innerHTML = `<div class="admin-card" style="margin-bottom:18px">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div><span class="eyebrow">Mi ritmo de estudio</span><h3 style="margin:5px 0">Hoy estudiaste ${formatMinutes(stats.today)}</h3></div>
     </div>
-    ${goalSection}
-    <div style="margin-top:16px">
+    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
+      ${goalSection}
+    </div>
+    <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:16px">
       <div class="admin-mini" style="margin-bottom:6px">Asistencia · últimos 7 días</div>
       <div style="display:flex;gap:4px">${attendanceRow}</div>
     </div>
-    <div style="margin-top:16px">
+    <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:16px">
       <div class="admin-mini" style="margin-bottom:6px">Sueño · últimos 7 días</div>
       <div style="display:flex;gap:4px">${last7}</div>
-      <div class="admin-mini" style="margin-top:8px;display:flex;gap:14px">
-        <span>😀${sleepCounts.bien}</span><span>😑${sleepCounts.regular}</span><span>🫩${sleepCounts.mal}</span>
-      </div>
     </div>
-    ${!todayCheckin ? `<button type="button" class="admin-btn secondary small" style="margin-top:14px" onclick="document.getElementById('sleep-checkin-overlay').classList.add('active')">Registrar cómo dormí hoy</button>` : ''}
-    ${fullProgressSection}
-    <button type="button" class="admin-btn" style="margin-top:16px;width:100%" onclick="toggleFullProgress()">${wellnessFullProgressOpen?'Ocultar mi progreso completo':'Ver mi progreso completo'}</button>
-    ${renderStudentMonthlySummaries()}
+    <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:16px">
+      ${!todayCheckin ? `<button type="button" class="admin-btn secondary small" onclick="document.getElementById('sleep-checkin-overlay').classList.add('active')">Registrar cómo dormí hoy</button>` : ''}
+      <button type="button" class="admin-btn" style="margin-top:${todayCheckin?'0':'10px'};width:100%" onclick="toggleFullProgress()">${wellnessFullProgressOpen?'Ocultar mi progreso completo':'Ver mi progreso completo'}</button>
+      ${fullProgressSection}
+    </div>
   </div>`;
 }
 let wellnessFullProgressOpen = false;
