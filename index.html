@@ -1799,7 +1799,7 @@ function renderStudentWellness(){
       <div style="flex:1;background:var(--line);border-radius:8px;height:10px;overflow:hidden">
         <div style="background:linear-gradient(90deg,var(--gold),var(--forest));height:100%;width:${Math.max(0,Math.min(100,Math.round(stats.today/commitment.dailyMinutes*100)))}%"></div>
       </div>
-      <span style="font-size:1.1rem">🏛️</span>
+      <span style="font-size:1.1rem;display:inline-block;filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(0.95)">🏛️</span>
     </div>
   </div>` : '';
   const goalRow=(label, actualMin, goalMin)=>{
