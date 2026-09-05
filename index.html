@@ -1580,7 +1580,8 @@ const adminData = {
   unitIntros: {},
   unitSubjects: {},
   attendance: [],
-  commitments: [],
+  weeklyGoals: [],
+  monthlyGoals: [],
   sleepCheckins: [],
   monthlySummaries: [],
   dailyGoals: [],
@@ -1719,10 +1720,56 @@ function renderMinutesBarChart(dates, studentId, goalMin){
   }).join('');
   return `<div style="display:flex;gap:6px;align-items:flex-end;margin-top:6px">${bars}</div>`;
 }
-function latestCommitmentFor(studentId){
-  const list = adminData.commitments.filter(c=>c.studentId===studentId);
-  if(!list.length) return null;
-  return list.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))[0];
+// Metas semanal y mensual: igual que la diaria, se guardan por período y no se
+// repiten solas — la semanal dura hasta que termina esa semana, la mensual
+// hasta que termina ese mes. Al pasar el período, queda vacío hasta que el
+// alumno elija una nueva (con opciones fijas: semanal desde 5hs, mensual desde 10hs).
+const WEEKLY_GOAL_OPTIONS = [5,10,15,20];
+const MONTHLY_GOAL_OPTIONS = [10,20,30,40];
+function weeklyGoalFor(studentId, weekStart){
+  return adminData.weeklyGoals.find(g=>g.studentId===studentId && g.weekStart===weekStart) || null;
+}
+function monthlyGoalFor(studentId, monthKey){
+  return adminData.monthlyGoals.find(g=>g.studentId===studentId && g.monthKey===monthKey) || null;
+}
+function pickWeeklyGoal(hours){
+  if(!DEMO_STUDENT_ID) return;
+  const weekStart = isoWeekStart();
+  window.fsSet('weeklyGoals', DEMO_STUDENT_ID+'_'+weekStart, {
+    studentId: DEMO_STUDENT_ID, weekStart, weeklyMinutes: Math.round(hours*60), createdAt: new Date().toISOString()
+  }).then(()=>{
+    studentGoalEditing = false;
+    queuePush(DEMO_STUDENT_ID, 'Tu meta semanal quedó activa 🎯', `Guardamos tu meta: ${hours}h esta semana. ¡Vamos con todo!`);
+    renderStudentWellness();
+  }).catch(warnSaveError);
+}
+function pickMonthlyGoal(hours){
+  if(!DEMO_STUDENT_ID) return;
+  const monthKey = isoMonthStart().slice(0,7);
+  window.fsSet('monthlyGoals', DEMO_STUDENT_ID+'_'+monthKey, {
+    studentId: DEMO_STUDENT_ID, monthKey, monthlyMinutes: Math.round(hours*60), createdAt: new Date().toISOString()
+  }).then(()=>{
+    studentGoalEditing = false;
+    queuePush(DEMO_STUDENT_ID, 'Tu meta mensual quedó activa 🎯', `Guardamos tu meta: ${hours}h este mes. ¡Vamos con todo!`);
+    renderStudentWellness();
+  }).catch(warnSaveError);
+}
+// Barra de progreso con banderita y edificio dorado, igual estilo que la meta diaria.
+function renderPeriodGoalBar(label, actualMin, goalMin){
+  if(!goalMin) return '';
+  const pct = Math.max(0, Math.min(100, Math.round(actualMin/goalMin*100)));
+  return `<div style="margin-top:12px">
+    <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">
+      <span>${label}</span><span>${formatMinutes(actualMin)} / ${formatMinutes(goalMin)}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:1.1rem">🚩</span>
+      <div style="flex:1;background:var(--line);border-radius:8px;height:10px;overflow:hidden">
+        <div style="background:linear-gradient(90deg,var(--gold),var(--forest));height:100%;width:${pct}%"></div>
+      </div>
+      <span style="font-size:1.1rem;filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(0.95)">🏛️</span>
+    </div>
+  </div>`;
 }
 // Temporizador de asistencia: mientras el alumno tiene la pestaña abierta y visible,
 // suma 1 minuto por tick al documento de asistencia del día (vía window.fsIncrementAttendance,
@@ -1775,8 +1822,7 @@ function maybeShowGoalCard(){
   const sleepOverlay = document.getElementById('sleep-checkin-overlay');
   if(sleepOverlay && sleepOverlay.classList.contains('active')) return; // no lo tapamos con dos carteles a la vez
   const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
-  const commitment = latestCommitmentFor(DEMO_STUDENT_ID);
-  const canSetGoal = !!(student?.goalInviteSent || commitment);
+  const canSetGoal = !!(student?.goalInviteSent || weeklyGoalFor(DEMO_STUDENT_ID, isoWeekStart()) || monthlyGoalFor(DEMO_STUDENT_ID, isoMonthStart().slice(0,7)));
   const goal = dailyGoalFor(DEMO_STUDENT_ID, todayISO());
   if(!goal){ if(canSetGoal) showGoalCard('ask'); return; }
   if(goal.completed){ showGoalCard('completed'); return; }
@@ -1932,34 +1978,16 @@ function triggerConfetti(){
   setTimeout(()=>spawnBatch(120), 750);
   setTimeout(()=>container.remove(), 5500);
 }
-function saveStudentCommitment(e){
-  e.preventDefault();
-  if(!DEMO_STUDENT_ID) return;
-  const weeklyH = Number(document.getElementById('student-goal-weekly').value)||0;
-  const monthlyH = Number(document.getElementById('student-goal-monthly').value)||0;
-  if(weeklyH<=0 && monthlyH<=0){ alert('Cargá al menos una meta de horas.'); return; }
-  window.fsAdd('commitments', {
-    studentId: DEMO_STUDENT_ID,
-    weeklyMinutes: Math.round(weeklyH*60),
-    monthlyMinutes: Math.round(monthlyH*60),
-    createdAt: new Date().toISOString(),
-    sentByAdmin: true
-  }).then(()=>{
-    studentGoalEditing = false;
-    queuePush(DEMO_STUDENT_ID, 'Tu meta de estudio quedó activa 🎯', `Guardamos tu meta: ${fmtCredit(weeklyH)}h por semana, ${fmtCredit(monthlyH)}h por mes. ¡Vamos con todo!`);
-    alert('¡Guardamos tu meta! Ya está activa.');
-    renderStudentWellness();
-  }).catch(warnSaveError);
-}
 function renderStudentWellness(){
   const el=document.getElementById('student-wellness-panel');
   if(!el || !DEMO_STUDENT_ID) return;
   const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
   const stats = attendanceStats(DEMO_STUDENT_ID);
-  const commitment = latestCommitmentFor(DEMO_STUDENT_ID);
+  const weeklyGoal = weeklyGoalFor(DEMO_STUDENT_ID, isoWeekStart());
+  const monthlyGoal = monthlyGoalFor(DEMO_STUDENT_ID, isoMonthStart().slice(0,7));
   checkDailyGoalCompletion(DEMO_STUDENT_ID);
   const todayGoal = dailyGoalFor(DEMO_STUDENT_ID, todayISO());
-  const canSetGoal = !!(student?.goalInviteSent || commitment || todayGoal); // el admin habilita esto con "Enviar meta"
+  const canSetGoal = !!(student?.goalInviteSent || weeklyGoal || monthlyGoal || todayGoal); // el admin habilita esto con "Enviar meta"
   const topbarBtn = document.getElementById('wellness-topbar-btn');
   if(topbarBtn) topbarBtn.style.display = canSetGoal ? 'flex' : 'none';
   const todayCheckin = sleepCheckinFor(DEMO_STUDENT_ID, todayISO());
@@ -2004,31 +2032,25 @@ function renderStudentWellness(){
   }else{
     dailyGoalSection = '';
   }
-  const goalRow=(label, actualMin, goalMin)=>{
-    if(!goalMin) return '';
-    const pct=Math.max(0, Math.min(100, Math.round(actualMin/goalMin*100)));
-    return `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted);font-weight:600"><span>${label}</span><span>${formatMinutes(actualMin)} / ${formatMinutes(goalMin)}</span></div><div style="background:var(--line);border-radius:8px;height:8px;margin-top:4px;overflow:hidden"><div style="background:var(--forest);height:100%;width:${pct}%"></div></div></div>`;
-  };
-  const goalForm = `<form onsubmit="saveStudentCommitment(event)" style="display:flex;flex-direction:column;gap:10px;margin-top:12px;padding:12px;background:var(--bg-soft);border-radius:var(--radius-md)">
-    <label style="font-size:.78rem;color:var(--text-muted);font-weight:600">Horas semanales
-      <input id="student-goal-weekly" type="number" min="0" step="0.5" placeholder="Ej: 10" value="${commitment?(commitment.weeklyMinutes/60):''}" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md)">
-    </label>
-    <label style="font-size:.78rem;color:var(--text-muted);font-weight:600">Horas mensuales
-      <input id="student-goal-monthly" type="number" min="0" step="1" placeholder="Ej: 40" value="${commitment?(commitment.monthlyMinutes/60):''}" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md)">
-    </label>
-    <div style="display:flex;gap:8px">
-      <button type="submit" class="admin-btn small">Guardar mi meta</button>
-      <button type="button" class="admin-btn secondary small" onclick="toggleStudentGoalForm()">Cancelar</button>
+  const periodPickForm = `<div style="margin-top:12px;padding:12px;background:var(--bg-soft);border-radius:var(--radius-md)">
+    <div class="admin-mini" style="font-weight:600;margin-bottom:6px">Meta semanal (dura hasta que termine la semana)</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${WEEKLY_GOAL_OPTIONS.map(h=>`<button type="button" class="admin-btn secondary small" onclick="pickWeeklyGoal(${h})">${h}h</button>`).join('')}
     </div>
-  </form>`;
+    <div class="admin-mini" style="font-weight:600;margin:14px 0 6px">Meta mensual (dura hasta que termine el mes)</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${MONTHLY_GOAL_OPTIONS.map(h=>`<button type="button" class="admin-btn secondary small" onclick="pickMonthlyGoal(${h})">${h}h</button>`).join('')}
+    </div>
+    <button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">Cerrar</button>
+  </div>`;
   let goalSection;
-  if(commitment){
-    goalSection = `${dailyGoalSection}${studentGoalEditing ? '' : goalRow('Meta semanal', stats.week, commitment.weeklyMinutes)}${studentGoalEditing ? '' : goalRow('Meta mensual', stats.month, commitment.monthlyMinutes)}
-      ${studentGoalEditing ? goalForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">Cambiar mi meta semanal/mensual</button>`}`;
+  if(weeklyGoal || monthlyGoal){
+    goalSection = `${dailyGoalSection}${studentGoalEditing ? '' : renderPeriodGoalBar('Meta semanal', stats.week, weeklyGoal?.weeklyMinutes)}${studentGoalEditing ? '' : renderPeriodGoalBar('Meta mensual', stats.month, monthlyGoal?.monthlyMinutes)}
+      ${studentGoalEditing ? periodPickForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">Cambiar mi meta semanal/mensual</button>`}`;
   }else if(canSetGoal){
     goalSection = `${dailyGoalSection}
       <p class="admin-mini" style="margin-top:12px">Tu profesor te invitó a elegir tu meta de estudio.</p>
-      ${studentGoalEditing ? goalForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">🎯 Elegir mi meta semanal/mensual</button>`}`;
+      ${studentGoalEditing ? periodPickForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">🎯 Elegir mi meta semanal/mensual</button>`}`;
   }else{
     goalSection = `<p class="admin-mini" style="margin-top:12px">Todavía no podés elegir tu meta de estudio. Tu profesor te va a habilitar esta opción.</p>`;
   }
@@ -2126,8 +2148,10 @@ function renderProfileAttendance(){
   const card = document.getElementById('profile-attendance-card');
   if(!s || !card) return;
   const stats = attendanceStats(s.id);
-  const commitment = latestCommitmentFor(s.id);
+  const weeklyGoal = weeklyGoalFor(s.id, isoWeekStart());
+  const monthlyGoal = monthlyGoalFor(s.id, isoMonthStart().slice(0,7));
   const todayGoal = dailyGoalFor(s.id, todayISO());
+  const hasAnyGoal = !!(weeklyGoal || monthlyGoal);
   const last7 = lastNDatesISO(7).map(d=>{
     const dayLabel = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short'});
     return `<div style="text-align:center;flex:1;min-width:0"><div style="font-size:1.2rem">${sleepEmojiForDay(s.id, d)}</div><div class="admin-mini" style="text-transform:capitalize;font-size:.62rem">${dayLabel}</div></div>`;
@@ -2138,7 +2162,7 @@ function renderProfileAttendance(){
       <button type="button" class="admin-btn secondary small" onclick="openWeeklyReport('${s.id}')">📋 Informe</button>
     </div>
     <div class="admin-actions" style="margin-bottom:14px">
-      ${!commitment
+      ${!hasAnyGoal
         ? `<button type="button" class="admin-btn secondary small" onclick="inviteGoalSetup(${profileStudentIndex})">${s.goalInviteSent?'🔁 Reenviar meta':'📨 Enviar meta'}</button>`
         : `<button type="button" class="admin-btn secondary small" onclick="sendCommitmentReminder('${s.id}')">🔔 Enviar recordatorio</button>`
       }
@@ -2148,9 +2172,9 @@ function renderProfileAttendance(){
       <div class="access-stat">Tiempo esta semana<strong>${formatMinutes(stats.week)}</strong></div>
       <div class="access-stat">Tiempo este mes<strong>${formatMinutes(stats.month)}</strong></div>
     </div>
-    ${!commitment
+    ${!hasAnyGoal
       ? `<p class="admin-mini" style="margin-top:12px">${s.goalInviteSent ? 'Ya lo invitaste a elegir su meta de estudio — todavía no la definió.' : 'Este alumno todavía no puede elegir su meta. Tocá "Enviar meta" para invitarlo.'}</p>`
-      : `<div class="admin-mini" style="margin-top:12px">Meta activa: <strong>${formatMinutes(commitment.weeklyMinutes)}/semana</strong> · <strong>${formatMinutes(commitment.monthlyMinutes)}/mes</strong></div>`
+      : `<div class="admin-mini" style="margin-top:12px">Meta activa: ${weeklyGoal?`<strong>${formatMinutes(weeklyGoal.weeklyMinutes)}/semana</strong>`:'sin meta semanal'} · ${monthlyGoal?`<strong>${formatMinutes(monthlyGoal.monthlyMinutes)}/mes</strong>`:'sin meta mensual'}</div>`
     }
     <div class="admin-mini" style="margin-top:4px">Meta de hoy: ${todayGoal ? `<strong>${formatMinutes(todayGoal.dailyMinutes)}</strong> ${todayGoal.completed?'✅ cumplida':'en progreso'}` : 'todavía no la eligió hoy'}</div>
     <div style="margin-top:16px">
@@ -2164,10 +2188,10 @@ function renderProfileAttendance(){
 }
 
 function sendCommitmentReminder(studentId){
-  const commitment = latestCommitmentFor(studentId);
+  const weeklyGoal = weeklyGoalFor(studentId, isoWeekStart());
   const s = adminData.students.find(x=>x.id===studentId);
-  if(!commitment) return;
   const todayGoal = dailyGoalFor(studentId, todayISO());
+  if(!weeklyGoal && !todayGoal) return;
   const body = todayGoal
     ? `Llevás ${formatMinutes(goalProgressMinutes(studentId, todayGoal))} hoy de tu meta de ${formatMinutes(todayGoal.dailyMinutes)}. ¡Vamos que se puede!`
     : `Todavía no elegiste cuánto querés estudiar hoy. ¡Entrá y definí tu meta del día!`;
@@ -2204,7 +2228,8 @@ function renderWeeklyReportContent(){
   const el = document.getElementById('weekly-report-content');
   if(!s || !el) return;
   const dates = lastNDatesISO(7);
-  const commitment = latestCommitmentFor(s.id);
+  const weeklyGoal = weeklyGoalFor(s.id, isoWeekStart());
+  const monthlyGoal = monthlyGoalFor(s.id, isoMonthStart().slice(0,7));
   const rows = dates.map(d=>{
     const mins = attendanceMinutesInRange(s.id, d, d);
     const label = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'long', day:'numeric', month:'short'});
@@ -2222,8 +2247,8 @@ function renderWeeklyReportContent(){
       <thead><tr style="text-align:left"><th style="padding:6px 4px;border-bottom:2px solid var(--forest)">Día</th><th style="padding:6px 4px;border-bottom:2px solid var(--forest)">Tiempo de estudio</th><th style="padding:6px 4px;border-bottom:2px solid var(--forest)">Sueño</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="admin-mini" style="margin-top:12px"><strong>Total de la semana:</strong> ${formatMinutes(totalWeekMin)}${commitment?` de una meta de ${formatMinutes(commitment.weeklyMinutes)}`:''}</div>
-    ${commitment?`<div class="admin-mini" style="margin-top:4px"><strong>Compromiso vigente:</strong> ${formatMinutes(commitment.weeklyMinutes)}/semana · ${formatMinutes(commitment.monthlyMinutes)}/mes</div>`:''}`;
+    <div class="admin-mini" style="margin-top:12px"><strong>Total de la semana:</strong> ${formatMinutes(totalWeekMin)}${weeklyGoal?` de una meta de ${formatMinutes(weeklyGoal.weeklyMinutes)}`:''}</div>
+    ${(weeklyGoal||monthlyGoal)?`<div class="admin-mini" style="margin-top:4px"><strong>Compromiso vigente:</strong> ${weeklyGoal?formatMinutes(weeklyGoal.weeklyMinutes)+'/semana':'sin meta semanal'} · ${monthlyGoal?formatMinutes(monthlyGoal.monthlyMinutes)+'/mes':'sin meta mensual'}</div>`:''}`;
 }
 
 /* ---------- resumen mensual (admin): datos del mes + envío al alumno ---------- */
@@ -2274,7 +2299,7 @@ function renderMonthlyReportContent(){
   const el = document.getElementById('weekly-report-content');
   if(!s || !el) return;
   const dates = isoDatesInMonthSoFar();
-  const commitment = latestCommitmentFor(s.id);
+  const monthlyGoal = monthlyGoalFor(s.id, isoMonthStart().slice(0,7));
   const totalMonthMin = attendanceMinutesInRange(s.id, dates[0], dates[dates.length-1]);
   const buckets = weeklyMinutesBuckets(dates, s.id);
   const sleep = sleepSummaryForRange(s.id, dates);
@@ -2284,7 +2309,7 @@ function renderMonthlyReportContent(){
     <div class="eyebrow">Resumen mensual</div>
     <h3 style="font-family:var(--font-display);color:var(--forest);margin:4px 0 2px;text-transform:capitalize">${escapeHtml(s.name)} · ${monthLabel}</h3>
     <div class="admin-mini" style="margin-bottom:14px">${daysWithActivity} de ${dates.length} días con actividad hasta hoy</div>
-    <div style="margin-bottom:16px">${renderWeeksBarChart(buckets, commitment?.weeklyMinutes)}</div>
+    <div style="margin-bottom:16px">${renderWeeksBarChart(buckets, null)}</div>
     <div class="access-grid">
       <div class="access-stat">Tiempo total del mes<strong>${formatMinutes(totalMonthMin)}</strong></div>
       <div class="access-stat">Días con actividad<strong>${daysWithActivity}/${dates.length}</strong></div>
@@ -2298,7 +2323,7 @@ function renderMonthlyReportContent(){
         <span>🫩 Mal: <strong>${sleep.mal}</strong></span>
       </div>
     </div>
-    ${commitment?.monthlyMinutes?`<div class="admin-mini" style="margin-top:14px"><strong>Meta mensual:</strong> ${formatMinutes(commitment.monthlyMinutes)} — ${totalMonthMin>=commitment.monthlyMinutes?'✅ cumplida':'todavía en camino'}</div>`:''}`;
+    ${monthlyGoal?.monthlyMinutes?`<div class="admin-mini" style="margin-top:14px"><strong>Meta mensual:</strong> ${formatMinutes(monthlyGoal.monthlyMinutes)} — ${totalMonthMin>=monthlyGoal.monthlyMinutes?'✅ cumplida':'todavía en camino'}</div>`:''}`;
 }
 function sendMonthlySummary(studentId){
   if(!studentId) return;
@@ -2306,14 +2331,14 @@ function sendMonthlySummary(studentId){
   if(!s) return;
   const dates = isoDatesInMonthSoFar();
   const totalMonthMin = attendanceMinutesInRange(studentId, dates[0], dates[dates.length-1]);
-  const commitment = latestCommitmentFor(studentId);
+  const monthlyGoal = monthlyGoalFor(studentId, isoMonthStart().slice(0,7));
   const sleep = sleepSummaryForRange(studentId, dates);
   const daysWithActivity = dates.filter(d=>attendanceMinutesInRange(studentId,d,d)>0).length;
   const monthLabel = new Date(dates[0]+'T00:00:00').toLocaleDateString('es-AR',{month:'long'});
   const monthKey = dates[0].slice(0,7); // YYYY-MM
-  const goalMet = !!(commitment?.monthlyMinutes && totalMonthMin>=commitment.monthlyMinutes);
+  const goalMet = !!(monthlyGoal?.monthlyMinutes && totalMonthMin>=monthlyGoal.monthlyMinutes);
   let body = `Estudiaste ${formatMinutes(totalMonthMin)} en ${daysWithActivity} de ${dates.length} días de ${monthLabel}.`;
-  if(commitment?.monthlyMinutes) body += ` Meta mensual: ${formatMinutes(commitment.monthlyMinutes)} (${goalMet?'¡cumplida! 🎉':'todavía en camino'}).`;
+  if(monthlyGoal?.monthlyMinutes) body += ` Meta mensual: ${formatMinutes(monthlyGoal.monthlyMinutes)} (${goalMet?'¡cumplida! 🎉':'todavía en camino'}).`;
   body += ` Sueño del mes: 😀${sleep.bien} · 😑${sleep.regular} · 🫩${sleep.mal}.`;
   // Guardamos el resumen en Firestore para que quede disponible en el panel del alumno
   // (el push es solo el aviso; esto es lo que le permite volver a verlo después).
@@ -2321,7 +2346,7 @@ function sendMonthlySummary(studentId){
     studentId, monthKey, monthLabel,
     totalMinutes: totalMonthMin, daysWithActivity, totalDays: dates.length,
     sleepBien: sleep.bien, sleepRegular: sleep.regular, sleepMal: sleep.mal,
-    monthlyGoalMinutes: commitment?.monthlyMinutes || null, goalMet,
+    monthlyGoalMinutes: monthlyGoal?.monthlyMinutes || null, goalMet,
     sentAt: new Date().toISOString()
   }).then(()=>{
     queuePush(studentId, `📊 Tu resumen de ${monthLabel}`, body);
@@ -2394,7 +2419,7 @@ function renderAdmin(){
   populateFixedScheduleStudentSelect();
   renderFixedScheduleList();
   const st=document.getElementById('students-table');
-  if(st)st.innerHTML=adminData.students.map((s,i)=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s);const hasGoal=adminData.commitments.some(c=>c.studentId===s.id);const goalBtn=hasGoal?'':`<button class="admin-btn secondary small" onclick="inviteGoalSetup(${i})">${s.goalInviteSent?'🔁 Reenviar meta':'📨 Enviar meta'}</button>`;return `<tr><td><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${p?p.classes:0} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td>
+  if(st)st.innerHTML=adminData.students.map((s,i)=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s);const hasGoal=adminData.weeklyGoals.some(g=>g.studentId===s.id)||adminData.monthlyGoals.some(g=>g.studentId===s.id);const goalBtn=hasGoal?'':`<button class="admin-btn secondary small" onclick="inviteGoalSetup(${i})">${s.goalInviteSent?'🔁 Reenviar meta':'📨 Enviar meta'}</button>`;return `<tr><td><strong>${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${p?p.classes:0} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td>
     <div class="admin-actions">
       <button class="admin-btn small" onclick="openStudentProfile(${i})">Ver perfil</button>
       <button class="admin-btn small" onclick="editStudent(${i})">Editar</button>
@@ -3862,7 +3887,7 @@ window.seedInitialData = async function(){
 };
 
 /* ---------- listeners en tiempo real de las colecciones compartidas ---------- */
-let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubCommitments=null, unsubSleepCheckins=null, unsubMonthlySummaries=null, unsubDailyGoals=null;
+let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubWeeklyGoals=null, unsubMonthlyGoals=null, unsubSleepCheckins=null, unsubMonthlySummaries=null, unsubDailyGoals=null;
 
 function startCollectionListeners(){
   stopCollectionListeners();
@@ -3923,8 +3948,12 @@ function startCollectionListeners(){
     window.adminData.attendance = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance();
   });
-  unsubCommitments = onSnapshot(collection(db,'commitments'), snap=>{
-    window.adminData.commitments = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  unsubWeeklyGoals = onSnapshot(collection(db,'weeklyGoals'), snap=>{
+    window.adminData.weeklyGoals = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance();
+  });
+  unsubMonthlyGoals = onSnapshot(collection(db,'monthlyGoals'), snap=>{
+    window.adminData.monthlyGoals = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance();
   });
   unsubSleepCheckins = onSnapshot(collection(db,'sleepCheckins'), snap=>{
@@ -3941,8 +3970,8 @@ function startCollectionListeners(){
   });
 }
 function stopCollectionListeners(){
-  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubCommitments,unsubSleepCheckins,unsubMonthlySummaries,unsubDailyGoals].forEach(u=>{ if(u) u(); });
-  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubCommitments=unsubSleepCheckins=unsubMonthlySummaries=unsubDailyGoals=null;
+  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubWeeklyGoals,unsubMonthlyGoals,unsubSleepCheckins,unsubMonthlySummaries,unsubDailyGoals].forEach(u=>{ if(u) u(); });
+  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubWeeklyGoals=unsubMonthlyGoals=unsubSleepCheckins=unsubMonthlySummaries=unsubDailyGoals=null;
 }
 function safeRenderAdmin(){ if(typeof window.renderAdmin==='function') window.renderAdmin(); }
 function safeRenderStudentDashboard(){ if(window.__currentUid && typeof window.renderStudentDashboard==='function') window.renderStudentDashboard(); }
