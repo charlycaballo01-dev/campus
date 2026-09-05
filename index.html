@@ -507,6 +507,7 @@
       <button class="tab-btn" id="package-topbar-btn" onclick="togglePackagePanel()">Mi paquete</button>
       <button class="tab-btn" data-tab="quiz" onclick="openQuizPicker()">Preguntas</button>
       <button class="tab-btn" data-tab="booking" id="nav-booking-btn" onclick="showTab('booking')">Reservas</button>
+      <button class="tab-btn" data-tab="notifications" onclick="showTab('notifications')">Notificaciones</button>
     </div>
     <button type="button" class="admin-btn secondary small" id="pomodoro-topbar-btn" onclick="togglePomodoroPanel()" title="Temporizador de estudio" style="display:flex;align-items:center;gap:6px;margin-right:8px">⏱ <span id="pomodoro-topbar-label">Tiempo</span></button>
     <button type="button" class="admin-btn secondary small" id="wellness-topbar-btn" onclick="toggleWellnessPanel()" title="Mi ritmo de estudio" style="display:none;align-items:center;gap:6px;margin-right:8px">🌱 <span id="wellness-topbar-label">Ritmo</span></button>
@@ -697,6 +698,13 @@
     <div class="page">
       <div class="page-head"><span class="eyebrow">Clases particulares</span><h2>Mis reservas</h2><p>Elegí un horario disponible. La clase se descuenta cuando el administrador la marca como completada.</p></div>
       <div id="student-booking-panel"></div>
+    </div>
+  </div>
+
+  <div id="tab-notifications" class="view">
+    <div class="page">
+      <div class="page-head"><span class="eyebrow">Avisos</span><h2>Notificaciones</h2><p>Acá vas a ver los recordatorios de tu meta, los avisos de tu profesor y todo lo que te llegue como notificación.</p></div>
+      <div id="student-notifications-panel"></div>
     </div>
   </div>
 
@@ -1085,10 +1093,10 @@ function goDashboard(){
 }
 function showTab(name){
   document.querySelectorAll('#app-shell > .view').forEach(v=>v.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active'); if(name==='dashboard'||name==='booking') renderStudentDashboard();
+  document.getElementById('tab-'+name).classList.add('active'); if(name==='dashboard'||name==='booking'||name==='notifications') renderStudentDashboard();
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  const map={dashboard:0, quiz:1, booking:2};
-  if(name==='dashboard'||name==='quiz'){
+  const map={dashboard:0, quiz:1, booking:2, notifications:3};
+  if(name==='dashboard'||name==='quiz'||name==='notifications'){
     document.querySelectorAll('.tab-btn')[map[name]].classList.add('active');
   }
 }
@@ -1772,6 +1780,7 @@ const adminData = {
   bookings: [],
   lessons: [],
   materials: [],
+  notifications: [],
   itemViews: [],
   updates: [],
   quizQuestions: [],
@@ -1957,16 +1966,19 @@ function pickMonthlyGoal(hours){
 function renderPeriodGoalBar(label, actualMin, goalMin){
   if(!goalMin) return '';
   const pct = Math.max(0, Math.min(100, Math.round(actualMin/goalMin*100)));
+  const completed = actualMin >= goalMin;
+  // Al cumplir la meta, la banderita y la casita dorada desaparecen (ya no hace falta la
+  // referencia de "cuánto falta" si ya se llegó) y queda un ✅ como confirmación.
   return `<div style="margin-top:12px">
     <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">
-      <span>${label}</span><span>${formatMinutes(actualMin)} / ${formatMinutes(goalMin)}</span>
+      <span>${label}${completed?' ✅':''}</span><span>${formatMinutes(actualMin)} / ${formatMinutes(goalMin)}</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:1.1rem">🚩</span>
+      ${completed?'':'<span style="font-size:1.1rem">🚩</span>'}
       <div style="flex:1;background:var(--line);border-radius:8px;height:10px;overflow:hidden">
         <div style="background:linear-gradient(90deg,var(--gold),var(--forest));height:100%;width:${pct}%"></div>
       </div>
-      <span style="font-size:1.1rem;filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(0.95)">🏛️</span>
+      ${completed?'':'<span style="font-size:1.1rem;filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(0.95)">🏛️</span>'}
     </div>
   </div>`;
 }
@@ -2068,6 +2080,46 @@ function renderGoalFloatingCard(mode){
       </div>`;
     return;
   }
+  if(mode==='period-choice'){
+    // Primer paso al tocar "Cambiar mi meta semanal/mensual": preguntar cuál de las dos
+    // quiere cambiar, antes de mostrarle las opciones de esa meta en particular.
+    el.innerHTML = `
+      <div style="background:linear-gradient(160deg,#1c5c3e,#0d3524);padding:28px 22px 22px;text-align:center;color:#fff">
+        <div style="font-size:.7rem;letter-spacing:.08em;font-weight:700;color:var(--gold);text-transform:uppercase">Tu meta</div>
+        <div style="font-size:1.4rem;font-weight:700;margin-top:8px;font-family:var(--font-display)">¿Qué meta querés cambiar?</div>
+        <div style="font-size:.85rem;opacity:.85;margin-top:6px">Elegí semanal o mensual</div>
+      </div>
+      <div style="padding:20px 22px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+          <button type="button" class="admin-btn" style="flex:1;min-width:100px" onclick="showGoalCard('weekly')">Semanal</button>
+          <button type="button" class="admin-btn" style="flex:1;min-width:100px" onclick="showGoalCard('monthly')">Mensual</button>
+        </div>
+        <button type="button" class="admin-btn secondary small" style="width:100%;margin-top:12px" onclick="closeGoalReminder()">Ahora no</button>
+      </div>`;
+    return;
+  }
+  if(mode==='weekly' || mode==='monthly'){
+    // Mismo estilo que la tarjeta de la meta diaria, pero con las opciones de horas
+    // semanales o mensuales según cuál haya elegido en el paso anterior.
+    const isWeekly = mode==='weekly';
+    const label = isWeekly ? 'Meta semanal' : 'Meta mensual';
+    const subtitle = isWeekly ? '¿Cuántas horas querés estudiar esta semana?' : '¿Cuántas horas querés estudiar este mes?';
+    const opts = isWeekly ? WEEKLY_GOAL_OPTIONS : MONTHLY_GOAL_OPTIONS;
+    const pickFn = isWeekly ? 'pickWeeklyGoal' : 'pickMonthlyGoal';
+    el.innerHTML = `
+      <div style="background:linear-gradient(160deg,#1c5c3e,#0d3524);padding:28px 22px 22px;text-align:center;color:#fff">
+        <div style="font-size:.7rem;letter-spacing:.08em;font-weight:700;color:var(--gold);text-transform:uppercase">${label}</div>
+        <div style="font-size:1.4rem;font-weight:700;margin-top:8px;font-family:var(--font-display)">¡Elegí tu meta!</div>
+        <div style="font-size:.85rem;opacity:.85;margin-top:6px">${subtitle}</div>
+      </div>
+      <div style="padding:20px 22px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+          ${opts.map(h=>`<button type="button" class="admin-btn" style="flex:1;min-width:70px" onclick="${pickFn}(${h}); closeGoalReminder();">${h}h</button>`).join('')}
+        </div>
+        <button type="button" class="admin-btn secondary small" style="width:100%;margin-top:12px" onclick="showGoalCard('period-choice')">← Volver</button>
+      </div>`;
+    return;
+  }
   const level = mode==='completed' ? nextGoalLevel(DEMO_STUDENT_ID) : 1;
   const heading = mode==='completed' ? '🎉 ¡Cumpliste tu meta!' : '¡Elegí tu meta de hoy!';
   const subtitle = mode==='completed' ? '¿Querés ponerte otra meta?' : '¿Cuánto tiempo querés estudiar hoy?';
@@ -2143,6 +2195,27 @@ function checkDailyGoalCompletion(studentId){
     }).catch(()=>{}).finally(()=>{ goalCompletionInFlight.delete(goal.id); });
   }
 }
+const periodGoalCompletionInFlight = new Set();
+// Igual que checkDailyGoalCompletion, pero para la meta semanal y mensual: al llegar a la meta
+// por primera vez se marca "completed" (para no festejar de nuevo en cada render) y se dispara
+// un confeti bien grande — bastante más que el de la meta diaria, para que se note la diferencia.
+function checkPeriodGoalCompletion(studentId){
+  const stats = attendanceStats(studentId);
+  const weeklyGoal = weeklyGoalFor(studentId, isoWeekStart());
+  if(weeklyGoal && !weeklyGoal.completed && !periodGoalCompletionInFlight.has(weeklyGoal.id) && stats.week >= weeklyGoal.weeklyMinutes){
+    periodGoalCompletionInFlight.add(weeklyGoal.id);
+    window.fsUpdate('weeklyGoals', weeklyGoal.id, {completed:true, completedAt:new Date().toISOString()})
+      .then(()=>triggerConfetti('big'))
+      .catch(()=>{}).finally(()=>{ periodGoalCompletionInFlight.delete(weeklyGoal.id); });
+  }
+  const monthlyGoal = monthlyGoalFor(studentId, isoMonthStart().slice(0,7));
+  if(monthlyGoal && !monthlyGoal.completed && !periodGoalCompletionInFlight.has(monthlyGoal.id) && stats.month >= monthlyGoal.monthlyMinutes){
+    periodGoalCompletionInFlight.add(monthlyGoal.id);
+    window.fsUpdate('monthlyGoals', monthlyGoal.id, {completed:true, completedAt:new Date().toISOString()})
+      .then(()=>triggerConfetti('big'))
+      .catch(()=>{}).finally(()=>{ periodGoalCompletionInFlight.delete(monthlyGoal.id); });
+  }
+}
 function pickDailyGoal(minutes){
   if(!DEMO_STUDENT_ID) return;
   const level = nextGoalLevel(DEMO_STUDENT_ID);
@@ -2151,8 +2224,11 @@ function pickDailyGoal(minutes){
     studentId: DEMO_STUDENT_ID, date: todayISO(), dailyMinutes: minutes, level, completed:false, baselineMinutes, createdAt: new Date().toISOString()
   }).then(()=>{ renderStudentWellness(); }).catch(warnSaveError);
 }
-// Confeti de celebración al cumplir una meta diaria (sin librerías externas).
-function triggerConfetti(){
+// Confeti de celebración al cumplir una meta (sin librerías externas). Con intensity='big'
+// (metas semanal/mensual) tira muchas más tandas, con piezas más grandes y dura bastante más
+// que el confeti normal de la meta diaria.
+function triggerConfetti(intensity){
+  const big = intensity === 'big';
   const colors = ['#e0b34d','#1c5c3e','#d9534f','#3d7ea6','#c77dff','#f2a541','#4fb477','#ff7ab6'];
   const container = document.createElement('div');
   container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden';
@@ -2163,19 +2239,30 @@ function triggerConfetti(){
       const color = colors[Math.floor(Math.random()*colors.length)];
       const left = Math.random()*100;
       const delay = Math.random()*0.6;
-      const duration = 2.4+Math.random()*1.8;
-      const w = 6+Math.random()*10, h = w*0.6;
+      const duration = (big ? 3.2+Math.random()*2.6 : 2.4+Math.random()*1.8);
+      const w = (big ? 8+Math.random()*14 : 6+Math.random()*10), h = w*0.6;
       const rotate = Math.random()*360;
       const shape = Math.random()<0.3 ? '50%' : '2px';
       piece.style.cssText = `position:absolute;top:-20px;left:${left}%;width:${w}px;height:${h}px;background:${color};opacity:.95;border-radius:${shape};transform:rotate(${rotate}deg);animation:confetti-fall ${duration}s ${delay}s ease-in forwards`;
       container.appendChild(piece);
     }
   };
-  // Varias tandas espaciadas para que la lluvia de papelitos dure más y se sienta más abundante.
-  spawnBatch(160);
-  setTimeout(()=>spawnBatch(140), 350);
-  setTimeout(()=>spawnBatch(120), 750);
-  setTimeout(()=>container.remove(), 5500);
+  if(big){
+    // Meta semanal/mensual: bastante más papelitos, más tandas y más tiempo que la diaria.
+    spawnBatch(280);
+    setTimeout(()=>spawnBatch(260), 300);
+    setTimeout(()=>spawnBatch(240), 650);
+    setTimeout(()=>spawnBatch(220), 1050);
+    setTimeout(()=>spawnBatch(200), 1550);
+    setTimeout(()=>spawnBatch(160), 2150);
+    setTimeout(()=>container.remove(), 10000);
+  }else{
+    // Varias tandas espaciadas para que la lluvia de papelitos dure más y se sienta más abundante.
+    spawnBatch(160);
+    setTimeout(()=>spawnBatch(140), 350);
+    setTimeout(()=>spawnBatch(120), 750);
+    setTimeout(()=>container.remove(), 5500);
+  }
 }
 function renderStudentWellness(){
   const el=document.getElementById('student-wellness-panel');
@@ -2185,6 +2272,7 @@ function renderStudentWellness(){
   const weeklyGoal = weeklyGoalFor(DEMO_STUDENT_ID, isoWeekStart());
   const monthlyGoal = monthlyGoalFor(DEMO_STUDENT_ID, isoMonthStart().slice(0,7));
   checkDailyGoalCompletion(DEMO_STUDENT_ID);
+  checkPeriodGoalCompletion(DEMO_STUDENT_ID);
   const todayGoal = dailyGoalFor(DEMO_STUDENT_ID, todayISO());
   const canSetGoal = !!(student?.goalInviteSent || weeklyGoal || monthlyGoal || todayGoal); // el admin habilita esto con "Enviar meta"
   const topbarBtn = document.getElementById('wellness-topbar-btn');
@@ -2231,25 +2319,14 @@ function renderStudentWellness(){
   }else{
     dailyGoalSection = '';
   }
-  const periodPickForm = `<div style="margin-top:12px;padding:12px;background:var(--bg-soft);border-radius:var(--radius-md)">
-    <div class="admin-mini" style="font-weight:600;margin-bottom:6px">Meta semanal (dura hasta que termine la semana)</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${WEEKLY_GOAL_OPTIONS.map(h=>`<button type="button" class="admin-btn secondary small" onclick="pickWeeklyGoal(${h})">${h}h</button>`).join('')}
-    </div>
-    <div class="admin-mini" style="font-weight:600;margin:14px 0 6px">Meta mensual (dura hasta que termine el mes)</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${MONTHLY_GOAL_OPTIONS.map(h=>`<button type="button" class="admin-btn secondary small" onclick="pickMonthlyGoal(${h})">${h}h</button>`).join('')}
-    </div>
-    <button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">Cerrar</button>
-  </div>`;
   let goalSection;
   if(weeklyGoal || monthlyGoal){
-    goalSection = `${dailyGoalSection}${studentGoalEditing ? '' : renderPeriodGoalBar('Meta semanal', stats.week, weeklyGoal?.weeklyMinutes)}${studentGoalEditing ? '' : renderPeriodGoalBar('Meta mensual', stats.month, monthlyGoal?.monthlyMinutes)}
-      ${studentGoalEditing ? periodPickForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">Cambiar mi meta semanal/mensual</button>`}`;
+    goalSection = `${dailyGoalSection}${renderPeriodGoalBar('Meta semanal', stats.week, weeklyGoal?.weeklyMinutes)}${renderPeriodGoalBar('Meta mensual', stats.month, monthlyGoal?.monthlyMinutes)}
+      <button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="showGoalCard('period-choice')">Cambiar mi meta semanal/mensual</button>`;
   }else if(canSetGoal){
     goalSection = `${dailyGoalSection}
       <p class="admin-mini" style="margin-top:12px">Tu profesor te invitó a elegir tu meta de estudio.</p>
-      ${studentGoalEditing ? periodPickForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">🎯 Elegir mi meta semanal/mensual</button>`}`;
+      <button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="showGoalCard('period-choice')">🎯 Elegir mi meta semanal/mensual</button>`;
   }else{
     goalSection = `<p class="admin-mini" style="margin-top:12px">Todavía no podés elegir tu meta de estudio. Tu profesor te va a habilitar esta opción.</p>`;
   }
@@ -3448,7 +3525,22 @@ function renderStudentBooking(){
   el.innerHTML=`<div class="access-panel"><strong>Tus próximas clases</strong>${futureRows}</div>
   <div class="access-panel" style="margin-top:16px"><strong>Clases que ya tuviste</strong>${pastRows}</div>`;
 }
-function renderStudentDashboard(){renderStudentAccess();renderStudentBooking();renderStudentUpdates();renderStudentWellness()}
+// Historial de notificaciones del alumno: recordatorios de meta, resúmenes, avisos del
+// profesor y cualquier otra cosa que se le mande con queuePush(). Se guarda aparte de
+// "pushQueue" (esa se vacía al procesar el envío real), así queda como historial permanente.
+function renderStudentNotifications(){
+  const el = document.getElementById('student-notifications-panel');
+  if(!el || !DEMO_STUDENT_ID) return;
+  const list = adminData.notifications
+    .filter(n=>n.studentId===DEMO_STUDENT_ID)
+    .sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  if(!list.length){
+    el.innerHTML = '<div class="access-panel"><strong>Todavía no tenés notificaciones</strong><div class="admin-mini" style="margin-top:8px">Acá vas a ver los recordatorios de tu meta de estudio, los avisos de tu profesor, y todo lo demás que te llegue como notificación.</div></div>';
+    return;
+  }
+  el.innerHTML = list.map(n=>`<div class="update-card" style="margin-bottom:10px"><div class="update-card-top"><h4>${escapeHtml(n.title||'')}</h4><span class="update-date">${formatUpdateDate(n.createdAt)}</span></div><p>${escapeHtml(n.body||'')}</p></div>`).join('');
+}
+function renderStudentDashboard(){renderStudentAccess();renderStudentBooking();renderStudentUpdates();renderStudentWellness();renderStudentNotifications()}
 renderAdmin();
 
 /* ---------- reproductor de sonido relajante / ruido blanco / naturaleza (100% generado en el navegador) ---------- */
@@ -4050,6 +4142,10 @@ function markStudentActiveNow(uid){
 function queuePush(studentId, title, body){
   if(!studentId) return;
   addDoc(collection(db,'pushQueue'), { studentId, title, body, createdAt: new Date().toISOString() }).catch(()=>{});
+  // Guarda una copia en "notifications", separada de "pushQueue" (que se procesa y se vacía
+  // para mandar la notificación real al teléfono). Esta es la que el alumno puede ver como
+  // historial dentro de la app, en la pestaña "Notificaciones" — no se borra sola.
+  addDoc(collection(db,'notifications'), { studentId, title, body, createdAt: new Date().toISOString() }).catch(()=>{});
 }
 window.queuePush = queuePush;
 
@@ -4226,7 +4322,7 @@ window.seedInitialData = async function(){
 };
 
 /* ---------- listeners en tiempo real de las colecciones compartidas ---------- */
-let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubMaterials=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubWeeklyGoals=null, unsubMonthlyGoals=null, unsubSleepCheckins=null, unsubMonthlySummaries=null, unsubDailyGoals=null;
+let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubMaterials=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubWeeklyGoals=null, unsubMonthlyGoals=null, unsubSleepCheckins=null, unsubMonthlySummaries=null, unsubDailyGoals=null, unsubNotifications=null;
 
 function startCollectionListeners(){
   stopCollectionListeners();
@@ -4257,6 +4353,10 @@ function startCollectionListeners(){
     window.adminData.materials = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
     if(typeof window.renderSubjectContent==='function') window.renderSubjectContent();
+  });
+  unsubNotifications = onSnapshot(collection(db,'notifications'), snap=>{
+    window.adminData.notifications = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    safeRenderStudentDashboard();
   });
   unsubItemViews = onSnapshot(collection(db,'itemViews'), snap=>{
     window.adminData.itemViews = snap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -4316,8 +4416,8 @@ function startCollectionListeners(){
   });
 }
 function stopCollectionListeners(){
-  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubMaterials,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubWeeklyGoals,unsubMonthlyGoals,unsubSleepCheckins,unsubMonthlySummaries,unsubDailyGoals].forEach(u=>{ if(u) u(); });
-  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubMaterials=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubWeeklyGoals=unsubMonthlyGoals=unsubSleepCheckins=unsubMonthlySummaries=unsubDailyGoals=null;
+  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubMaterials,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubWeeklyGoals,unsubMonthlyGoals,unsubSleepCheckins,unsubMonthlySummaries,unsubDailyGoals,unsubNotifications].forEach(u=>{ if(u) u(); });
+  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubMaterials=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubWeeklyGoals=unsubMonthlyGoals=unsubSleepCheckins=unsubMonthlySummaries=unsubDailyGoals=unsubNotifications=null;
 }
 function safeRenderAdmin(){ if(typeof window.renderAdmin==='function') window.renderAdmin(); }
 function safeAutoSyncGivenClasses(){ if(typeof window.autoSyncGivenClasses==='function') window.autoSyncGivenClasses(); }
