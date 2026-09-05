@@ -1906,12 +1906,6 @@ function pickDailyGoal(minutes){
     studentId: DEMO_STUDENT_ID, date: todayISO(), dailyMinutes: minutes, level, completed:false, baselineMinutes, createdAt: new Date().toISOString()
   }).then(()=>{ renderStudentWellness(); }).catch(warnSaveError);
 }
-function renderGoalOptionButtons(level){
-  const opts = GOAL_LEVEL_OPTIONS[level] || GOAL_LEVEL_OPTIONS[3];
-  return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-    ${opts.map(m=>`<button type="button" class="admin-btn secondary small" onclick="pickDailyGoal(${m})">${m} min</button>`).join('')}
-  </div>`;
-}
 // Confeti de celebración al cumplir una meta diaria (sin librerías externas).
 function triggerConfetti(){
   const colors = ['#e0b34d','#1c5c3e','#d9534f','#3d7ea6','#c77dff','#f2a541','#4fb477','#ff7ab6'];
@@ -1999,15 +1993,13 @@ function renderStudentWellness(){
     </div>`;
   }else if(todayGoal && todayGoal.completed){
     dailyGoalSection = `<div style="margin-top:12px">
-      <div class="admin-mini" style="font-weight:600;margin-bottom:4px">🎉 ¡Cumpliste tu meta de hoy! (${formatMinutes(todayGoal.dailyMinutes)})</div>
-      <p class="admin-mini">¿Querés ponerte otra meta?</p>
-      ${renderGoalOptionButtons(nextGoalLevel(DEMO_STUDENT_ID))}
+      <div class="admin-mini" style="font-weight:600;margin-bottom:6px">🎉 ¡Cumpliste tu meta de hoy! (${formatMinutes(todayGoal.dailyMinutes)})</div>
+      <button type="button" class="admin-btn secondary small" onclick="showGoalCard('completed')">🎯 Meta</button>
     </div>`;
   }else if(canSetGoal){
     dailyGoalSection = `<div style="margin-top:12px">
-      <div class="admin-mini" style="font-weight:600;margin-bottom:4px">Meta diaria</div>
-      <p class="admin-mini">¿Cuál va a ser tu meta de hoy?</p>
-      ${renderGoalOptionButtons(1)}
+      <div class="admin-mini" style="font-weight:600;margin-bottom:6px">Meta diaria</div>
+      <button type="button" class="admin-btn secondary small" onclick="showGoalCard('ask')">🎯 Meta</button>
     </div>`;
   }else{
     dailyGoalSection = '';
@@ -2083,6 +2075,30 @@ function attendanceBadge(status){
 }
 // Lista de resúmenes mensuales que el profesor le fue enviando (quedan guardados acá,
 // no solo como notificación pasajera).
+// Calendario mensual: una grilla con el mes completo, mostrando en cada día la
+// carita de sueño correspondiente (🥶 si ese día ya cerró y no respondió/no
+// estudió, según la misma lógica que usa sleepEmojiForDay en el resto del sitio).
+function renderSleepCalendarForMonth(studentId, monthKey){
+  const [y,m] = monthKey.split('-').map(Number);
+  if(!y || !m) return '';
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const firstWeekday = (new Date(y, m-1, 1).getDay()+6)%7; // 0=lunes
+  const cells = [];
+  for(let i=0;i<firstWeekday;i++) cells.push(null);
+  for(let day=1; day<=daysInMonth; day++) cells.push(`${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`);
+  while(cells.length%7!==0) cells.push(null);
+  const today = todayISO();
+  const headerLetters = [1,2,3,4,5,6,0].map(i=>WEEKDAY_LETTER[i]);
+  const header = headerLetters.map(l=>`<div style="text-align:center;font-size:.6rem;font-weight:700;color:var(--text-muted)">${l}</div>`).join('');
+  const body = cells.map(dateStr=>{
+    if(!dateStr) return `<div></div>`;
+    const dayNum = Number(dateStr.slice(8,10));
+    const isFuture = dateStr > today;
+    const emoji = isFuture ? '' : sleepEmojiForDay(studentId, dateStr);
+    return `<div style="text-align:center;padding:3px 0"><div style="font-size:.58rem;color:var(--text-muted)">${dayNum}</div><div style="font-size:.95rem;min-height:1.1em">${emoji}</div></div>`;
+  }).join('');
+  return `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:10px">${header}${body}</div>`;
+}
 function renderStudentMonthlySummaries(){
   if(!DEMO_STUDENT_ID) return '';
   const list = adminData.monthlySummaries
@@ -2096,6 +2112,7 @@ function renderStudentMonthlySummaries(){
         <span class="admin-mini">${formatMinutes(m.totalMinutes)} · ${m.daysWithActivity}/${m.totalDays} días</span>
       </div>
       <div class="admin-mini" style="margin-top:4px">😀${m.sleepBien||0} · 😑${m.sleepRegular||0} · 🫩${m.sleepMal||0}${m.monthlyGoalMinutes?` · Meta: ${formatMinutes(m.monthlyGoalMinutes)} ${m.goalMet?'✅':''}`:''}</div>
+      ${renderSleepCalendarForMonth(DEMO_STUDENT_ID, m.monthKey)}
     </div>`).join('');
   return `<div style="margin-top:18px">
     <div class="admin-mini" style="margin-bottom:6px">📊 Resúmenes mensuales de tu profesor</div>
