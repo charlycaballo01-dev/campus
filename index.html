@@ -1734,7 +1734,20 @@ function startAttendanceTracking(uid){
     if(document.visibilityState !== 'visible') return;
     if(typeof window.fsIncrementAttendance === 'function') window.fsIncrementAttendance(uid, todayISO());
   }, 60000);
+  // "Salís y entrás": cuando vuelve a la pestaña (o vuelve del segundo plano en el celular),
+  // le mostramos el cartel de meta diaria correspondiente, si corresponde. Con un mínimo de
+  // tiempo entre apariciones para no bombardearlo si cambia de pestaña seguido.
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState==='visible'){
+      const now=Date.now();
+      if(now - lastGoalCardCheckAt > 60000){
+        lastGoalCardCheckAt = now;
+        setTimeout(safeMaybeShowGoalCard, 500);
+      }
+    }
+  });
 }
+let lastGoalCardCheckAt = 0;
 function stopAttendanceTracking(){ if(attendanceIntervalId){ clearInterval(attendanceIntervalId); attendanceIntervalId=null; } }
 
 /* ---------- check-in de sueño (lo ve el alumno al entrar) ---------- */
@@ -1752,46 +1765,79 @@ function closeSleepCheckin(){
   if(DEMO_STUDENT_ID) localStorage.setItem('sleepCheckinDismissed_'+DEMO_STUDENT_ID+'_'+todayISO(), '1');
 }
 /* ---------- recordatorio de meta diaria (si vuelve al campus sin haberla terminado) ---------- */
-function maybeShowGoalReminder(){
+// Cartel flotante de meta diaria: cubre 3 situaciones, todas con el mismo diseño
+// (como el de la imagen de referencia) y se dispara al entrar/salir del campus:
+//  - 'ask': todavía no eligió meta hoy → le pregunta cuánto quiere estudiar.
+//  - 'completed': ya cumplió la meta activa → la felicita y ofrece subir de nivel.
+//  - 'reminder': tiene una meta sin terminar → le recuerda cuánto le falta.
+function maybeShowGoalCard(){
   if(!DEMO_STUDENT_ID) return;
   const sleepOverlay = document.getElementById('sleep-checkin-overlay');
   if(sleepOverlay && sleepOverlay.classList.contains('active')) return; // no lo tapamos con dos carteles a la vez
+  const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
+  const commitment = latestCommitmentFor(DEMO_STUDENT_ID);
+  const canSetGoal = !!(student?.goalInviteSent || commitment);
   const goal = dailyGoalFor(DEMO_STUDENT_ID, todayISO());
-  if(!goal || goal.completed) return; // sin meta hoy, o ya la cumplió: no hay nada que recordar
+  if(!goal){ if(canSetGoal) showGoalCard('ask'); return; }
+  if(goal.completed){ showGoalCard('completed'); return; }
   const stats = attendanceStats(DEMO_STUDENT_ID);
-  if(stats.today >= goal.dailyMinutes) return; // por las dudas, si ya la cumplió no lo marquemos como pendiente
-  renderGoalReminderCard(goal, stats);
+  if(stats.today < goal.dailyMinutes) showGoalCard('reminder');
+}
+function showGoalCard(mode){
+  renderGoalFloatingCard(mode);
   document.getElementById('goal-reminder-overlay')?.classList.add('active');
 }
-function renderGoalReminderCard(goal, stats){
+function renderGoalFloatingCard(mode){
   const el = document.getElementById('goal-reminder-content');
   if(!el) return;
-  const remaining = Math.max(0, goal.dailyMinutes - stats.today);
-  const pct = Math.max(0, Math.min(100, Math.round(stats.today/goal.dailyMinutes*100)));
-  el.innerHTML = `
-    <div style="background:linear-gradient(160deg,#1c5c3e,#0d3524);padding:28px 22px 40px;text-align:center;color:#fff">
-      <div style="font-size:.7rem;letter-spacing:.08em;font-weight:700;color:var(--gold);text-transform:uppercase">Meta diaria</div>
-      <div style="font-size:1.4rem;font-weight:700;margin-top:8px;font-family:var(--font-display)">¡Ya casi llegás!</div>
-      <div style="font-size:.85rem;opacity:.85;margin-top:6px">Te falta poco para completar tu meta de hoy</div>
-    </div>
-    <div style="padding:0 22px 22px">
-      <div style="background:var(--bg-soft);border-radius:14px;padding:14px 16px;margin-top:-26px;position:relative;box-shadow:0 4px 14px rgba(0,0,0,.1)">
-        <div style="display:flex;justify-content:space-between;font-size:.8rem;font-weight:700;color:var(--text-muted)">
-          <span>Progreso de hoy</span><span style="color:var(--forest)">${formatMinutes(stats.today)} / ${formatMinutes(goal.dailyMinutes)}</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-          <span style="font-size:1.1rem">🚩</span>
-          <div style="flex:1;background:var(--line);border-radius:8px;height:10px;overflow:hidden">
-            <div style="background:linear-gradient(90deg,var(--gold),var(--forest));height:100%;width:${pct}%"></div>
+  if(mode==='reminder'){
+    const goal = dailyGoalFor(DEMO_STUDENT_ID, todayISO());
+    if(!goal) return;
+    const progressMin = goalProgressMinutes(DEMO_STUDENT_ID, goal);
+    const remaining = Math.max(0, goal.dailyMinutes - progressMin);
+    const pct = Math.max(0, Math.min(100, Math.round(progressMin/goal.dailyMinutes*100)));
+    el.innerHTML = `
+      <div style="background:linear-gradient(160deg,#1c5c3e,#0d3524);padding:28px 22px 40px;text-align:center;color:#fff">
+        <div style="font-size:.7rem;letter-spacing:.08em;font-weight:700;color:var(--gold);text-transform:uppercase">Meta diaria</div>
+        <div style="font-size:1.4rem;font-weight:700;margin-top:8px;font-family:var(--font-display)">¡Ya casi llegás!</div>
+        <div style="font-size:.85rem;opacity:.85;margin-top:6px">Te falta poco para completar tu meta de hoy</div>
+      </div>
+      <div style="padding:0 22px 22px">
+        <div style="background:var(--bg-soft);border-radius:14px;padding:14px 16px;margin-top:-26px;position:relative;box-shadow:0 4px 14px rgba(0,0,0,.1)">
+          <div style="display:flex;justify-content:space-between;font-size:.8rem;font-weight:700;color:var(--text-muted)">
+            <span>Progreso de hoy</span><span style="color:var(--forest)">${formatMinutes(progressMin)} / ${formatMinutes(goal.dailyMinutes)}</span>
           </div>
-          <span style="font-size:1.1rem;filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(0.95)">🏛️</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <span style="font-size:1.1rem">🚩</span>
+            <div style="flex:1;background:var(--line);border-radius:8px;height:10px;overflow:hidden">
+              <div style="background:linear-gradient(90deg,var(--gold),var(--forest));height:100%;width:${pct}%"></div>
+            </div>
+            <span style="font-size:1.1rem;filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(0.95)">🏛️</span>
+          </div>
         </div>
+        <div style="background:var(--bg-soft);border-radius:14px;padding:14px;text-align:center;margin-top:14px">
+          <div style="font-size:1.6rem;font-weight:700;color:var(--forest);font-family:var(--font-display)">${remaining}</div>
+          <div class="admin-mini">Minutos restantes</div>
+        </div>
+        <button type="button" class="admin-btn" style="width:100%;margin-top:16px" onclick="closeGoalReminder()">¡Completá tu meta de hoy!</button>
+      </div>`;
+    return;
+  }
+  const level = mode==='completed' ? nextGoalLevel(DEMO_STUDENT_ID) : 1;
+  const heading = mode==='completed' ? '🎉 ¡Cumpliste tu meta!' : '¡Elegí tu meta de hoy!';
+  const subtitle = mode==='completed' ? '¿Querés ponerte otra meta?' : '¿Cuánto tiempo querés estudiar hoy?';
+  const opts = GOAL_LEVEL_OPTIONS[level] || GOAL_LEVEL_OPTIONS[3];
+  el.innerHTML = `
+    <div style="background:linear-gradient(160deg,#1c5c3e,#0d3524);padding:28px 22px 22px;text-align:center;color:#fff">
+      <div style="font-size:.7rem;letter-spacing:.08em;font-weight:700;color:var(--gold);text-transform:uppercase">Meta diaria</div>
+      <div style="font-size:1.4rem;font-weight:700;margin-top:8px;font-family:var(--font-display)">${heading}</div>
+      <div style="font-size:.85rem;opacity:.85;margin-top:6px">${subtitle}</div>
+    </div>
+    <div style="padding:20px 22px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        ${opts.map(m=>`<button type="button" class="admin-btn" style="flex:1;min-width:70px" onclick="pickDailyGoal(${m}); closeGoalReminder();">${m} min</button>`).join('')}
       </div>
-      <div style="background:var(--bg-soft);border-radius:14px;padding:14px;text-align:center;margin-top:14px">
-        <div style="font-size:1.6rem;font-weight:700;color:var(--forest);font-family:var(--font-display)">${remaining}</div>
-        <div class="admin-mini">Minutos restantes</div>
-      </div>
-      <button type="button" class="admin-btn" style="width:100%;margin-top:16px" onclick="closeGoalReminder()">¡Completá tu meta de hoy!</button>
+      <button type="button" class="admin-btn secondary small" style="width:100%;margin-top:12px" onclick="closeGoalReminder()">Ahora no</button>
     </div>`;
 }
 function closeGoalReminder(){
@@ -1834,22 +1880,30 @@ function nextGoalLevel(studentId){
 let goalCompletionInFlight = new Set();
 // Se fija si la meta activa de hoy ya se cumplió con los minutos ya estudiados;
 // si es así, la marca como completada (una sola vez) y dispara el confeti.
+// El progreso de una meta se mide desde el momento en que se CREÓ, no desde el
+// arranque del día: si ya venía estudiando antes de crearla, ese tiempo no cuenta.
+function goalProgressMinutes(studentId, goal){
+  if(!goal) return 0;
+  const stats = attendanceStats(studentId);
+  return Math.max(0, stats.today - (goal.baselineMinutes||0));
+}
 function checkDailyGoalCompletion(studentId){
   const goal = dailyGoalFor(studentId, todayISO());
   if(!goal || goal.completed || goalCompletionInFlight.has(goal.id)) return;
-  const stats = attendanceStats(studentId);
-  if(stats.today >= goal.dailyMinutes){
+  if(goalProgressMinutes(studentId, goal) >= goal.dailyMinutes){
     goalCompletionInFlight.add(goal.id);
     window.fsUpdate('dailyGoals', goal.id, {completed:true, completedAt:new Date().toISOString()}).then(()=>{
       triggerConfetti();
+      setTimeout(()=>showGoalCard('completed'), 900);
     }).catch(()=>{}).finally(()=>{ goalCompletionInFlight.delete(goal.id); });
   }
 }
 function pickDailyGoal(minutes){
   if(!DEMO_STUDENT_ID) return;
   const level = nextGoalLevel(DEMO_STUDENT_ID);
+  const baselineMinutes = attendanceStats(DEMO_STUDENT_ID).today;
   window.fsAdd('dailyGoals', {
-    studentId: DEMO_STUDENT_ID, date: todayISO(), dailyMinutes: minutes, level, completed:false, createdAt: new Date().toISOString()
+    studentId: DEMO_STUDENT_ID, date: todayISO(), dailyMinutes: minutes, level, completed:false, baselineMinutes, createdAt: new Date().toISOString()
   }).then(()=>{ renderStudentWellness(); }).catch(warnSaveError);
 }
 function renderGoalOptionButtons(level){
@@ -1860,22 +1914,29 @@ function renderGoalOptionButtons(level){
 }
 // Confeti de celebración al cumplir una meta diaria (sin librerías externas).
 function triggerConfetti(){
-  const colors = ['#e0b34d','#1c5c3e','#d9534f','#3d7ea6','#c77dff','#f2a541'];
+  const colors = ['#e0b34d','#1c5c3e','#d9534f','#3d7ea6','#c77dff','#f2a541','#4fb477','#ff7ab6'];
   const container = document.createElement('div');
   container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden';
   document.body.appendChild(container);
-  for(let i=0;i<70;i++){
-    const piece = document.createElement('div');
-    const color = colors[Math.floor(Math.random()*colors.length)];
-    const left = Math.random()*100;
-    const delay = Math.random()*0.5;
-    const duration = 2.2+Math.random()*1.3;
-    const w = 6+Math.random()*6, h = w*0.6;
-    const rotate = Math.random()*360;
-    piece.style.cssText = `position:absolute;top:-20px;left:${left}%;width:${w}px;height:${h}px;background:${color};opacity:.95;border-radius:2px;transform:rotate(${rotate}deg);animation:confetti-fall ${duration}s ${delay}s ease-in forwards`;
-    container.appendChild(piece);
-  }
-  setTimeout(()=>container.remove(), 4200);
+  const spawnBatch = (count)=>{
+    for(let i=0;i<count;i++){
+      const piece = document.createElement('div');
+      const color = colors[Math.floor(Math.random()*colors.length)];
+      const left = Math.random()*100;
+      const delay = Math.random()*0.6;
+      const duration = 2.4+Math.random()*1.8;
+      const w = 6+Math.random()*10, h = w*0.6;
+      const rotate = Math.random()*360;
+      const shape = Math.random()<0.3 ? '50%' : '2px';
+      piece.style.cssText = `position:absolute;top:-20px;left:${left}%;width:${w}px;height:${h}px;background:${color};opacity:.95;border-radius:${shape};transform:rotate(${rotate}deg);animation:confetti-fall ${duration}s ${delay}s ease-in forwards`;
+      container.appendChild(piece);
+    }
+  };
+  // Varias tandas espaciadas para que la lluvia de papelitos dure más y se sienta más abundante.
+  spawnBatch(160);
+  setTimeout(()=>spawnBatch(140), 350);
+  setTimeout(()=>spawnBatch(120), 750);
+  setTimeout(()=>container.remove(), 5500);
 }
 function saveStudentCommitment(e){
   e.preventDefault();
@@ -1921,11 +1982,12 @@ function renderStudentWellness(){
   // más largo; segundo cumplida → todas las opciones, hasta que deje de crear metas nuevas.
   let dailyGoalSection;
   if(todayGoal && !todayGoal.completed){
-    const pct = Math.max(0,Math.min(100,Math.round(stats.today/todayGoal.dailyMinutes*100)));
+    const progressMin = goalProgressMinutes(DEMO_STUDENT_ID, todayGoal);
+    const pct = Math.max(0,Math.min(100,Math.round(progressMin/todayGoal.dailyMinutes*100)));
     dailyGoalSection = `<div style="margin-top:12px">
       <div class="admin-mini" style="font-weight:600;margin-bottom:6px">Meta diaria</div>
       <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">
-        <span>Progreso de hoy</span><span>${formatMinutes(stats.today)} / ${formatMinutes(todayGoal.dailyMinutes)}</span>
+        <span>Progreso de hoy</span><span>${formatMinutes(progressMin)} / ${formatMinutes(todayGoal.dailyMinutes)}</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:1.1rem">🚩</span>
@@ -2088,10 +2150,9 @@ function sendCommitmentReminder(studentId){
   const commitment = latestCommitmentFor(studentId);
   const s = adminData.students.find(x=>x.id===studentId);
   if(!commitment) return;
-  const stats = attendanceStats(studentId);
   const todayGoal = dailyGoalFor(studentId, todayISO());
   const body = todayGoal
-    ? `Llevás ${formatMinutes(stats.today)} hoy de tu meta de ${formatMinutes(todayGoal.dailyMinutes)}. ¡Vamos que se puede!`
+    ? `Llevás ${formatMinutes(goalProgressMinutes(studentId, todayGoal))} hoy de tu meta de ${formatMinutes(todayGoal.dailyMinutes)}. ¡Vamos que se puede!`
     : `Todavía no elegiste cuánto querés estudiar hoy. ¡Entrá y definí tu meta del día!`;
   queuePush(studentId, 'Recordatorio de tu compromiso', body);
   alert(`Se envió un recordatorio a ${s?s.name:'el alumno'}.`);
@@ -3871,7 +3932,7 @@ function safeRenderStudentDashboard(){ if(window.__currentUid && typeof window.r
 function safeRenderUnits(){ if(typeof renderUnits==='function') renderUnits(); }
 function safeRenderProfileAttendance(){ if(typeof window.renderProfileAttendance==='function') window.renderProfileAttendance(); }
 function safeMaybeShowSleepCheckin(){ if(typeof window.maybeShowSleepCheckin==='function') window.maybeShowSleepCheckin(); }
-function safeMaybeShowGoalReminder(){ if(typeof window.maybeShowGoalReminder==='function') window.maybeShowGoalReminder(); }
+function safeMaybeShowGoalCard(){ if(typeof window.maybeShowGoalCard==='function') window.maybeShowGoalCard(); }
 
 function updateUserChip(){
   const chip = document.getElementById('user-chip');
@@ -3922,7 +3983,7 @@ async function routeUser(user){
       setupPushNotifications(user.uid);
       startAttendanceTracking(user.uid);
       safeMaybeShowSleepCheckin();
-      setTimeout(safeMaybeShowGoalReminder, 1200);
+      setTimeout(safeMaybeShowGoalCard, 1200);
     }
   }catch(err){
     alert('Error al cargar tu cuenta: ' + err.message + '\n\nProbá recargar la página e iniciar sesión de nuevo.');
