@@ -1580,8 +1580,15 @@ window.DEFAULT_SUBJECTS = DEFAULT_SUBJECTS;
 
 let DEMO_STUDENT_ID = null;
 function setCurrentStudentId(id){ DEMO_STUDENT_ID = id; }
-const todayISO=()=>new Date().toISOString().slice(0,10);
-function addDays(date,days){const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+Number(days));return d.toISOString().slice(0,10)}
+// Convierte un objeto Date a "YYYY-MM-DD" usando la fecha LOCAL del dispositivo
+// (no UTC). Importante: `Date.toISOString()` siempre da la fecha en UTC, así que
+// en Argentina (UTC-3) "cambiaría de día" a las 21:00 hs locales en vez de a
+// medianoche. Por eso todas las fechas del sitio se arman con esta función.
+function toISODate(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+const todayISO=()=>toISODate(new Date());
+function addDays(date,days){const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+Number(days));return toISODate(d)}
 function getPackage(student){return adminData.packages.find(p=>p.name===student.package)}
 function getStudentExpiry(student){const p=getPackage(student);return p?addDays(student.startDate,p.days):null}
 function isStudentActive(student){return student.status==='Activo' && !!getPackage(student) && todayISO()<=getStudentExpiry(student)}
@@ -1594,12 +1601,12 @@ function currentCycleBounds(cycle){
     const diffToMonday = (day===0?-6:1-day);
     const monday = new Date(now); monday.setDate(now.getDate()+diffToMonday);
     const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
-    return {start: monday.toISOString().slice(0,10), end: sunday.toISOString().slice(0,10)};
+    return {start: toISODate(monday), end: toISODate(sunday)};
   }
   if(cycle==='mensual'){
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     const end = new Date(now.getFullYear(), now.getMonth()+1, 0);
-    return {start: start.toISOString().slice(0,10), end: end.toISOString().slice(0,10)};
+    return {start: toISODate(start), end: toISODate(end)};
   }
   return null;
 }
@@ -1628,12 +1635,12 @@ function formatMinutes(mins){
 }
 function lastNDatesISO(n){
   const arr=[];
-  for(let i=n-1;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push(d.toISOString().slice(0,10)); }
+  for(let i=n-1;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push(toISODate(d)); }
   return arr;
 }
 function isoWeekStart(){
   const d=new Date(); const day=d.getDay(); const diffToMonday=(day===0?-6:1-day);
-  d.setDate(d.getDate()+diffToMonday); return d.toISOString().slice(0,10);
+  d.setDate(d.getDate()+diffToMonday); return toISODate(d);
 }
 function isoMonthStart(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`; }
 function attendanceMinutesInRange(studentId, fromISO, toISO){
@@ -1654,8 +1661,7 @@ function sleepLabel(quality){ return quality==='bien'?'Bien':quality==='regular'
 // no la falta de respuesta a la pregunta de sueño. Solo aplica desde el día en
 // que el profesor le envió el botón de meta (antes de eso no cuenta), y solo
 // para días ya cerrados (no el de hoy, que todavía puede tener actividad).
-function countsFromInviteDate(studentId, date){
-  const student = adminData.students.find(x=>x.id===studentId);
+function countsFromInviteDate(studentId, date){  const student = adminData.students.find(x=>x.id===studentId);
   const invitedDate = student?.goalInviteSentAt ? student.goalInviteSentAt.slice(0,10) : null;
   return !!(invitedDate && date >= invitedDate);
 }
@@ -1675,6 +1681,14 @@ function sleepLabelForDay(studentId, date){
 }
 // Mini gráfico de barras (sin librerías) para mostrar minutos estudiados por día.
 // `goalMin` (si existe) se usa como techo de referencia; si no, se usa el máximo del propio rango.
+// Etiqueta corta para las barras: minutos si es menos de una hora, si no horas + minutos.
+function formatMinutesShort(mins){
+  mins = Math.max(0, Math.round(mins||0));
+  if(mins<=0) return '';
+  if(mins<60) return `${mins}m`;
+  const h = Math.floor(mins/60), m = mins%60;
+  return m>0 ? `${h}h${m}m` : `${h}h`;
+}
 function renderMinutesBarChart(dates, studentId, goalMin){
   const values = dates.map(d=>attendanceMinutesInRange(studentId, d, d));
   const ceiling = Math.max(goalMin||0, ...values, 1);
@@ -1684,7 +1698,7 @@ function renderMinutesBarChart(dates, studentId, goalMin){
     const dayLabel = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short'});
     const over = goalMin && mins>=goalMin;
     return `<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px">
-      <div style="font-size:.62rem;color:var(--text-muted);font-weight:700">${mins>0?Math.round(mins):''}</div>
+      <div style="font-size:.62rem;color:var(--text-muted);font-weight:700">${formatMinutesShort(mins)}</div>
       <div style="width:100%;height:64px;display:flex;align-items:flex-end;background:var(--bg-soft);border-radius:6px;overflow:hidden">
         <div style="width:100%;height:${pct}%;background:${over?'var(--gold)':'var(--forest)'};border-radius:6px 6px 0 0;transition:height ${'var(--ease)'}"></div>
       </div>
@@ -1989,7 +2003,7 @@ function isoDatesInMonthSoFar(){
   const arr=[];
   let d = new Date(start+'T00:00:00');
   const endDate = new Date(end+'T00:00:00');
-  while(d<=endDate){ arr.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+  while(d<=endDate){ arr.push(toISODate(d)); d.setDate(d.getDate()+1); }
   return arr;
 }
 function weeklyMinutesBuckets(dates, studentId){
@@ -3507,7 +3521,7 @@ window.handleRegister = async function(){
     try{
       await setDoc(doc(db,'students',cred.user.uid), {
         name, email, package: 'Sin asignar', status: 'Pendiente',
-        startDate: new Date().toISOString().slice(0,10), classesUsed: 0
+        startDate: (()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(), classesUsed: 0
       });
     }catch(saveErr){
       // La cuenta ya existe en Firebase Auth aunque falle este guardado.
@@ -3515,7 +3529,7 @@ window.handleRegister = async function(){
       try{
         await setDoc(doc(db,'students',cred.user.uid), {
           name, email, package: 'Sin asignar', status: 'Pendiente',
-          startDate: new Date().toISOString().slice(0,10), classesUsed: 0
+          startDate: (()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(), classesUsed: 0
         }, {merge:true});
       }catch(retryErr){
         console.error('No se pudo guardar la ficha del alumno:', retryErr);
@@ -3716,7 +3730,7 @@ function updateUserChip(){
         chip.dataset.healing = '1';
         setDoc(doc(db,'students', window.__currentUid), {
           name: fallbackName, email: u.email || '', package: 'Sin asignar', status: 'Pendiente',
-          startDate: new Date().toISOString().slice(0,10), classesUsed: 0
+          startDate: (()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(), classesUsed: 0
         }, {merge:true}).catch(err=>console.error('Autorreparación de ficha de alumno falló:', err));
       }
       const initials = fallbackName.split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('') || '?';
