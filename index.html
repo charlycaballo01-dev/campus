@@ -341,6 +341,10 @@
   .quiz-cta p{font-size:0.86rem; color:rgba(255,255,255,0.78); max-width:420px; line-height:1.5;}
   .quiz-cta .admin-btn{background:var(--gold); flex-shrink:0;}
   .quiz-cta .admin-btn:hover{background:#FFFFFF; color:var(--forest);}
+  @keyframes confetti-fall{
+    0%{ transform: translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform: translateY(110vh) rotate(360deg); opacity:0; }
+  }
 </style>
 <style>
 .access-panel{margin:20px 0 30px;padding:26px;border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--bg-panel);box-shadow:0 2px 14px rgba(20,59,42,.04)}
@@ -987,6 +991,13 @@
   </div>
 </div>
 
+<!-- ============ Recordatorio de meta diaria (si vuelve sin terminarla) ============ -->
+<div id="goal-reminder-overlay" class="app-modal-overlay">
+  <div class="app-modal" style="max-width:340px;padding:0;overflow:hidden">
+    <div id="goal-reminder-content"></div>
+  </div>
+</div>
+
 <!-- ============ Informe (admin): semanal / mensual ============ -->
 <div id="weekly-report-overlay" class="app-modal-overlay">
   <div class="app-modal" style="max-width:560px">
@@ -1572,6 +1583,7 @@ const adminData = {
   commitments: [],
   sleepCheckins: [],
   monthlySummaries: [],
+  dailyGoals: [],
   recent: []
 };
 window.adminData = adminData;
@@ -1739,6 +1751,54 @@ function closeSleepCheckin(){
   document.getElementById('sleep-checkin-overlay')?.classList.remove('active');
   if(DEMO_STUDENT_ID) localStorage.setItem('sleepCheckinDismissed_'+DEMO_STUDENT_ID+'_'+todayISO(), '1');
 }
+/* ---------- recordatorio de meta diaria (si vuelve al campus sin haberla terminado) ---------- */
+function maybeShowGoalReminder(){
+  if(!DEMO_STUDENT_ID) return;
+  const sleepOverlay = document.getElementById('sleep-checkin-overlay');
+  if(sleepOverlay && sleepOverlay.classList.contains('active')) return; // no lo tapamos con dos carteles a la vez
+  const goal = dailyGoalFor(DEMO_STUDENT_ID, todayISO());
+  if(!goal || goal.completed) return; // sin meta hoy, o ya la cumplió: no hay nada que recordar
+  const stats = attendanceStats(DEMO_STUDENT_ID);
+  if(stats.today >= goal.dailyMinutes) return; // por las dudas, si ya la cumplió no lo marquemos como pendiente
+  renderGoalReminderCard(goal, stats);
+  document.getElementById('goal-reminder-overlay')?.classList.add('active');
+}
+function renderGoalReminderCard(goal, stats){
+  const el = document.getElementById('goal-reminder-content');
+  if(!el) return;
+  const remaining = Math.max(0, goal.dailyMinutes - stats.today);
+  const pct = Math.max(0, Math.min(100, Math.round(stats.today/goal.dailyMinutes*100)));
+  el.innerHTML = `
+    <div style="background:linear-gradient(160deg,#1c5c3e,#0d3524);padding:28px 22px 40px;text-align:center;color:#fff">
+      <div style="font-size:.7rem;letter-spacing:.08em;font-weight:700;color:var(--gold);text-transform:uppercase">Meta diaria</div>
+      <div style="font-size:1.4rem;font-weight:700;margin-top:8px;font-family:var(--font-display)">¡Ya casi llegás!</div>
+      <div style="font-size:.85rem;opacity:.85;margin-top:6px">Te falta poco para completar tu meta de hoy</div>
+    </div>
+    <div style="padding:0 22px 22px">
+      <div style="background:var(--bg-soft);border-radius:14px;padding:14px 16px;margin-top:-26px;position:relative;box-shadow:0 4px 14px rgba(0,0,0,.1)">
+        <div style="display:flex;justify-content:space-between;font-size:.8rem;font-weight:700;color:var(--text-muted)">
+          <span>Progreso de hoy</span><span style="color:var(--forest)">${formatMinutes(stats.today)} / ${formatMinutes(goal.dailyMinutes)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+          <span style="font-size:1.1rem">🚩</span>
+          <div style="flex:1;background:var(--line);border-radius:8px;height:10px;overflow:hidden">
+            <div style="background:linear-gradient(90deg,var(--gold),var(--forest));height:100%;width:${pct}%"></div>
+          </div>
+          <span style="font-size:1.1rem;filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(0.95)">🏛️</span>
+        </div>
+      </div>
+      <div style="background:var(--bg-soft);border-radius:14px;padding:14px;text-align:center;margin-top:14px">
+        <div style="font-size:1.6rem;font-weight:700;color:var(--forest);font-family:var(--font-display)">${remaining}</div>
+        <div class="admin-mini">Minutos restantes</div>
+      </div>
+      <button type="button" class="admin-btn" style="width:100%;margin-top:16px" onclick="closeGoalReminder()">¡Completá tu meta de hoy!</button>
+    </div>`;
+}
+function closeGoalReminder(){
+  document.getElementById('goal-reminder-overlay')?.classList.remove('active');
+  const panel=document.getElementById('wellness-panel');
+  if(panel && panel.style.display!=='block'){ toggleWellnessPanel(); }
+}
 function submitSleepCheckin(quality){
   if(!DEMO_STUDENT_ID) return;
   window.fsSet('sleepCheckins', DEMO_STUDENT_ID+'_'+todayISO(), {studentId:DEMO_STUDENT_ID, date:todayISO(), quality, createdAt:new Date().toISOString()})
@@ -1749,23 +1809,89 @@ function submitSleepCheckin(quality){
 /* ---------- panel de bienestar del alumno (tiempo de estudio + compromiso + sueño) ---------- */
 let studentGoalEditing = false;
 function toggleStudentGoalForm(){ studentGoalEditing = !studentGoalEditing; renderStudentWellness(); }
+// La meta DIARIA es día por día y sube de nivel: arranca con opciones cortas
+// (5/15/30 min) para incentivar a empezar; al cumplirla, ofrece un desafío más
+// largo (15/30/60); al cumplir ese también, ya quedan todas las opciones
+// disponibles (5/15/30/60) para el resto del día. Cada meta del día es un
+// documento propio en "dailyGoals" (no se pisan entre sí), y no se repite sola
+// al día siguiente.
+const GOAL_LEVEL_OPTIONS = {1:[5,15,30], 2:[15,30,60], 3:[5,15,30,60]};
+function dailyGoalsForDate(studentId, date){
+  return adminData.dailyGoals.filter(g=>g.studentId===studentId && g.date===date)
+    .slice().sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||''));
+}
+// La meta "activa" de un día es la última que se cargó ese día.
+function dailyGoalFor(studentId, date){
+  const goals = dailyGoalsForDate(studentId, date);
+  return goals.length ? goals[goals.length-1] : null;
+}
+function nextGoalLevel(studentId){
+  const goals = dailyGoalsForDate(studentId, todayISO());
+  const completedLevels = goals.filter(g=>g.completed).map(g=>g.level||1);
+  if(!completedLevels.length) return 1;
+  return Math.min(3, Math.max(...completedLevels)+1);
+}
+let goalCompletionInFlight = new Set();
+// Se fija si la meta activa de hoy ya se cumplió con los minutos ya estudiados;
+// si es así, la marca como completada (una sola vez) y dispara el confeti.
+function checkDailyGoalCompletion(studentId){
+  const goal = dailyGoalFor(studentId, todayISO());
+  if(!goal || goal.completed || goalCompletionInFlight.has(goal.id)) return;
+  const stats = attendanceStats(studentId);
+  if(stats.today >= goal.dailyMinutes){
+    goalCompletionInFlight.add(goal.id);
+    window.fsUpdate('dailyGoals', goal.id, {completed:true, completedAt:new Date().toISOString()}).then(()=>{
+      triggerConfetti();
+    }).catch(()=>{}).finally(()=>{ goalCompletionInFlight.delete(goal.id); });
+  }
+}
+function pickDailyGoal(minutes){
+  if(!DEMO_STUDENT_ID) return;
+  const level = nextGoalLevel(DEMO_STUDENT_ID);
+  window.fsAdd('dailyGoals', {
+    studentId: DEMO_STUDENT_ID, date: todayISO(), dailyMinutes: minutes, level, completed:false, createdAt: new Date().toISOString()
+  }).then(()=>{ renderStudentWellness(); }).catch(warnSaveError);
+}
+function renderGoalOptionButtons(level){
+  const opts = GOAL_LEVEL_OPTIONS[level] || GOAL_LEVEL_OPTIONS[3];
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+    ${opts.map(m=>`<button type="button" class="admin-btn secondary small" onclick="pickDailyGoal(${m})">${m} min</button>`).join('')}
+  </div>`;
+}
+// Confeti de celebración al cumplir una meta diaria (sin librerías externas).
+function triggerConfetti(){
+  const colors = ['#e0b34d','#1c5c3e','#d9534f','#3d7ea6','#c77dff','#f2a541'];
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden';
+  document.body.appendChild(container);
+  for(let i=0;i<70;i++){
+    const piece = document.createElement('div');
+    const color = colors[Math.floor(Math.random()*colors.length)];
+    const left = Math.random()*100;
+    const delay = Math.random()*0.5;
+    const duration = 2.2+Math.random()*1.3;
+    const w = 6+Math.random()*6, h = w*0.6;
+    const rotate = Math.random()*360;
+    piece.style.cssText = `position:absolute;top:-20px;left:${left}%;width:${w}px;height:${h}px;background:${color};opacity:.95;border-radius:2px;transform:rotate(${rotate}deg);animation:confetti-fall ${duration}s ${delay}s ease-in forwards`;
+    container.appendChild(piece);
+  }
+  setTimeout(()=>container.remove(), 4200);
+}
 function saveStudentCommitment(e){
   e.preventDefault();
   if(!DEMO_STUDENT_ID) return;
-  const dailyH = Number(document.getElementById('student-goal-daily').value)||0;
   const weeklyH = Number(document.getElementById('student-goal-weekly').value)||0;
   const monthlyH = Number(document.getElementById('student-goal-monthly').value)||0;
-  if(dailyH<=0 && weeklyH<=0 && monthlyH<=0){ alert('Cargá al menos una meta de horas.'); return; }
+  if(weeklyH<=0 && monthlyH<=0){ alert('Cargá al menos una meta de horas.'); return; }
   window.fsAdd('commitments', {
     studentId: DEMO_STUDENT_ID,
-    dailyMinutes: Math.round(dailyH*60),
     weeklyMinutes: Math.round(weeklyH*60),
     monthlyMinutes: Math.round(monthlyH*60),
     createdAt: new Date().toISOString(),
     sentByAdmin: true
   }).then(()=>{
     studentGoalEditing = false;
-    queuePush(DEMO_STUDENT_ID, 'Tu meta de estudio quedó activa 🎯', `Guardamos tu meta: ${fmtCredit(dailyH)}h por día, ${fmtCredit(weeklyH)}h por semana, ${fmtCredit(monthlyH)}h por mes. ¡Vamos con todo!`);
+    queuePush(DEMO_STUDENT_ID, 'Tu meta de estudio quedó activa 🎯', `Guardamos tu meta: ${fmtCredit(weeklyH)}h por semana, ${fmtCredit(monthlyH)}h por mes. ¡Vamos con todo!`);
     alert('¡Guardamos tu meta! Ya está activa.');
     renderStudentWellness();
   }).catch(warnSaveError);
@@ -1776,7 +1902,9 @@ function renderStudentWellness(){
   const student = adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
   const stats = attendanceStats(DEMO_STUDENT_ID);
   const commitment = latestCommitmentFor(DEMO_STUDENT_ID);
-  const canSetGoal = !!(student?.goalInviteSent || commitment); // el admin habilita esto con "Enviar meta"
+  checkDailyGoalCompletion(DEMO_STUDENT_ID);
+  const todayGoal = dailyGoalFor(DEMO_STUDENT_ID, todayISO());
+  const canSetGoal = !!(student?.goalInviteSent || commitment || todayGoal); // el admin habilita esto con "Enviar meta"
   const topbarBtn = document.getElementById('wellness-topbar-btn');
   if(topbarBtn) topbarBtn.style.display = canSetGoal ? 'flex' : 'none';
   const todayCheckin = sleepCheckinFor(DEMO_STUDENT_ID, todayISO());
@@ -1789,28 +1917,45 @@ function renderStudentWellness(){
     const letter = WEEKDAY_LETTER[new Date(d+'T00:00:00').getDay()];
     return `<div style="text-align:center;flex:1;min-width:0"><div>${attendanceBadge(attendanceStatusForDay(DEMO_STUDENT_ID, d))}</div><div class="admin-mini" style="font-size:.62rem;margin-top:4px">${letter}</div></div>`;
   }).join('');
-  const dailyGoalBar = commitment?.dailyMinutes ? `<div style="margin-top:12px">
-    <div class="admin-mini" style="font-weight:600;margin-bottom:6px">Meta diaria</div>
-    <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">
-      <span>Progreso de hoy</span><span>${stats.today} / ${commitment.dailyMinutes} min</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:1.1rem">🚩</span>
-      <div style="flex:1;background:var(--line);border-radius:8px;height:10px;overflow:hidden">
-        <div style="background:linear-gradient(90deg,var(--gold),var(--forest));height:100%;width:${Math.max(0,Math.min(100,Math.round(stats.today/commitment.dailyMinutes*100)))}%"></div>
+  // La meta diaria sube de nivel: sin meta hoy → opciones cortas; meta cumplida → desafío
+  // más largo; segundo cumplida → todas las opciones, hasta que deje de crear metas nuevas.
+  let dailyGoalSection;
+  if(todayGoal && !todayGoal.completed){
+    const pct = Math.max(0,Math.min(100,Math.round(stats.today/todayGoal.dailyMinutes*100)));
+    dailyGoalSection = `<div style="margin-top:12px">
+      <div class="admin-mini" style="font-weight:600;margin-bottom:6px">Meta diaria</div>
+      <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">
+        <span>Progreso de hoy</span><span>${formatMinutes(stats.today)} / ${formatMinutes(todayGoal.dailyMinutes)}</span>
       </div>
-      <span style="font-size:1.1rem;display:inline-block;filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(0.95)">🏛️</span>
-    </div>
-  </div>` : '';
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:1.1rem">🚩</span>
+        <div style="flex:1;background:var(--line);border-radius:8px;height:10px;overflow:hidden">
+          <div style="background:linear-gradient(90deg,var(--gold),var(--forest));height:100%;width:${pct}%"></div>
+        </div>
+        <span style="font-size:1.1rem;display:inline-block;filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(0.95)">🏛️</span>
+      </div>
+    </div>`;
+  }else if(todayGoal && todayGoal.completed){
+    dailyGoalSection = `<div style="margin-top:12px">
+      <div class="admin-mini" style="font-weight:600;margin-bottom:4px">🎉 ¡Cumpliste tu meta de hoy! (${formatMinutes(todayGoal.dailyMinutes)})</div>
+      <p class="admin-mini">¿Querés ponerte otra meta?</p>
+      ${renderGoalOptionButtons(nextGoalLevel(DEMO_STUDENT_ID))}
+    </div>`;
+  }else if(canSetGoal){
+    dailyGoalSection = `<div style="margin-top:12px">
+      <div class="admin-mini" style="font-weight:600;margin-bottom:4px">Meta diaria</div>
+      <p class="admin-mini">¿Cuál va a ser tu meta de hoy?</p>
+      ${renderGoalOptionButtons(1)}
+    </div>`;
+  }else{
+    dailyGoalSection = '';
+  }
   const goalRow=(label, actualMin, goalMin)=>{
     if(!goalMin) return '';
     const pct=Math.max(0, Math.min(100, Math.round(actualMin/goalMin*100)));
     return `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted);font-weight:600"><span>${label}</span><span>${formatMinutes(actualMin)} / ${formatMinutes(goalMin)}</span></div><div style="background:var(--line);border-radius:8px;height:8px;margin-top:4px;overflow:hidden"><div style="background:var(--forest);height:100%;width:${pct}%"></div></div></div>`;
   };
   const goalForm = `<form onsubmit="saveStudentCommitment(event)" style="display:flex;flex-direction:column;gap:10px;margin-top:12px;padding:12px;background:var(--bg-soft);border-radius:var(--radius-md)">
-    <label style="font-size:.78rem;color:var(--text-muted);font-weight:600">Horas diarias
-      <input id="student-goal-daily" type="number" min="0" step="0.25" placeholder="Ej: 2" value="${commitment?(commitment.dailyMinutes/60):''}" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md)">
-    </label>
     <label style="font-size:.78rem;color:var(--text-muted);font-weight:600">Horas semanales
       <input id="student-goal-weekly" type="number" min="0" step="0.5" placeholder="Ej: 10" value="${commitment?(commitment.weeklyMinutes/60):''}" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md)">
     </label>
@@ -1824,17 +1969,18 @@ function renderStudentWellness(){
   </form>`;
   let goalSection;
   if(commitment){
-    goalSection = `${dailyGoalBar}${studentGoalEditing ? '' : goalRow('Meta semanal', stats.week, commitment.weeklyMinutes)}${studentGoalEditing ? '' : goalRow('Meta mensual', stats.month, commitment.monthlyMinutes)}
-      ${studentGoalEditing ? goalForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">Cambiar mi meta</button>`}`;
+    goalSection = `${dailyGoalSection}${studentGoalEditing ? '' : goalRow('Meta semanal', stats.week, commitment.weeklyMinutes)}${studentGoalEditing ? '' : goalRow('Meta mensual', stats.month, commitment.monthlyMinutes)}
+      ${studentGoalEditing ? goalForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">Cambiar mi meta semanal/mensual</button>`}`;
   }else if(canSetGoal){
-    goalSection = `<p class="admin-mini" style="margin-top:12px">Tu profesor te invitó a elegir tu meta de estudio.</p>
-      ${studentGoalEditing ? goalForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">🎯 Elegir mi meta de estudio</button>`}`;
+    goalSection = `${dailyGoalSection}
+      <p class="admin-mini" style="margin-top:12px">Tu profesor te invitó a elegir tu meta de estudio.</p>
+      ${studentGoalEditing ? goalForm : `<button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="toggleStudentGoalForm()">🎯 Elegir mi meta semanal/mensual</button>`}`;
   }else{
     goalSection = `<p class="admin-mini" style="margin-top:12px">Todavía no podés elegir tu meta de estudio. Tu profesor te va a habilitar esta opción.</p>`;
   }
   const fullProgressSection = wellnessFullProgressOpen ? `<div style="margin-top:16px">
       <div class="admin-mini" style="margin-bottom:6px">Tiempo de estudio · últimos 7 días</div>
-      ${renderMinutesBarChart(dates7, DEMO_STUDENT_ID, commitment?.dailyMinutes)}
+      ${renderMinutesBarChart(dates7, DEMO_STUDENT_ID)}
     </div>
     ${renderStudentMonthlySummaries()}` : '';
   el.innerHTML = `<div class="admin-card" style="margin-bottom:18px">
@@ -1902,6 +2048,7 @@ function renderProfileAttendance(){
   if(!s || !card) return;
   const stats = attendanceStats(s.id);
   const commitment = latestCommitmentFor(s.id);
+  const todayGoal = dailyGoalFor(s.id, todayISO());
   const last7 = lastNDatesISO(7).map(d=>{
     const dayLabel = new Date(d+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short'});
     return `<div style="text-align:center;flex:1;min-width:0"><div style="font-size:1.2rem">${sleepEmojiForDay(s.id, d)}</div><div class="admin-mini" style="text-transform:capitalize;font-size:.62rem">${dayLabel}</div></div>`;
@@ -1924,11 +2071,12 @@ function renderProfileAttendance(){
     </div>
     ${!commitment
       ? `<p class="admin-mini" style="margin-top:12px">${s.goalInviteSent ? 'Ya lo invitaste a elegir su meta de estudio — todavía no la definió.' : 'Este alumno todavía no puede elegir su meta. Tocá "Enviar meta" para invitarlo.'}</p>`
-      : `<div class="admin-mini" style="margin-top:12px">Meta activa: <strong>${formatMinutes(commitment.dailyMinutes)}/día</strong> · <strong>${formatMinutes(commitment.weeklyMinutes)}/semana</strong> · <strong>${formatMinutes(commitment.monthlyMinutes)}/mes</strong></div>`
+      : `<div class="admin-mini" style="margin-top:12px">Meta activa: <strong>${formatMinutes(commitment.weeklyMinutes)}/semana</strong> · <strong>${formatMinutes(commitment.monthlyMinutes)}/mes</strong></div>`
     }
+    <div class="admin-mini" style="margin-top:4px">Meta de hoy: ${todayGoal ? `<strong>${formatMinutes(todayGoal.dailyMinutes)}</strong> ${todayGoal.completed?'✅ cumplida':'en progreso'}` : 'todavía no la eligió hoy'}</div>
     <div style="margin-top:16px">
       <div class="admin-mini" style="margin-bottom:6px">Tiempo de estudio · últimos 7 días</div>
-      ${renderMinutesBarChart(lastNDatesISO(7), s.id, commitment?.dailyMinutes)}
+      ${renderMinutesBarChart(lastNDatesISO(7), s.id)}
     </div>
     <div style="margin-top:16px">
       <div class="admin-mini" style="margin-bottom:6px">Sueño · últimos 7 días</div>
@@ -1941,7 +2089,11 @@ function sendCommitmentReminder(studentId){
   const s = adminData.students.find(x=>x.id===studentId);
   if(!commitment) return;
   const stats = attendanceStats(studentId);
-  queuePush(studentId, 'Recordatorio de tu compromiso', `Llevás ${formatMinutes(stats.today)} hoy de tu meta de ${formatMinutes(commitment.dailyMinutes)} diarios. ¡Vamos que se puede!`);
+  const todayGoal = dailyGoalFor(studentId, todayISO());
+  const body = todayGoal
+    ? `Llevás ${formatMinutes(stats.today)} hoy de tu meta de ${formatMinutes(todayGoal.dailyMinutes)}. ¡Vamos que se puede!`
+    : `Todavía no elegiste cuánto querés estudiar hoy. ¡Entrá y definí tu meta del día!`;
+  queuePush(studentId, 'Recordatorio de tu compromiso', body);
   alert(`Se envió un recordatorio a ${s?s.name:'el alumno'}.`);
 }
 
@@ -1987,13 +2139,13 @@ function renderWeeklyReportContent(){
     <div class="eyebrow">Informe semanal</div>
     <h3 style="font-family:var(--font-display);color:var(--forest);margin:4px 0 2px">${escapeHtml(s.name)}</h3>
     <div class="admin-mini" style="margin-bottom:14px">${fromLabel} al ${toLabel}</div>
-    <div style="margin-bottom:16px">${renderMinutesBarChart(dates, s.id, commitment?.dailyMinutes)}</div>
+    <div style="margin-bottom:16px">${renderMinutesBarChart(dates, s.id)}</div>
     <table style="width:100%;border-collapse:collapse;font-size:.86rem">
       <thead><tr style="text-align:left"><th style="padding:6px 4px;border-bottom:2px solid var(--forest)">Día</th><th style="padding:6px 4px;border-bottom:2px solid var(--forest)">Tiempo de estudio</th><th style="padding:6px 4px;border-bottom:2px solid var(--forest)">Sueño</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="admin-mini" style="margin-top:12px"><strong>Total de la semana:</strong> ${formatMinutes(totalWeekMin)}${commitment?` de una meta de ${formatMinutes(commitment.weeklyMinutes)}`:''}</div>
-    ${commitment?`<div class="admin-mini" style="margin-top:4px"><strong>Compromiso vigente:</strong> ${formatMinutes(commitment.dailyMinutes)}/día · ${formatMinutes(commitment.weeklyMinutes)}/semana · ${formatMinutes(commitment.monthlyMinutes)}/mes</div>`:''}`;
+    ${commitment?`<div class="admin-mini" style="margin-top:4px"><strong>Compromiso vigente:</strong> ${formatMinutes(commitment.weeklyMinutes)}/semana · ${formatMinutes(commitment.monthlyMinutes)}/mes</div>`:''}`;
 }
 
 /* ---------- resumen mensual (admin): datos del mes + envío al alumno ---------- */
@@ -3632,7 +3784,7 @@ window.seedInitialData = async function(){
 };
 
 /* ---------- listeners en tiempo real de las colecciones compartidas ---------- */
-let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubCommitments=null, unsubSleepCheckins=null, unsubMonthlySummaries=null;
+let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubCommitments=null, unsubSleepCheckins=null, unsubMonthlySummaries=null, unsubDailyGoals=null;
 
 function startCollectionListeners(){
   stopCollectionListeners();
@@ -3705,16 +3857,21 @@ function startCollectionListeners(){
     window.adminData.monthlySummaries = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard();
   });
+  unsubDailyGoals = onSnapshot(collection(db,'dailyGoals'), snap=>{
+    window.adminData.dailyGoals = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    safeRenderAdmin(); safeRenderStudentDashboard();
+  });
 }
 function stopCollectionListeners(){
-  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubCommitments,unsubSleepCheckins,unsubMonthlySummaries].forEach(u=>{ if(u) u(); });
-  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubCommitments=unsubSleepCheckins=unsubMonthlySummaries=null;
+  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubCommitments,unsubSleepCheckins,unsubMonthlySummaries,unsubDailyGoals].forEach(u=>{ if(u) u(); });
+  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubCommitments=unsubSleepCheckins=unsubMonthlySummaries=unsubDailyGoals=null;
 }
 function safeRenderAdmin(){ if(typeof window.renderAdmin==='function') window.renderAdmin(); }
 function safeRenderStudentDashboard(){ if(window.__currentUid && typeof window.renderStudentDashboard==='function') window.renderStudentDashboard(); }
 function safeRenderUnits(){ if(typeof renderUnits==='function') renderUnits(); }
 function safeRenderProfileAttendance(){ if(typeof window.renderProfileAttendance==='function') window.renderProfileAttendance(); }
 function safeMaybeShowSleepCheckin(){ if(typeof window.maybeShowSleepCheckin==='function') window.maybeShowSleepCheckin(); }
+function safeMaybeShowGoalReminder(){ if(typeof window.maybeShowGoalReminder==='function') window.maybeShowGoalReminder(); }
 
 function updateUserChip(){
   const chip = document.getElementById('user-chip');
@@ -3765,6 +3922,7 @@ async function routeUser(user){
       setupPushNotifications(user.uid);
       startAttendanceTracking(user.uid);
       safeMaybeShowSleepCheckin();
+      setTimeout(safeMaybeShowGoalReminder, 1200);
     }
   }catch(err){
     alert('Error al cargar tu cuenta: ' + err.message + '\n\nProbá recargar la página e iniciar sesión de nuevo.');
