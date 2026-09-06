@@ -2396,13 +2396,16 @@ function renderSleepCalendarForMonth(studentId, monthKey){
   const headerLetters = [1,2,3,4,5,6,0].map(i=>WEEKDAY_LETTER[i]);
   const header = headerLetters.map(l=>`<div style="text-align:center;font-size:.6rem;font-weight:700;color:var(--text-muted)">${l}</div>`).join('');
   const body = cells.map(dateStr=>{
-    if(!dateStr) return `<div></div>`;
+    if(!dateStr) return `<div style="border:1px solid transparent"></div>`;
     const dayNum = Number(dateStr.slice(8,10));
     const isFuture = dateStr > today;
+    const isToday = dateStr === today;
     const emoji = isFuture ? '' : sleepEmojiForDay(studentId, dateStr);
-    return `<div style="text-align:center;padding:3px 0"><div style="font-size:.58rem;color:var(--text-muted)">${dayNum}</div><div style="font-size:.95rem;min-height:1.1em">${emoji}</div></div>`;
+    // 👣 marca el día de hoy, para ubicarse rápido en qué día del mes estamos.
+    const icons = `${emoji}${isToday?'👣':''}`;
+    return `<div style="text-align:center;padding:3px 0;border:1px solid var(--line);${isToday?'background:var(--bg-soft)':''}"><div style="font-size:.58rem;color:var(--text-muted)">${dayNum}</div><div style="font-size:.9rem;min-height:1.1em">${icons}</div></div>`;
   }).join('');
-  return `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:10px">${header}${body}</div>`;
+  return `<div style="display:grid;grid-template-columns:repeat(7,1fr);margin-top:10px">${header}${body}</div>`;
 }
 function renderStudentMonthlySummaries(){
   if(!DEMO_STUDENT_ID) return '';
@@ -2834,30 +2837,33 @@ function renderProfileCalendar(){
   while(cells.length%7!==0) cells.push(null);
   const headerLetters = [1,2,3,4,5,6,0].map(i=>WEEKDAY_LETTER[i]);
   const header = headerLetters.map(l=>`<div style="text-align:center;font-size:.6rem;font-weight:700;color:var(--text-muted)">${l}</div>`).join('');
+  const todayForProfileCal = todayISO();
   const body = cells.map(dateStr=>{
-    if(!dateStr) return `<div></div>`;
+    if(!dateStr) return `<div style="border:1px solid transparent"></div>`;
     const dayNum = Number(dateStr.slice(8,10));
+    const isToday = dateStr === todayForProfileCal;
     const dayMarks = marks[dateStr];
-    const icons = dayMarks ? dayMarks.map(mk=>mk.icon).join('') : '';
-    const title = dayMarks ? dayMarks.map(mk=>mk.label).join(' · ') : '';
-    return `<div style="text-align:center;padding:3px 0" title="${escapeHtml(title)}"><div style="font-size:.58rem;color:var(--text-muted)">${dayNum}</div><div style="font-size:1rem;min-height:1.2em">${icons}</div></div>`;
+    // 👣 marca el día de hoy, para ubicarse rápido en qué día estamos parados.
+    const icons = (dayMarks ? dayMarks.map(mk=>mk.icon).join('') : '') + (isToday?'👣':'');
+    const title = (dayMarks ? dayMarks.map(mk=>mk.label).join(' · ')+' · ' : '') + (isToday?'Hoy':'');
+    return `<div style="text-align:center;padding:3px 0;border:1px solid var(--line);${isToday?'background:var(--bg-soft)':''}" title="${escapeHtml(title)}"><div style="font-size:.58rem;color:var(--text-muted)">${dayNum}</div><div style="font-size:1rem;min-height:1.2em">${icons}</div></div>`;
   }).join('');
   const monthLabel = new Date(y, m-1, 1).toLocaleDateString('es-AR',{month:'long', year:'numeric'});
   const events = adminData.packageEvents.filter(e=>e.studentId===s.id).sort((a,b)=>(b.dateISO||'').localeCompare(a.dateISO||''));
   const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'});
   const eventRows = events.length ? events.map(e=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${e.icon||'💰'} ${escapeHtml(e.label||'Marca')}</strong><div class="admin-mini">${fmt(e.dateISO)}${e.amount?` · $${escapeHtml(String(e.amount))}`:''}</div></div><div><button class="admin-btn small" onclick="editPackageEvent('${e.id}')">Editar</button> <button class="admin-btn danger small" onclick="removePackageEvent('${e.id}')">Eliminar</button></div></div>`).join('') : '<p class="admin-mini">Todavía no cargaste ninguna marca para este alumno.</p>';
   card.innerHTML = `<h3>Calendario del paquete</h3>
-    <div class="admin-mini" style="margin-bottom:10px">🚩 se pone solo el día que arrancó su inscripción, y 🏁 el día que termina su paquete. Las demás marcas (como los pagos 💰) las cargás vos acá. Si cargás un monto, se le manda un recibo al alumno.</div>
+    <div class="admin-mini" style="margin-bottom:10px">👣 marca el día de hoy. 🚩 se pone solo el día que arrancó su inscripción, y 🏁 el día que termina su paquete. Las demás marcas (pagos 💰, día de cobro 📅, notas 📌, destacados ⭐) las cargás vos acá. Si cargás un monto en un pago, se le manda un recibo al alumno. El alumno ve el significado de cada signo que le cargues, abajo de su propio calendario.</div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
       <button type="button" class="admin-btn secondary small" onclick="shiftProfileCalendarMonth(-1)">←</button>
       <span class="admin-mini" style="text-transform:capitalize;font-weight:600">${monthLabel}</span>
       <button type="button" class="admin-btn secondary small" onclick="shiftProfileCalendarMonth(1)">→</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:8px">${header}${body}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-top:8px">${header}${body}</div>
     <form class="admin-form" style="margin-top:16px" onsubmit="addPackageEvent(event,'${s.id}')">
       <input type="hidden" id="editing-package-event-id" value="">
       <label>Fecha<input type="date" id="package-event-date" value="${todayISO()}" required></label>
-      <label>Marca<select id="package-event-icon"><option value="💰">💰 Pago</option><option value="📌">📌 Nota</option><option value="⭐">⭐ Destacado</option></select></label>
+      <label>Marca<select id="package-event-icon"><option value="💰">💰 Pago</option><option value="📅">📅 Día de cobro</option><option value="📌">📌 Nota</option><option value="⭐">⭐ Destacado</option></select></label>
       <label class="full">Concepto (ej.: "Cuota de septiembre")<input id="package-event-label" placeholder="Cuota de septiembre"></label>
       <label>Monto (opcional, manda recibo si lo completás)<input type="number" min="0" step="0.01" id="package-event-amount" placeholder="Ej.: 25000"></label>
       <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="package-event-submit-btn">Agregar marca</button><button class="admin-btn secondary" type="button" id="package-event-cancel-btn" style="display:none" onclick="cancelEditPackageEvent()">Cancelar edición</button></div>
@@ -2881,7 +2887,8 @@ function addPackageEvent(e, studentId){
   const amount = amountRaw ? Number(amountRaw) : null;
   if(!dateISO){ alert('Elegí una fecha.'); return; }
   const s = adminData.students.find(x=>x.id===studentId);
-  const data = { studentId, dateISO, icon, label: label || (icon==='💰' ? 'Pago' : 'Marca'), amount };
+  const defaultLabels = {'💰':'Pago', '📅':'Día de cobro', '📌':'Nota', '⭐':'Destacado'};
+  const data = { studentId, dateISO, icon, label: label || defaultLabels[icon] || 'Marca', amount };
   const isNewReceipt = icon==='💰' && amount;
   const save = editingId ? window.fsUpdate('packageEvents', editingId, data) : window.fsAdd('packageEvents', data);
   save.then(()=>{
@@ -3162,6 +3169,58 @@ function autoSyncGivenClasses(){
         .catch(err=>console.error('No se pudo auto-guardar la clase dada:', err))
         .finally(()=>{ autoGivenClassInFlight.delete(docId); });
     });
+  });
+}
+const paymentReminderInFlight = new Set();
+// Recorre las marcas "📅 Día de cobro" de todos los alumnos y, apenas faltan exactamente 2 días
+// para esa fecha, le manda una notificación avisándole (queda guardada en su pestaña
+// "Notificaciones" y además dispara el push). Se manda una sola vez por marca (se guarda
+// reminderSent en el evento para no repetirla). Solo corre en la sesión del profesor, que es
+// quien tiene permiso para mandarle notificaciones a cualquier alumno.
+function checkPaymentDueReminders(){
+  if(!window.__isAdmin) return;
+  const today = new Date(todayISO()+'T00:00:00');
+  adminData.packageEvents.forEach(e=>{
+    if(e.icon !== '📅' || !e.dateISO || e.reminderSent) return;
+    if(paymentReminderInFlight.has(e.id)) return;
+    const eventDate = new Date(e.dateISO+'T00:00:00');
+    const diffDays = Math.round((eventDate - today) / 86400000);
+    if(diffDays !== 2) return;
+    paymentReminderInFlight.add(e.id);
+    const fecha = eventDate.toLocaleDateString('es-AR',{day:'numeric',month:'long'});
+    const concepto = e.label && e.label !== 'Día de cobro' ? ` (${e.label})` : '';
+    window.queuePush(e.studentId, '📅 Se acerca tu día de pago', `En 2 días, el ${fecha}, es tu día de pago${concepto}. ¡No te olvides!`);
+    window.fsUpdate('packageEvents', e.id, {reminderSent:true})
+      .catch(err=>console.error('No se pudo marcar el recordatorio como enviado:', err))
+      .finally(()=>{ paymentReminderInFlight.delete(e.id); });
+  });
+}
+const overdueReminderInFlight = new Set();
+// Complemento de checkPaymentDueReminders: si ya pasaron 2 días desde un "📅 Día de cobro" y
+// todavía no hay ningún pago (💰) registrado desde esa fecha en adelante, le manda un aviso de
+// que está atrasado. También se manda una sola vez por marca (overdueReminderSent).
+function checkPaymentOverdueReminders(){
+  if(!window.__isAdmin) return;
+  const today = new Date(todayISO()+'T00:00:00');
+  adminData.packageEvents.forEach(e=>{
+    if(e.icon !== '📅' || !e.dateISO || e.overdueReminderSent) return;
+    if(overdueReminderInFlight.has(e.id)) return;
+    const eventDate = new Date(e.dateISO+'T00:00:00');
+    const diffDays = Math.round((today - eventDate) / 86400000);
+    if(diffDays !== 2) return;
+    const yaPago = adminData.packageEvents.some(p=>p.studentId===e.studentId && p.icon==='💰' && p.dateISO >= e.dateISO);
+    if(yaPago){
+      // Ya está pagado: no hace falta avisar, pero igual lo marcamos para no volver a chequearlo.
+      window.fsUpdate('packageEvents', e.id, {overdueReminderSent:true}).catch(()=>{});
+      return;
+    }
+    overdueReminderInFlight.add(e.id);
+    const fecha = eventDate.toLocaleDateString('es-AR',{day:'numeric',month:'long'});
+    const concepto = e.label && e.label !== 'Día de cobro' ? ` (${e.label})` : '';
+    window.queuePush(e.studentId, '⏰ Todavía no registramos tu pago', `Pasaron 2 días desde tu día de pago del ${fecha}${concepto} y todavía no lo tenemos registrado. Ponete en contacto con C.A.E.R. si ya lo hiciste.`);
+    window.fsUpdate('packageEvents', e.id, {overdueReminderSent:true})
+      .catch(err=>console.error('No se pudo marcar el aviso de atraso como enviado:', err))
+      .finally(()=>{ overdueReminderInFlight.delete(e.id); });
   });
 }
 function populateFixedScheduleStudentSelect(){
@@ -3628,6 +3687,16 @@ function packageMarksFor(student){
   });
   return marks;
 }
+// Arma la leyenda de "qué significa cada signo" para el calendario de un alumno en particular:
+// siempre incluye 👣 (hoy), y después suma cualquier ícono que realmente aparezca en su
+// calendario (🚩, 🏁, 💰, 📅, y lo que sea que haya cargado el profesor), con su significado.
+const PACKAGE_ICON_MEANINGS = {'🚩':'Inicio de tu inscripción', '🏁':'Fin de tu paquete', '💰':'Pago registrado', '📅':'Día de cobro', '📌':'Nota', '⭐':'Destacado'};
+function packageLegendFor(student){
+  const marks = packageMarksFor(student);
+  const icons = new Set(['👣']);
+  Object.values(marks).flat().forEach(mk=>icons.add(mk.icon));
+  return [...icons].map(icon=>`${icon} ${PACKAGE_ICON_MEANINGS[icon] || 'Marca de tu profesor'}`).join(' · ');
+}
 let studentPackageCalendarMonth = null;
 function renderPackageCalendarSection(student){
   if(!studentPackageCalendarMonth) studentPackageCalendarMonth = todayISO().slice(0,7);
@@ -3641,13 +3710,16 @@ function renderPackageCalendarSection(student){
   while(cells.length%7!==0) cells.push(null);
   const headerLetters = [1,2,3,4,5,6,0].map(i=>WEEKDAY_LETTER[i]);
   const header = headerLetters.map(l=>`<div style="text-align:center;font-size:.6rem;font-weight:700;color:var(--text-muted)">${l}</div>`).join('');
+  const todayForPackageCal = todayISO();
   const body = cells.map(dateStr=>{
-    if(!dateStr) return `<div></div>`;
+    if(!dateStr) return `<div style="border:1px solid transparent"></div>`;
     const dayNum = Number(dateStr.slice(8,10));
+    const isToday = dateStr === todayForPackageCal;
     const dayMarks = marks[dateStr];
-    const icons = dayMarks ? dayMarks.map(mk=>mk.icon).join('') : '';
-    const title = dayMarks ? dayMarks.map(mk=>mk.label).join(' · ') : '';
-    return `<div style="text-align:center;padding:3px 0" title="${escapeHtml(title)}"><div style="font-size:.58rem;color:var(--text-muted)">${dayNum}</div><div style="font-size:1rem;min-height:1.2em">${icons}</div></div>`;
+    // 👣 marca el día de hoy, para saber rápido en qué día del mes estamos.
+    const icons = (dayMarks ? dayMarks.map(mk=>mk.icon).join('') : '') + (isToday?'👣':'');
+    const title = (dayMarks ? dayMarks.map(mk=>mk.label).join(' · ')+' · ' : '') + (isToday?'Hoy':'');
+    return `<div style="text-align:center;padding:3px 0;border:1px solid var(--line);${isToday?'background:var(--bg-soft)':''}" title="${escapeHtml(title)}"><div style="font-size:.58rem;color:var(--text-muted)">${dayNum}</div><div style="font-size:1rem;min-height:1.2em">${icons}</div></div>`;
   }).join('');
   const monthLabel = new Date(y, m-1, 1).toLocaleDateString('es-AR',{month:'long', year:'numeric'});
   return `<div style="margin-top:16px">
@@ -3657,8 +3729,8 @@ function renderPackageCalendarSection(student){
       <span class="admin-mini" style="text-transform:capitalize;font-weight:600">${monthLabel}</span>
       <button type="button" class="admin-btn secondary small" onclick="shiftPackageCalendarMonth(1)">→</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:8px">${header}${body}</div>
-    <div class="admin-mini" style="margin-top:8px">🚩 Inicio de tu inscripción · 💰 Pago registrado · 🏁 Fin de tu paquete</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-top:8px">${header}${body}</div>
+    <div class="admin-mini" style="margin-top:8px">${packageLegendFor(student)}</div>
   </div>`;
 }
 function shiftPackageCalendarMonth(delta){
@@ -4537,6 +4609,8 @@ function startCollectionListeners(){
     window.adminData.packageEvents = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderStudentDashboard();
     if(typeof window.renderProfileCalendar==='function') window.renderProfileCalendar();
+    safeCheckPaymentDueReminders();
+    safeCheckPaymentOverdueReminders();
   });
   unsubItemViews = onSnapshot(collection(db,'itemViews'), snap=>{
     window.adminData.itemViews = snap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -4601,6 +4675,13 @@ function stopCollectionListeners(){
 }
 function safeRenderAdmin(){ if(typeof window.renderAdmin==='function') window.renderAdmin(); }
 function safeAutoSyncGivenClasses(){ if(typeof window.autoSyncGivenClasses==='function') window.autoSyncGivenClasses(); }
+// Revisión periódica de los avisos de pago (cada 30 min), para que se manden aunque el
+// profesor no esté tocando el calendario justo el día en que corresponde avisar. Las funciones
+// mismas no hacen nada si no es una sesión de administrador, así que es seguro dejarlo corriendo
+// siempre en segundo plano.
+setInterval(()=>{ safeCheckPaymentDueReminders(); safeCheckPaymentOverdueReminders(); }, 30*60*1000);
+function safeCheckPaymentDueReminders(){ if(typeof window.checkPaymentDueReminders==='function') window.checkPaymentDueReminders(); }
+function safeCheckPaymentOverdueReminders(){ if(typeof window.checkPaymentOverdueReminders==='function') window.checkPaymentOverdueReminders(); }
 function safeRenderStudentDashboard(){ if(window.__currentUid && typeof window.renderStudentDashboard==='function') window.renderStudentDashboard(); }
 function safeRenderUnits(){ if(typeof renderUnits==='function') renderUnits(); }
 function safeRenderProfileAttendance(){ if(typeof window.renderProfileAttendance==='function') window.renderProfileAttendance(); }
