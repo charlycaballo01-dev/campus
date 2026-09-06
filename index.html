@@ -789,6 +789,7 @@
       <div class="admin-card" id="profile-header-card"></div>
       <div class="admin-card" id="profile-attendance-card"></div>
       <div class="admin-card" id="profile-classes-card"></div>
+      <div class="admin-card" id="profile-calendar-card"></div>
       <div id="profile-body"></div>
     </section>
 
@@ -1781,6 +1782,7 @@ const adminData = {
   lessons: [],
   materials: [],
   notifications: [],
+  packageEvents: [],
   itemViews: [],
   updates: [],
   quizQuestions: [],
@@ -1963,22 +1965,27 @@ function pickMonthlyGoal(hours){
   }).catch(warnSaveError);
 }
 // Barra de progreso con banderita y edificio dorado, igual estilo que la meta diaria.
-function renderPeriodGoalBar(label, actualMin, goalMin){
+function renderPeriodGoalBar(label, actualMin, goalMin, periodWord){
   if(!goalMin) return '';
-  const pct = Math.max(0, Math.min(100, Math.round(actualMin/goalMin*100)));
   const completed = actualMin >= goalMin;
-  // Al cumplir la meta, la banderita y la casita dorada desaparecen (ya no hace falta la
-  // referencia de "cuánto falta" si ya se llegó) y queda un ✅ como confirmación.
+  // Al cumplir la meta semanal o mensual, se muestra el mismo tipo de mensaje que la meta
+  // diaria cumplida ("🎉 ¡Cumpliste tu meta...!"), en vez de la barra con banderita/casita.
+  if(completed){
+    return `<div style="margin-top:12px">
+      <div class="admin-mini" style="font-weight:600;margin-bottom:6px">🎉 ¡Cumpliste tu meta ${periodWord}! (${formatMinutes(goalMin)})</div>
+    </div>`;
+  }
+  const pct = Math.max(0, Math.min(100, Math.round(actualMin/goalMin*100)));
   return `<div style="margin-top:12px">
     <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">
-      <span>${label}${completed?' ✅':''}</span><span>${formatMinutes(actualMin)} / ${formatMinutes(goalMin)}</span>
+      <span>${label}</span><span>${formatMinutes(actualMin)} / ${formatMinutes(goalMin)}</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      ${completed?'':'<span style="font-size:1.1rem">🚩</span>'}
+      <span style="font-size:1.1rem">🚩</span>
       <div style="flex:1;background:var(--line);border-radius:8px;height:10px;overflow:hidden">
         <div style="background:linear-gradient(90deg,var(--gold),var(--forest));height:100%;width:${pct}%"></div>
       </div>
-      ${completed?'':'<span style="font-size:1.1rem;filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(0.95)">🏛️</span>'}
+      <span style="font-size:1.1rem;filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(0.95)">🏛️</span>
     </div>
   </div>`;
 }
@@ -2321,7 +2328,7 @@ function renderStudentWellness(){
   }
   let goalSection;
   if(weeklyGoal || monthlyGoal){
-    goalSection = `${dailyGoalSection}${renderPeriodGoalBar('Meta semanal', stats.week, weeklyGoal?.weeklyMinutes)}${renderPeriodGoalBar('Meta mensual', stats.month, monthlyGoal?.monthlyMinutes)}
+    goalSection = `${dailyGoalSection}${renderPeriodGoalBar('Meta semanal', stats.week, weeklyGoal?.weeklyMinutes, 'semanal')}${renderPeriodGoalBar('Meta mensual', stats.month, monthlyGoal?.monthlyMinutes, 'mensual')}
       <button type="button" class="admin-btn secondary small" style="margin-top:12px" onclick="showGoalCard('period-choice')">Cambiar mi meta semanal/mensual</button>`;
   }else if(canSetGoal){
     goalSection = `${dailyGoalSection}
@@ -2805,7 +2812,111 @@ function openStudentProfile(i){
   renderProfileHeader();
   renderProfileAttendance();
   renderProfileClasses();
+  renderProfileCalendar();
   renderProfileUnits();
+}
+let profileCalendarMonth = null;
+// Panel del profesor para el calendario del alumno: puede agregar marcas (pagos u otras) en
+// cualquier fecha, editarlas o borrarlas. Si carga un pago con monto, además le manda un
+// recibo al alumno como notificación (ver addPackageEvent).
+function renderProfileCalendar(){
+  const s = adminData.students[profileStudentIndex];
+  const card = document.getElementById('profile-calendar-card');
+  if(!s || !card) return;
+  if(!profileCalendarMonth) profileCalendarMonth = todayISO().slice(0,7);
+  const marks = packageMarksFor(s);
+  const [y,m] = profileCalendarMonth.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const firstWeekday = (new Date(y, m-1, 1).getDay()+6)%7;
+  const cells = [];
+  for(let i=0;i<firstWeekday;i++) cells.push(null);
+  for(let day=1; day<=daysInMonth; day++) cells.push(`${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`);
+  while(cells.length%7!==0) cells.push(null);
+  const headerLetters = [1,2,3,4,5,6,0].map(i=>WEEKDAY_LETTER[i]);
+  const header = headerLetters.map(l=>`<div style="text-align:center;font-size:.6rem;font-weight:700;color:var(--text-muted)">${l}</div>`).join('');
+  const body = cells.map(dateStr=>{
+    if(!dateStr) return `<div></div>`;
+    const dayNum = Number(dateStr.slice(8,10));
+    const dayMarks = marks[dateStr];
+    const icons = dayMarks ? dayMarks.map(mk=>mk.icon).join('') : '';
+    const title = dayMarks ? dayMarks.map(mk=>mk.label).join(' · ') : '';
+    return `<div style="text-align:center;padding:3px 0" title="${escapeHtml(title)}"><div style="font-size:.58rem;color:var(--text-muted)">${dayNum}</div><div style="font-size:1rem;min-height:1.2em">${icons}</div></div>`;
+  }).join('');
+  const monthLabel = new Date(y, m-1, 1).toLocaleDateString('es-AR',{month:'long', year:'numeric'});
+  const events = adminData.packageEvents.filter(e=>e.studentId===s.id).sort((a,b)=>(b.dateISO||'').localeCompare(a.dateISO||''));
+  const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'});
+  const eventRows = events.length ? events.map(e=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${e.icon||'💰'} ${escapeHtml(e.label||'Marca')}</strong><div class="admin-mini">${fmt(e.dateISO)}${e.amount?` · $${escapeHtml(String(e.amount))}`:''}</div></div><div><button class="admin-btn small" onclick="editPackageEvent('${e.id}')">Editar</button> <button class="admin-btn danger small" onclick="removePackageEvent('${e.id}')">Eliminar</button></div></div>`).join('') : '<p class="admin-mini">Todavía no cargaste ninguna marca para este alumno.</p>';
+  card.innerHTML = `<h3>Calendario del paquete</h3>
+    <div class="admin-mini" style="margin-bottom:10px">🚩 se pone solo el día que arrancó su inscripción, y 🏁 el día que termina su paquete. Las demás marcas (como los pagos 💰) las cargás vos acá. Si cargás un monto, se le manda un recibo al alumno.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+      <button type="button" class="admin-btn secondary small" onclick="shiftProfileCalendarMonth(-1)">←</button>
+      <span class="admin-mini" style="text-transform:capitalize;font-weight:600">${monthLabel}</span>
+      <button type="button" class="admin-btn secondary small" onclick="shiftProfileCalendarMonth(1)">→</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:8px">${header}${body}</div>
+    <form class="admin-form" style="margin-top:16px" onsubmit="addPackageEvent(event,'${s.id}')">
+      <input type="hidden" id="editing-package-event-id" value="">
+      <label>Fecha<input type="date" id="package-event-date" value="${todayISO()}" required></label>
+      <label>Marca<select id="package-event-icon"><option value="💰">💰 Pago</option><option value="📌">📌 Nota</option><option value="⭐">⭐ Destacado</option></select></label>
+      <label class="full">Concepto (ej.: "Cuota de septiembre")<input id="package-event-label" placeholder="Cuota de septiembre"></label>
+      <label>Monto (opcional, manda recibo si lo completás)<input type="number" min="0" step="0.01" id="package-event-amount" placeholder="Ej.: 25000"></label>
+      <div class="full" style="display:flex;gap:10px"><button class="admin-btn" type="submit" id="package-event-submit-btn">Agregar marca</button><button class="admin-btn secondary" type="button" id="package-event-cancel-btn" style="display:none" onclick="cancelEditPackageEvent()">Cancelar edición</button></div>
+    </form>
+    <div style="margin-top:14px">${eventRows}</div>`;
+}
+function shiftProfileCalendarMonth(delta){
+  if(!profileCalendarMonth) profileCalendarMonth = todayISO().slice(0,7);
+  const [y,m] = profileCalendarMonth.split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  profileCalendarMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  renderProfileCalendar();
+}
+function addPackageEvent(e, studentId){
+  e.preventDefault();
+  const editingId = document.getElementById('editing-package-event-id').value;
+  const dateISO = document.getElementById('package-event-date').value;
+  const icon = document.getElementById('package-event-icon').value;
+  const label = document.getElementById('package-event-label').value.trim();
+  const amountRaw = document.getElementById('package-event-amount').value;
+  const amount = amountRaw ? Number(amountRaw) : null;
+  if(!dateISO){ alert('Elegí una fecha.'); return; }
+  const s = adminData.students.find(x=>x.id===studentId);
+  const data = { studentId, dateISO, icon, label: label || (icon==='💰' ? 'Pago' : 'Marca'), amount };
+  const isNewReceipt = icon==='💰' && amount;
+  const save = editingId ? window.fsUpdate('packageEvents', editingId, data) : window.fsAdd('packageEvents', data);
+  save.then(()=>{
+    if(isNewReceipt && s){
+      // Si cargó un pago con monto, le mandamos el recibo como notificación (mismo sistema
+      // que usan los recordatorios de meta y los avisos del profesor).
+      window.queuePush(studentId, '🧾 Recibo de pago', `${data.label}: $${amount} — ${new Date(dateISO+'T00:00:00').toLocaleDateString('es-AR')}.`);
+    }
+    cancelEditPackageEvent();
+    renderProfileCalendar();
+  }).catch(err=>alert('Error al guardar: '+err.message));
+}
+function editPackageEvent(id){
+  const ev = adminData.packageEvents.find(x=>x.id===id);
+  if(!ev) return;
+  document.getElementById('editing-package-event-id').value = id;
+  document.getElementById('package-event-date').value = ev.dateISO;
+  document.getElementById('package-event-icon').value = ev.icon || '💰';
+  document.getElementById('package-event-label').value = ev.label || '';
+  document.getElementById('package-event-amount').value = ev.amount || '';
+  document.getElementById('package-event-submit-btn').textContent = 'Guardar cambios';
+  document.getElementById('package-event-cancel-btn').style.display = '';
+}
+function cancelEditPackageEvent(){
+  document.getElementById('editing-package-event-id').value = '';
+  document.getElementById('package-event-date').value = todayISO();
+  document.getElementById('package-event-icon').value = '💰';
+  document.getElementById('package-event-label').value = '';
+  document.getElementById('package-event-amount').value = '';
+  document.getElementById('package-event-submit-btn').textContent = 'Agregar marca';
+  document.getElementById('package-event-cancel-btn').style.display = 'none';
+}
+function removePackageEvent(id){
+  if(!confirm('¿Eliminar esta marca del calendario?')) return;
+  window.fsDelete('packageEvents', id).then(()=>renderProfileCalendar()).catch(err=>alert('Error: '+err.message));
 }
 // Historial de clases particulares del alumno: las "dadas" están guardadas en bookings (auto o
 // cargadas a mano); las "agendadas" son fecha+hora concretas que cargó el profesor y todavía no
@@ -3503,7 +3614,71 @@ function renderUpdateCard(u,actionsHtml){return `<div class="update-card ${u.pin
 function renderAdminUpdates(){const el=document.getElementById('admin-updates-list');if(!el)return;const list=sortedUpdates();el.innerHTML=list.length?list.map((u,i)=>renderUpdateCard(u,`<div class="admin-actions" style="margin-top:10px"><button class="admin-btn small" onclick="editUpdate(${i})">Editar</button> <button class="admin-btn danger small" onclick="removeUpdate(${i})">Eliminar</button></div>`)).join(''):'<p class="updates-feed-empty">Todavía no publicaste ninguna novedad.</p>'}
 function renderStudentUpdates(){const panel=document.getElementById('student-updates-panel');const el=document.getElementById('student-updates-list');if(!panel||!el)return;const list=sortedUpdates();if(!list.length){panel.style.display='none';return}panel.style.display='block';el.innerHTML=list.map(u=>renderUpdateCard(u)).join('')}
 // Semana del mes en bloques simples de 7 días (1-7=Semana 1, 8-14=Semana 2, 15-21=Semana 3, 22-31=Semana 4).
-function renderStudentAccess(){const s=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);const el=document.getElementById('student-access-panel');if(!el||!s)return;const p=getPackage(s),active=isStudentActive(s),rem=remainingClasses(s),days=daysRemaining(s);const cycleTxt=p?cycleLabel(p.bookingCycle):'';let statusMsg=active?`Acceso activo · vence el ${getStudentExpiry(s)}`:'Acceso vencido o suspendido';if(!active && s.status==='Pendiente' && !p){statusMsg='Tu cuenta está creada pero todavía no tiene un paquete asignado. Escribinos a C.A.E.R. para activar tu acceso y ver el contenido.';}el.innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap"><div><span class="eyebrow">Mi paquete</span><h3 style="margin:5px 0">${escapeHtml(s.package)}</h3><div class="admin-mini">${statusMsg}</div></div><div class="${active?'expiry-ok':'expiry-bad'}"><strong>${active?days+' días restantes':'Acceso bloqueado'}</strong></div></div><div class="access-grid"><div class="access-stat">Clases permitidas ${cycleTxt}<strong>${p?.classes||0}</strong></div><div class="access-stat">Clases restantes ${cycleTxt}<strong>${rem}</strong></div><div class="access-stat">Materias habilitadas<strong>${p?.subjects.includes('Todas las materias')?'Todas':p?.subjects.length||0}</strong></div></div><div style="margin-top:14px"><strong>Materias disponibles</strong><div class="admin-mini">${p?.subjects.includes('Todas las materias')?'Tenés acceso a todas las materias.':(p?.subjects||[]).join(' · ')}</div></div>`}
+function renderStudentAccess(){const s=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);const el=document.getElementById('student-access-panel');if(!el||!s)return;const p=getPackage(s),active=isStudentActive(s),rem=remainingClasses(s),days=daysRemaining(s);const cycleTxt=p?cycleLabel(p.bookingCycle):'';let statusMsg=active?`Acceso activo · vence el ${getStudentExpiry(s)}`:'Acceso vencido o suspendido';if(!active && s.status==='Pendiente' && !p){statusMsg='Tu cuenta está creada pero todavía no tiene un paquete asignado. Escribinos a C.A.E.R. para activar tu acceso y ver el contenido.';}const subjectsLine = p?.subjects.includes('Todas las materias') ? '' : `<div style="margin-top:14px"><strong>Materias disponibles</strong><div class="admin-mini">${(p?.subjects||[]).join(' · ')}</div></div>`;el.innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap"><div><span class="eyebrow">Mi paquete</span><h3 style="margin:5px 0">${escapeHtml(s.package)}</h3><div class="admin-mini">${statusMsg}</div></div><div class="${active?'expiry-ok':'expiry-bad'}"><strong>${active?days+' días restantes':'Acceso bloqueado'}</strong></div></div><div class="access-grid"><div class="access-stat">Clases permitidas ${cycleTxt}<strong>${p?.classes||0}</strong></div><div class="access-stat">Clases restantes ${cycleTxt}<strong>${rem}</strong></div><div class="access-stat">Materias habilitadas<strong>${p?.subjects.includes('Todas las materias')?'Todas':p?.subjects.length||0}</strong></div></div>${subjectsLine}${renderPackageCalendarSection(s)}${renderStudentReceipts(s)}`}
+// Junta, por fecha, todas las marcas del calendario de un alumno: 🚩 el día que arrancó su
+// inscripción, 🏁 el día que termina/terminó su paquete, y lo que el profesor haya cargado a
+// mano (pagos u otras marcas) desde su perfil en el panel de administración.
+function packageMarksFor(student){
+  const marks = {};
+  const add = (dateISO, icon, label) => { if(!dateISO) return; (marks[dateISO] = marks[dateISO]||[]).push({icon, label}); };
+  add(student.startDate, '🚩', 'Inicio de tu inscripción');
+  add(getStudentExpiry(student), '🏁', 'Fin de tu paquete');
+  adminData.packageEvents.filter(e=>e.studentId===student.id).forEach(e=>{
+    add(e.dateISO, e.icon||'💰', e.label || (e.amount ? `Pago registrado: $${e.amount}` : 'Marca cargada por tu profesor'));
+  });
+  return marks;
+}
+let studentPackageCalendarMonth = null;
+function renderPackageCalendarSection(student){
+  if(!studentPackageCalendarMonth) studentPackageCalendarMonth = todayISO().slice(0,7);
+  const marks = packageMarksFor(student);
+  const [y,m] = studentPackageCalendarMonth.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const firstWeekday = (new Date(y, m-1, 1).getDay()+6)%7; // 0=lunes
+  const cells = [];
+  for(let i=0;i<firstWeekday;i++) cells.push(null);
+  for(let day=1; day<=daysInMonth; day++) cells.push(`${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`);
+  while(cells.length%7!==0) cells.push(null);
+  const headerLetters = [1,2,3,4,5,6,0].map(i=>WEEKDAY_LETTER[i]);
+  const header = headerLetters.map(l=>`<div style="text-align:center;font-size:.6rem;font-weight:700;color:var(--text-muted)">${l}</div>`).join('');
+  const body = cells.map(dateStr=>{
+    if(!dateStr) return `<div></div>`;
+    const dayNum = Number(dateStr.slice(8,10));
+    const dayMarks = marks[dateStr];
+    const icons = dayMarks ? dayMarks.map(mk=>mk.icon).join('') : '';
+    const title = dayMarks ? dayMarks.map(mk=>mk.label).join(' · ') : '';
+    return `<div style="text-align:center;padding:3px 0" title="${escapeHtml(title)}"><div style="font-size:.58rem;color:var(--text-muted)">${dayNum}</div><div style="font-size:1rem;min-height:1.2em">${icons}</div></div>`;
+  }).join('');
+  const monthLabel = new Date(y, m-1, 1).toLocaleDateString('es-AR',{month:'long', year:'numeric'});
+  return `<div style="margin-top:16px">
+    <strong>Tu calendario</strong>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+      <button type="button" class="admin-btn secondary small" onclick="shiftPackageCalendarMonth(-1)">←</button>
+      <span class="admin-mini" style="text-transform:capitalize;font-weight:600">${monthLabel}</span>
+      <button type="button" class="admin-btn secondary small" onclick="shiftPackageCalendarMonth(1)">→</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:8px">${header}${body}</div>
+    <div class="admin-mini" style="margin-top:8px">🚩 Inicio de tu inscripción · 💰 Pago registrado · 🏁 Fin de tu paquete</div>
+  </div>`;
+}
+function shiftPackageCalendarMonth(delta){
+  if(!studentPackageCalendarMonth) studentPackageCalendarMonth = todayISO().slice(0,7);
+  const [y,m] = studentPackageCalendarMonth.split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  studentPackageCalendarMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  renderStudentAccess();
+}
+// Historial de recibos que le mandó el profesor (se generan cuando carga un pago con monto en
+// su calendario). Se muestra debajo del calendario, con fecha, concepto y monto.
+function renderStudentReceipts(student){
+  const receipts = adminData.packageEvents
+    .filter(e=>e.studentId===student.id && e.amount)
+    .sort((a,b)=>(b.dateISO||'').localeCompare(a.dateISO||''));
+  if(!receipts.length) return '';
+  const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'});
+  const rows = receipts.map(r=>`<div class="reserve-card" style="margin-top:6px"><div><strong>${escapeHtml(r.label||'Pago')}</strong><div class="admin-mini">${fmt(r.dateISO)}</div></div><span class="admin-badge">$${escapeHtml(String(r.amount))}</span></div>`).join('');
+  return `<div style="margin-top:16px"><strong>💰 Recibos de pago</strong>${rows}</div>`;
+}
 function renderStudentBooking(){
   const el=document.getElementById('student-booking-panel');
   const s=adminData.students.find(x=>x.id===DEMO_STUDENT_ID);
@@ -4322,7 +4497,7 @@ window.seedInitialData = async function(){
 };
 
 /* ---------- listeners en tiempo real de las colecciones compartidas ---------- */
-let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubMaterials=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubWeeklyGoals=null, unsubMonthlyGoals=null, unsubSleepCheckins=null, unsubMonthlySummaries=null, unsubDailyGoals=null, unsubNotifications=null;
+let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubMaterials=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubWeeklyGoals=null, unsubMonthlyGoals=null, unsubSleepCheckins=null, unsubMonthlySummaries=null, unsubDailyGoals=null, unsubNotifications=null, unsubPackageEvents=null;
 
 function startCollectionListeners(){
   stopCollectionListeners();
@@ -4357,6 +4532,11 @@ function startCollectionListeners(){
   unsubNotifications = onSnapshot(collection(db,'notifications'), snap=>{
     window.adminData.notifications = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderStudentDashboard();
+  });
+  unsubPackageEvents = onSnapshot(collection(db,'packageEvents'), snap=>{
+    window.adminData.packageEvents = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    safeRenderStudentDashboard();
+    if(typeof window.renderProfileCalendar==='function') window.renderProfileCalendar();
   });
   unsubItemViews = onSnapshot(collection(db,'itemViews'), snap=>{
     window.adminData.itemViews = snap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -4416,8 +4596,8 @@ function startCollectionListeners(){
   });
 }
 function stopCollectionListeners(){
-  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubMaterials,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubWeeklyGoals,unsubMonthlyGoals,unsubSleepCheckins,unsubMonthlySummaries,unsubDailyGoals,unsubNotifications].forEach(u=>{ if(u) u(); });
-  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubMaterials=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubWeeklyGoals=unsubMonthlyGoals=unsubSleepCheckins=unsubMonthlySummaries=unsubDailyGoals=unsubNotifications=null;
+  [unsubStudents,unsubPackages,unsubSubjects,unsubBookings,unsubLessons,unsubMaterials,unsubItemViews,unsubUpdates,unsubQuizQuestions,unsubQuizAttempts,unsubUnitIntros,unsubUnitSubjects,unsubAttendance,unsubWeeklyGoals,unsubMonthlyGoals,unsubSleepCheckins,unsubMonthlySummaries,unsubDailyGoals,unsubNotifications,unsubPackageEvents].forEach(u=>{ if(u) u(); });
+  unsubStudents=unsubPackages=unsubSubjects=unsubBookings=unsubLessons=unsubMaterials=unsubItemViews=unsubUpdates=unsubQuizQuestions=unsubQuizAttempts=unsubUnitIntros=unsubUnitSubjects=unsubAttendance=unsubWeeklyGoals=unsubMonthlyGoals=unsubSleepCheckins=unsubMonthlySummaries=unsubDailyGoals=unsubNotifications=unsubPackageEvents=null;
 }
 function safeRenderAdmin(){ if(typeof window.renderAdmin==='function') window.renderAdmin(); }
 function safeAutoSyncGivenClasses(){ if(typeof window.autoSyncGivenClasses==='function') window.autoSyncGivenClasses(); }
