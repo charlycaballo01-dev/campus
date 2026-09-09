@@ -2407,6 +2407,32 @@ function renderSleepCalendarForMonth(studentId, monthKey){
   }).join('');
   return `<div style="display:grid;grid-template-columns:repeat(7,1fr);margin-top:10px">${header}${body}</div>`;
 }
+// Calendario mensual de asistencia para el profesor: en cada día del mes muestra si el alumno
+// estudió (punto verde) o no (punto apagado) y el tiempo, para poder ver de un vistazo qué días
+// asistió sin tener que abrir el informe. Mismo layout que renderSleepCalendarForMonth.
+function renderAttendanceCalendarForMonth(studentId, monthKey){
+  const [y,m] = monthKey.split('-').map(Number);
+  if(!y || !m) return '';
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const firstWeekday = (new Date(y, m-1, 1).getDay()+6)%7; // 0=lunes
+  const cells = [];
+  for(let i=0;i<firstWeekday;i++) cells.push(null);
+  for(let day=1; day<=daysInMonth; day++) cells.push(`${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`);
+  while(cells.length%7!==0) cells.push(null);
+  const today = todayISO();
+  const headerLetters = [1,2,3,4,5,6,0].map(i=>WEEKDAY_LETTER[i]);
+  const header = headerLetters.map(l=>`<div style="text-align:center;font-size:.6rem;font-weight:700;color:var(--text-muted)">${l}</div>`).join('');
+  const body = cells.map(dateStr=>{
+    if(!dateStr) return `<div style="border:1px solid transparent"></div>`;
+    const dayNum = Number(dateStr.slice(8,10));
+    const isFuture = dateStr > today;
+    const isToday = dateStr === today;
+    const mins = isFuture ? 0 : attendanceMinutesInRange(studentId, dateStr, dateStr);
+    const dot = isFuture ? '' : `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${mins>0?'var(--forest)':'var(--line)'}"></span>`;
+    return `<div title="${mins>0?formatMinutes(mins):'Sin actividad'}" style="text-align:center;padding:3px 0;border:1px solid var(--line);${isToday?'background:var(--bg-soft)':''}"><div style="font-size:.58rem;color:var(--text-muted)">${dayNum}</div><div style="min-height:1.1em;margin-top:2px">${dot}</div></div>`;
+  }).join('');
+  return `<div style="display:grid;grid-template-columns:repeat(7,1fr);margin-top:10px">${header}${body}</div>`;
+}
 function renderStudentMonthlySummaries(){
   if(!DEMO_STUDENT_ID) return '';
   const list = adminData.monthlySummaries
@@ -2421,6 +2447,7 @@ function renderStudentMonthlySummaries(){
       </div>
       <div class="admin-mini" style="margin-top:4px">😀${m.sleepBien||0} · 😑${m.sleepRegular||0} · 🫩${m.sleepMal||0}${m.monthlyGoalMinutes?` · Meta: ${formatMinutes(m.monthlyGoalMinutes)} ${m.goalMet?'✅':''}`:''}</div>
       ${renderSleepCalendarForMonth(DEMO_STUDENT_ID, m.monthKey)}
+      ${Array.isArray(m.dailyBreakdown)&&m.dailyBreakdown.length ? `<details style="margin-top:8px"><summary class="admin-mini" style="cursor:pointer">Ver detalle día por día</summary>${renderDailyBreakdownTable(m.dailyBreakdown)}</details>` : ''}
     </div>`).join('');
   return `<div style="margin-top:18px">
     <div class="admin-mini" style="margin-bottom:6px">📊 Resúmenes mensuales de tu profesor</div>
@@ -2470,6 +2497,10 @@ function renderProfileAttendance(){
     <div style="margin-top:16px">
       <div class="admin-mini" style="margin-bottom:6px">Sueño · últimos 7 días</div>
       <div style="display:flex;gap:4px">${last7}</div>
+    </div>
+    <div style="margin-top:16px">
+      <div class="admin-mini" style="margin-bottom:6px">Días de asistencia del mes</div>
+      ${renderAttendanceCalendarForMonth(s.id, todayISO().slice(0,7))}
     </div>`;
 }
 
@@ -2580,6 +2611,25 @@ function sleepSummaryForRange(studentId, dates){
   });
   return counts;
 }
+// Tabla día por día (fecha + tiempo estudiado) para el resumen mensual. Recibe las fechas del
+// mes y devuelve tanto el array de {date, mins} como el HTML de la tabla, para poder reusar el
+// array al guardar el resumen en Firestore (sendMonthlySummary) y al mostrarlo después.
+function attendanceDailyBreakdown(studentId, dates){
+  return dates.map(d=>({date:d, mins:attendanceMinutesInRange(studentId,d,d)}));
+}
+function renderDailyBreakdownTable(breakdown){
+  const rows = breakdown.map(({date,mins})=>{
+    const label = new Date(date+'T00:00:00').toLocaleDateString('es-AR',{weekday:'short', day:'numeric', month:'short'});
+    const hasActivity = mins>0;
+    return `<tr><td style="text-transform:capitalize;padding:5px 4px;border-bottom:1px solid var(--line);${hasActivity?'':'opacity:.55'}">${label}</td><td style="padding:5px 4px;border-bottom:1px solid var(--line);${hasActivity?'':'opacity:.55'}">${hasActivity?formatMinutes(mins):'—'}</td></tr>`;
+  }).join('');
+  return `<div style="max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--radius-md)">
+    <table style="width:100%;border-collapse:collapse;font-size:.84rem">
+      <thead><tr style="text-align:left;position:sticky;top:0;background:var(--bg-panel)"><th style="padding:6px 4px;border-bottom:2px solid var(--forest)">Día</th><th style="padding:6px 4px;border-bottom:2px solid var(--forest)">Tiempo de estudio</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
 function renderMonthlyReportContent(){
   const s = adminData.students.find(x=>x.id===weeklyReportStudentId);
   const el = document.getElementById('weekly-report-content');
@@ -2588,6 +2638,7 @@ function renderMonthlyReportContent(){
   const monthlyGoal = monthlyGoalFor(s.id, isoMonthStart().slice(0,7));
   const totalMonthMin = attendanceMinutesInRange(s.id, dates[0], dates[dates.length-1]);
   const buckets = weeklyMinutesBuckets(dates, s.id);
+  const breakdown = attendanceDailyBreakdown(s.id, dates);
   const sleep = sleepSummaryForRange(s.id, dates);
   const monthLabel = new Date(dates[0]+'T00:00:00').toLocaleDateString('es-AR',{month:'long', year:'numeric'});
   const daysWithActivity = dates.filter(d=>attendanceMinutesInRange(s.id,d,d)>0).length;
@@ -2600,6 +2651,10 @@ function renderMonthlyReportContent(){
       <div class="access-stat">Tiempo total del mes<strong>${formatMinutes(totalMonthMin)}</strong></div>
       <div class="access-stat">Días con actividad<strong>${daysWithActivity}/${dates.length}</strong></div>
       <div class="access-stat">Promedio diario<strong>${formatMinutes(totalMonthMin/Math.max(1,dates.length))}</strong></div>
+    </div>
+    <div style="margin-top:16px">
+      <div class="admin-mini" style="margin-bottom:6px">Detalle día por día</div>
+      ${renderDailyBreakdownTable(breakdown)}
     </div>
     <div style="margin-top:16px">
       <div class="admin-mini" style="margin-bottom:6px">Sueño del mes</div>
@@ -2623,16 +2678,20 @@ function sendMonthlySummary(studentId){
   const monthLabel = new Date(dates[0]+'T00:00:00').toLocaleDateString('es-AR',{month:'long'});
   const monthKey = dates[0].slice(0,7); // YYYY-MM
   const goalMet = !!(monthlyGoal?.monthlyMinutes && totalMonthMin>=monthlyGoal.monthlyMinutes);
+  const dailyBreakdown = attendanceDailyBreakdown(studentId, dates);
   let body = `Estudiaste ${formatMinutes(totalMonthMin)} en ${daysWithActivity} de ${dates.length} días de ${monthLabel}.`;
   if(monthlyGoal?.monthlyMinutes) body += ` Meta mensual: ${formatMinutes(monthlyGoal.monthlyMinutes)} (${goalMet?'¡cumplida! 🎉':'todavía en camino'}).`;
   body += ` Sueño del mes: 😀${sleep.bien} · 😑${sleep.regular} · 🫩${sleep.mal}.`;
   // Guardamos el resumen en Firestore para que quede disponible en el panel del alumno
   // (el push es solo el aviso; esto es lo que le permite volver a verlo después).
+  // dailyBreakdown queda guardado también, para que tanto el alumno como el profesor puedan
+  // ver el detalle día por día de ese mes, no solo el total.
   window.fsSet('monthlySummaries', `${studentId}_${monthKey}`, {
     studentId, monthKey, monthLabel,
     totalMinutes: totalMonthMin, daysWithActivity, totalDays: dates.length,
     sleepBien: sleep.bien, sleepRegular: sleep.regular, sleepMal: sleep.mal,
     monthlyGoalMinutes: monthlyGoal?.monthlyMinutes || null, goalMet,
+    dailyBreakdown,
     sentAt: new Date().toISOString()
   }).then(()=>{
     queuePush(studentId, `📊 Tu resumen de ${monthLabel}`, body);
@@ -3043,6 +3102,11 @@ function openProfileUnit(unitId){
   }).join('');
 }
 
+// Vista de la materia dentro del perfil del alumno (panel del profesor). Se muestra EXACTAMENTE
+// lo mismo que ve el alumno en su propia pantalla: mismos puntitos de color (renderDots, según
+// cuántas veces vio cada clase/material: 1=rojo, 2=amarillo, 3=verde/completo), mismos badges
+// "Vista/Sin ver" y "Completa/Pendiente", y el mismo % de avance — pero calculado con los datos
+// reales de ESTE alumno (getViewCountFor(s.id, ...)), no con el usuario que está logueado.
 function openProfileSubject(subjectId){
   const s = adminData.students[profileStudentIndex];
   const subject = findSubjectById(subjectId);
@@ -3050,6 +3114,10 @@ function openProfileSubject(subjectId){
   if(!s || !subject || !body) return;
   const st = studentSubjectStats(s.id, subject);
   const t = tierOf(st.pct);
+  const lessons = adminData.lessons.filter(l=>l.subjectId===subject.id).sort((a,b)=>(a.order||0)-(b.order||0));
+  const materials = materialsForSubject(subject);
+  const quizId = `${subject.id}-quiz`;
+  const quizCount = getViewCountFor(s.id, quizId);
   const examResultHtml = st.attempted
     ? `<div class="access-panel" style="margin-top:20px">
         <strong>Resultado de la evaluación</strong>
@@ -3075,11 +3143,26 @@ function openProfileSubject(subjectId){
     </div>
     <span class="section-label">Clases (${st.lessonsWatched}/${st.lessonsTotal} vistas)</span>
     <div class="video-list">
-      ${subject.videos.map(v=>`<div class="video-item ${v.watched?'watched':''}"><div class="vi-thumb">▶ ${v.dur}</div><div class="vi-info"><div class="vi-title">${escapeHtml(v.title)}</div><div class="vi-sub">${v.watched?'Vista':'Sin ver'}</div></div><span class="vi-status ${v.watched?'done':'pending'}">${v.watched?'Completa':'Pendiente'}</span></div>`).join('')}
+      ${lessons.length ? lessons.map(l=>{
+        const count = getViewCountFor(s.id, l.id);
+        const isWatched = count>=1;
+        return `<div class="video-item ${isWatched?'watched':''}"><div class="vi-thumb">▶</div><div class="vi-info"><div class="vi-title">${escapeHtml(l.title)}</div><div class="vi-sub">${isWatched?'Vista':'Sin ver'}</div></div>${renderDots(count)}<span class="vi-status ${isWatched?'done':'pending'}">${isWatched?'Completa':'Pendiente'}</span></div>`;
+      }).join('') : '<p class="admin-mini">Todavía no hay clases cargadas para esta materia.</p>'}
     </div>
     <span class="section-label">Material de estudio</span>
     <div class="video-list">
-      ${materialsForSubject(subject).map(m=>`<div class="video-item"><div class="vi-thumb">${m.type==='pdf'?'PDF':'PPT'}</div><div class="vi-info"><div class="vi-title">${escapeHtml(m.name)}</div><div class="vi-sub">Material descargable</div></div><span class="vi-status pending">Disponible</span></div>`).join('')}
+      ${materials.length ? materials.map((m,idx)=>{
+        const matId = `${subject.id}-mat-${idx}`;
+        const count = getViewCountFor(s.id, matId);
+        return `<div class="video-item"><div class="vi-thumb">${m.type==='pdf'?'PDF':'PPT'}</div><div class="vi-info"><div class="vi-title">${escapeHtml(m.name)}</div><div class="vi-sub">Material descargable</div></div>${renderDots(count)}<span class="vi-status pending">${m.url?`<a href="${m.url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">Ver</a>`:'Sin archivo'}</span></div>`;
+      }).join('') : '<p class="admin-mini">Todavía no hay material de lectura para esta materia.</p>'}
+    </div>
+    <div class="quiz-cta" style="margin-top:18px">
+      <div>
+        <strong>Evaluación final</strong>
+        <p>Vistas de este alumno sobre las 30 preguntas de la materia.</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">${renderDots(quizCount)}</div>
     </div>
     ${examResultHtml}
   `;
