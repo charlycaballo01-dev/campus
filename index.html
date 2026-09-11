@@ -4833,9 +4833,14 @@ async function routeUser(user){
 /* ---------- se dispara al cargar la página (sesión ya guardada) y al cerrar sesión ---------- */
 setTimeout(()=>{ document.getElementById('boot-loading')?.remove(); }, 4000);
 onAuthStateChanged(auth, async (user) => {
-  document.getElementById('boot-loading')?.remove();
   if(user){
+    // Ojo: NO sacamos el boot-loading acá todavía. routeUser tiene que consultar Firestore
+    // para saber si es admin o alumno antes de decidir qué pantalla mostrar; si sacáramos el
+    // overlay antes, se alcanza a ver un parpadeo de la pantalla de login de fondo mientras
+    // routeUser resuelve eso ("entra y sale"). Lo sacamos recién cuando ya está la pantalla
+    // correcta armada.
     await routeUser(user);
+    document.getElementById('boot-loading')?.remove();
   }else{
     window.__currentUid = null;
     window.__isAdmin = false;
@@ -4848,6 +4853,7 @@ onAuthStateChanged(auth, async (user) => {
     if(authView){ authView.style.display=''; authView.classList.add('active'); }
     window.setAuthMode('login');
     window.fitAuthScale();
+    document.getElementById('boot-loading')?.remove();
   }
 });
 </script>
@@ -4861,12 +4867,19 @@ if ('serviceWorker' in navigator) {
       // en vez de esperar a que el navegador lo revise solo (a veces tarda horas o días en
       // darse cuenta de que hay una versión nueva, y la app queda mostrando contenido viejo).
       reg.update().catch(()=>{});
+      // Si ya pasaron unos segundos sin que se dispare otro reload, esta carga está estable:
+      // liberamos el flag para que una actualización futura del sitio pueda volver a recargar
+      // una vez (si no, el flag quedaría pegado para siempre en esta pestaña).
+      setTimeout(()=>{ sessionStorage.removeItem('swReloaded'); }, 5000);
       // Si se activa una versión nueva del Service Worker mientras la página ya estaba
       // abierta, recargamos una sola vez para que se vea el contenido actualizado al toque.
-      let refreshedForNewSW = false;
+      // OJO: el flag va en sessionStorage, no en una variable en memoria — una variable local
+      // muere apenas se hace el reload, así que en la carga siguiente vuelve a valer false, el
+      // SW se activa de nuevo (controllerchange) y dispara otro reload: eso arma el loop de
+      // "entra y sale" al principio. sessionStorage sobrevive al reload y corta el loop.
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (refreshedForNewSW) return;
-        refreshedForNewSW = true;
+        if (sessionStorage.getItem('swReloaded') === '1') return;
+        sessionStorage.setItem('swReloaded', '1');
         window.location.reload();
       });
     }).catch(err => console.warn('SW error:', err));
