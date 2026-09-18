@@ -4374,7 +4374,7 @@ import {
   onAuthStateChanged, signOut, updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, onSnapshot, increment
+  getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, onSnapshot, increment, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getMessaging, getToken, onMessage, isSupported as isMessagingSupported
@@ -4654,8 +4654,18 @@ window.seedInitialData = async function(){
 /* ---------- listeners en tiempo real de las colecciones compartidas ---------- */
 let unsubStudents=null, unsubPackages=null, unsubSubjects=null, unsubBookings=null, unsubLessons=null, unsubMaterials=null, unsubItemViews=null, unsubUpdates=null, unsubQuizQuestions=null, unsubQuizAttempts=null, unsubUnitIntros=null, unsubUnitSubjects=null, unsubAttendance=null, unsubWeeklyGoals=null, unsubMonthlyGoals=null, unsubSleepCheckins=null, unsubMonthlySummaries=null, unsubDailyGoals=null, unsubNotifications=null, unsubPackageEvents=null;
 
-function startCollectionListeners(){
+// uid + isAdmin: el admin sigue viendo todo (colecciones completas, sin filtrar).
+// Un alumno solo necesita SUS PROPIOS documentos en las colecciones "personales"
+// (asistencia, vistas de material, intentos de quiz, metas, notificaciones, etc.),
+// así que ahí se agrega where('studentId','==',uid) en vez de traer la colección entera.
+// Esto es lo que bajó las lecturas de Firestore de ~128K/día a un nivel sostenible:
+// antes cada alumno que entraba leía los datos de TODOS los alumnos en esas 10 colecciones.
+function startCollectionListeners(uid, isAdmin){
   stopCollectionListeners();
+  const scoped = (colName) => (isAdmin || !uid)
+    ? collection(db, colName)
+    : query(collection(db, colName), where('studentId', '==', uid));
+
   unsubStudents = onSnapshot(collection(db,'students'), snap=>{
     window.adminData.students = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); updateUserChip();
@@ -4684,18 +4694,18 @@ function startCollectionListeners(){
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
     if(typeof window.renderSubjectContent==='function') window.renderSubjectContent();
   });
-  unsubNotifications = onSnapshot(collection(db,'notifications'), snap=>{
+  unsubNotifications = onSnapshot(scoped('notifications'), snap=>{
     window.adminData.notifications = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderStudentDashboard();
   });
-  unsubPackageEvents = onSnapshot(collection(db,'packageEvents'), snap=>{
+  unsubPackageEvents = onSnapshot(scoped('packageEvents'), snap=>{
     window.adminData.packageEvents = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderStudentDashboard();
     if(typeof window.renderProfileCalendar==='function') window.renderProfileCalendar();
     safeCheckPaymentDueReminders();
     safeCheckPaymentOverdueReminders();
   });
-  unsubItemViews = onSnapshot(collection(db,'itemViews'), snap=>{
+  unsubItemViews = onSnapshot(scoped('itemViews'), snap=>{
     window.adminData.itemViews = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
     if(typeof window.renderSubjectContent==='function') window.renderSubjectContent();
@@ -4708,7 +4718,7 @@ function startCollectionListeners(){
     window.adminData.quizQuestions = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
   });
-  unsubQuizAttempts = onSnapshot(collection(db,'quizAttempts'), snap=>{
+  unsubQuizAttempts = onSnapshot(scoped('quizAttempts'), snap=>{
     window.adminData.quizAttempts = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
   });
@@ -4727,27 +4737,27 @@ function startCollectionListeners(){
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderUnits();
     if(typeof window.refreshOpenUnitAfterEdit==='function') window.refreshOpenUnitAfterEdit();
   });
-  unsubAttendance = onSnapshot(collection(db,'attendance'), snap=>{
+  unsubAttendance = onSnapshot(scoped('attendance'), snap=>{
     window.adminData.attendance = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance();
   });
-  unsubWeeklyGoals = onSnapshot(collection(db,'weeklyGoals'), snap=>{
+  unsubWeeklyGoals = onSnapshot(scoped('weeklyGoals'), snap=>{
     window.adminData.weeklyGoals = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance();
   });
-  unsubMonthlyGoals = onSnapshot(collection(db,'monthlyGoals'), snap=>{
+  unsubMonthlyGoals = onSnapshot(scoped('monthlyGoals'), snap=>{
     window.adminData.monthlyGoals = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance();
   });
-  unsubSleepCheckins = onSnapshot(collection(db,'sleepCheckins'), snap=>{
+  unsubSleepCheckins = onSnapshot(scoped('sleepCheckins'), snap=>{
     window.adminData.sleepCheckins = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard(); safeRenderProfileAttendance();
   });
-  unsubMonthlySummaries = onSnapshot(collection(db,'monthlySummaries'), snap=>{
+  unsubMonthlySummaries = onSnapshot(scoped('monthlySummaries'), snap=>{
     window.adminData.monthlySummaries = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard();
   });
-  unsubDailyGoals = onSnapshot(collection(db,'dailyGoals'), snap=>{
+  unsubDailyGoals = onSnapshot(scoped('dailyGoals'), snap=>{
     window.adminData.dailyGoals = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard();
   });
@@ -4806,7 +4816,7 @@ async function routeUser(user){
     window.__currentUid = user.uid;
     const adminSnap = await getDoc(doc(db,'admins',user.uid));
     window.__isAdmin = adminSnap.exists();
-    startCollectionListeners();
+    startCollectionListeners(user.uid, window.__isAdmin);
     if(adminSnap.exists()){
       setCurrentStudentId(null);
       window.openAdmin();
