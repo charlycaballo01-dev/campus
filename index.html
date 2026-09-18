@@ -4666,11 +4666,22 @@ function startCollectionListeners(uid, isAdmin){
     ? collection(db, colName)
     : query(collection(db, colName), where('studentId', '==', uid));
 
-  unsubStudents = onSnapshot(collection(db,'students'), snap=>{
-    window.adminData.students = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    safeRenderAdmin(); safeRenderStudentDashboard(); updateUserChip();
-    safeAutoSyncGivenClasses();
-  });
+  // students: el admin sigue viendo la colección entera (la necesita para el panel).
+  // Un alumno ahora solo se suscribe a SU PROPIO documento (doc, no collection), así
+  // no recibe los datos (nombre, contacto, paquete) del resto de sus compañeros.
+  if(isAdmin || !uid){
+    unsubStudents = onSnapshot(collection(db,'students'), snap=>{
+      window.adminData.students = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      safeRenderAdmin(); safeRenderStudentDashboard(); updateUserChip();
+      safeAutoSyncGivenClasses();
+    });
+  }else{
+    unsubStudents = onSnapshot(doc(db,'students',uid), snap=>{
+      window.adminData.students = snap.exists() ? [{id:snap.id, ...snap.data()}] : [];
+      safeRenderAdmin(); safeRenderStudentDashboard(); updateUserChip();
+      safeAutoSyncGivenClasses();
+    });
+  }
   unsubPackages = onSnapshot(collection(db,'packages'), snap=>{
     window.adminData.packages = snap.docs.map(d=>({id:d.id, ...d.data()}));
     safeRenderAdmin(); safeRenderStudentDashboard();
