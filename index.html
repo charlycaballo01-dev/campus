@@ -1201,7 +1201,9 @@ function renderMaterialsList(){
   ml.innerHTML = Object.entries(bySubject).map(([subjectId,arr])=>{
     const sub=flatSubjects.find(s=>s.id===subjectId);
     const rows=arr.slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(m=>`<div class="reserve-card"><div><strong>${escapeHtml(m.name)}</strong><div class="admin-mini">${m.type==='pdf'?'PDF':'PPT'} · Orden ${m.order||1}</div></div><div><button class="admin-btn small" onclick="editMaterial('${m.id}')">Editar</button> <button class="admin-btn danger small" onclick="removeMaterial('${m.id}')">Eliminar</button></div></div>`).join('');
-    return `<div class="package-card"><strong>${escapeHtml(sub?sub.unitName+' · '+sub.name:'Materia eliminada')}</strong><div style="margin-top:8px">${rows}</div></div>`;
+    const dupCount=arr.length-new Set(arr.map(m=>materialKey(m.url)||m.name)).size;
+    const dupWarn=dupCount?`<div class="admin-mini" style="color:#b3261e;margin-top:6px">⚠ ${dupCount} material(es) repetido(s) <button class="admin-btn small" onclick="removeDuplicateMaterials('${subjectId}')">Quitar repetidos</button></div>`:'';
+    return `<div class="package-card"><strong>${escapeHtml(sub?sub.unitName+' · '+sub.name:'Materia eliminada')}</strong>${dupWarn}<div style="margin-top:8px">${rows}</div></div>`;
   }).join('');
 }
 function addMaterial(e){
@@ -1218,8 +1220,28 @@ function addMaterial(e){
   if(editingId){
     window.fsUpdate('materials',editingId,data).then(()=>{cancelEditMaterial(); renderAdmin();}).catch(err=>alert('Error al guardar: '+err.message));
   }else{
-    window.fsAdd('materials',data).then(()=>{ e.target.reset(); document.getElementById('new-material-order').value=1; }).catch(err=>alert('Error al guardar: '+err.message));
+    if(materialsForSubject({id:subjectId, materials:[]}).some(m=>materialKey(m.url)===materialKey(url))){ alert('Ese material ya está cargado en esta materia (mismo link).'); return; }
+    if(addMaterial._saving) return;
+    addMaterial._saving=true;
+    const btn=e.target.querySelector('button[type="submit"]'); const btnText=btn?btn.textContent:'';
+    if(btn){ btn.disabled=true; btn.textContent='Guardando...'; }
+    window.fsAdd('materials',data).then(()=>{ e.target.reset(); document.getElementById('new-material-order').value=1; }).catch(err=>alert('Error al guardar: '+err.message)).finally(()=>{ addMaterial._saving=false; if(btn){ btn.disabled=false; btn.textContent=btnText; } });
   }
+}
+// Normaliza un link (sobre todo de Drive) para detectar el mismo archivo aunque el link cambie un poco.
+function materialKey(url){
+  const u=String(url||'').trim();
+  const m=u.match(/\/d\/([A-Za-z0-9_-]{10,})/)||u.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+  return m?m[1]:u.toLowerCase().replace(/[?#].*$/,'').replace(/\/+$/,'');
+}
+function removeDuplicateMaterials(subjectId){
+  const seen=new Set(), dups=[];
+  (adminData.materials||[]).filter(m=>m.subjectId===subjectId).sort((a,b)=>(a.order||0)-(b.order||0)).forEach(m=>{
+    const key=materialKey(m.url)||m.name; if(seen.has(key)) dups.push(m); else seen.add(key);
+  });
+  if(!dups.length){ alert('No hay materiales repetidos en esta materia.'); return; }
+  if(!confirm(`Se van a borrar ${dups.length} material(es) repetido(s) (queda uno de cada archivo). ¿Continuar?`)) return;
+  Promise.all(dups.map(m=>window.fsDelete('materials',m.id))).then(()=>alert('Listo, se quitaron los repetidos.')).catch(err=>alert('Error: '+err.message));
 }
 function editMaterial(id){
   const m=adminData.materials.find(x=>x.id===id);
@@ -2829,7 +2851,9 @@ function renderAdmin(){
       ll.innerHTML=Object.entries(bySubject).map(([subjectId,arr])=>{
         const sub=flatSubjects.find(s=>s.id===subjectId);
         const rows=arr.slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(l=>`<div class="reserve-card"><div><strong>${escapeHtml(l.title)}</strong><div class="admin-mini">Orden ${l.order} · youtu.be/${escapeHtml(l.youtubeId)}</div></div><div><button class="admin-btn small" onclick="editLesson('${l.id}')">Editar</button> <button class="admin-btn danger small" onclick="removeLesson('${l.id}')">Eliminar</button></div></div>`).join('');
-        return `<div class="package-card"><strong>${escapeHtml(sub?sub.unitName+' · '+sub.name:'Materia eliminada')}</strong><div style="margin-top:8px">${rows}</div></div>`;
+        const dupCount=arr.length-new Set(arr.map(l=>l.youtubeId||l.title)).size;
+        const dupWarn=dupCount?`<div class="admin-mini" style="color:#b3261e;margin-top:6px">⚠ ${dupCount} clase(s) repetida(s) <button class="admin-btn small" onclick="removeDuplicateLessons('${subjectId}')">Quitar repetidas</button></div>`:'';
+        return `<div class="package-card"><strong>${escapeHtml(sub?sub.unitName+' · '+sub.name:'Materia eliminada')}</strong>${dupWarn}<div style="margin-top:8px">${rows}</div></div>`;
       }).join('');
     }
   }
@@ -3470,7 +3494,20 @@ function addLesson(e){e.preventDefault();const editingId=document.getElementById
     window.fsUpdate('lessons',editingId,{subjectId,unitId:sub?.unitId||'',title,youtubeId,order}).then(()=>{cancelEditLesson();renderAdmin()}).catch(err=>alert('Error al guardar: '+err.message));
     return;
   }
-  window.fsAdd('lessons',{subjectId,unitId:sub?.unitId||'',title,youtubeId,order}).then(()=>{e.target.reset();document.getElementById('new-lesson-order').value=1;}).catch(err=>alert('Error al guardar: '+err.message))}
+  if(adminData.lessons.some(l=>l.subjectId===subjectId&&l.youtubeId===youtubeId)){alert('Esa clase ya está cargada en esta materia (mismo video de YouTube).');return}
+  if(addLesson._saving) return;
+  addLesson._saving=true;
+  const btn=document.getElementById('lesson-submit-btn'); if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  window.fsAdd('lessons',{subjectId,unitId:sub?.unitId||'',title,youtubeId,order}).then(()=>{e.target.reset();document.getElementById('new-lesson-order').value=1;}).catch(err=>alert('Error al guardar: '+err.message)).finally(()=>{addLesson._saving=false;if(btn){btn.disabled=false;btn.textContent='Agregar clase';}})}
+function removeDuplicateLessons(subjectId){
+  const seen=new Set(), dups=[];
+  adminData.lessons.filter(l=>l.subjectId===subjectId).sort((a,b)=>(a.order||0)-(b.order||0)).forEach(l=>{
+    const key=l.youtubeId||l.title; if(seen.has(key)) dups.push(l); else seen.add(key);
+  });
+  if(!dups.length){alert('No hay clases repetidas en esta materia.');return}
+  if(!confirm(`Se van a borrar ${dups.length} clase(s) repetida(s) (se queda una de cada video). ¿Continuar?`)) return;
+  Promise.all(dups.map(l=>window.fsDelete('lessons',l.id))).then(()=>alert('Listo, se quitaron las repetidas.')).catch(err=>alert('Error: '+err.message));
+}
 function editLesson(id){
   const l=adminData.lessons.find(x=>x.id===id); if(!l) return;
   showAdminTab('videos', document.querySelectorAll('.admin-nav button')[5]);
