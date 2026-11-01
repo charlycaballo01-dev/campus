@@ -392,6 +392,101 @@
     0%{ transform: translateY(0) rotate(0deg); opacity:1; }
     100%{ transform: translateY(110vh) rotate(360deg); opacity:0; }
   }
+  /* ================= INTRODUCCIÓN DE UNIDAD: pergamino vertical ================= */
+  #unit-intro-modal{position:fixed; inset:0; z-index:999; display:none; overflow-y:auto; overflow-x:hidden;
+    padding:26px 0 70px; background:rgba(8,20,15,.84); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+    -webkit-overflow-scrolling:touch; overscroll-behavior:contain; touch-action:pan-y;}
+  #unit-intro-modal .ui-scroll{--rw:min(860px, calc(100vw - 40px)); width:var(--rw); margin-left:calc(50% - var(--rw) / 2); position:relative;}
+  #unit-intro-modal .ui-roller{display:block; width:100%; height:auto; position:relative; z-index:2; pointer-events:none; user-select:none;
+    filter:drop-shadow(0 6px 8px rgba(0,0,0,.45));}
+  #unit-intro-modal .ui-roller-top{transform:scaleY(-1); filter:drop-shadow(0 -6px 8px rgba(0,0,0,.45));}
+  #unit-intro-modal .ui-paper{position:relative; z-index:1; width:67.5%; margin:calc(var(--rw) * -.09) auto; box-sizing:border-box;
+    padding:calc(var(--rw) * .09 + 26px) 30px calc(var(--rw) * .09 + 30px);
+    border-style:solid; border-width:0 calc(var(--rw) * .675 * 14 / 514);
+    border-image:url("caer-papiro.webp") 0 14 fill / 0 calc(var(--rw) * .675 * 14 / 514) / 0 stretch round;
+    background:#F3EBD6; background-clip:padding-box; color:#2E2410;
+    filter:drop-shadow(0 16px 26px rgba(0,0,0,.35));
+    animation:uiUnroll .9s cubic-bezier(.2,.7,.2,1) both;}
+  #unit-intro-modal .ui-roller-bottom{animation:uiFade .5s .55s ease both;}
+  @keyframes uiUnroll{from{clip-path:inset(0 0 100% 0);} to{clip-path:inset(0 0 0 0);}}
+  @keyframes uiFade{from{opacity:0; transform:translateY(-12px);} to{opacity:1; transform:none;}}
+  @media (prefers-reduced-motion:reduce){#unit-intro-modal .ui-paper, #unit-intro-modal .ui-roller-bottom{animation:none;}}
+
+  #unit-intro-modal .ui-close{position:fixed; top:14px; right:14px; z-index:1001; width:42px; height:42px; border-radius:50%; cursor:pointer;
+    border:2px solid #C7B26A; background:#0F4A38; color:#EFE3BC; font-size:1.05rem; line-height:1; box-shadow:0 4px 14px rgba(0,0,0,.4);
+    transition:transform .2s, background .2s;}
+  #unit-intro-modal .ui-close:hover{transform:rotate(90deg); background:#1F6A52;}
+  #unit-intro-modal .ui-progress{position:fixed; top:0; left:0; right:0; height:3px; z-index:1001; background:rgba(0,0,0,.25);}
+  #unit-intro-modal .ui-progress span{display:block; height:100%; width:0; background:linear-gradient(90deg,#C7B36A,#F0D77A);}
+
+  /* Encabezado escrito sobre el papel */
+  #unit-intro-modal .ui-head{text-align:center; margin-bottom:22px;}
+  #unit-intro-modal .ui-eyebrow{display:block; font:700 .7rem var(--font-body,sans-serif); letter-spacing:.2em; text-transform:uppercase; color:#6E5A28;}
+  #unit-intro-modal .ui-title{display:block; margin:6px 0 2px; font-family:Georgia,'Times New Roman',serif; font-weight:700; font-size:2.3rem; line-height:1.05; color:#0F4A38;}
+  #unit-intro-modal .ui-meta{font:italic .95rem Georgia,serif; color:#5C4518;}
+  #unit-intro-modal .ui-orn{display:flex; align-items:center; justify-content:center; gap:10px; margin:12px auto 14px; color:#8A6B2F; font-size:.9rem;}
+  #unit-intro-modal .ui-orn::before, #unit-intro-modal .ui-orn::after{content:""; height:1px; width:70px; background:linear-gradient(90deg,transparent,#8A6B2F);}
+  #unit-intro-modal .ui-orn::after{transform:scaleX(-1);}
+  #unit-intro-modal .ui-route{display:flex; flex-wrap:wrap; justify-content:center; gap:6px;}
+  #unit-intro-modal .ui-route span{display:inline-flex; align-items:center; gap:6px; padding:3px 10px 3px 3px; border-radius:999px;
+    background:rgba(255,248,226,.5); border:1px solid rgba(110,85,35,.4); font:600 .74rem var(--font-body,sans-serif); color:#2E2410; white-space:nowrap;}
+  #unit-intro-modal .ui-route b{display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; font-size:.66rem; color:#fff; background:var(--c);}
+
+  /* Texto */
+  #unit-intro-modal .ui-sec{margin-bottom:28px;}
+  #unit-intro-modal .ui-sec-h{display:flex; align-items:center; gap:10px; margin:0 0 12px; padding-bottom:8px; border-bottom:1px solid rgba(110,85,35,.3);
+    font-family:Georgia,serif; font-size:1.3rem; color:#0F4A38;}
+  #unit-intro-modal .ui-sec-h i{font-style:normal; display:inline-grid; place-items:center; width:28px; height:28px; border-radius:50%; flex-shrink:0;
+    background:linear-gradient(180deg,#E7D9A0,#C7B36A); color:#3A2A14; font:700 .82rem var(--font-body,sans-serif); box-shadow:0 0 0 1px #9C8438;}
+  #unit-intro-modal .ui-sec-h small{font:italic .82rem Georgia,serif; color:#6E5A28; margin-left:auto; text-align:right;}
+  #unit-intro-modal .ui-p{font-family:Georgia,'Times New Roman',serif; font-size:1.06rem; line-height:1.8; margin:0 0 14px; color:#2E2410;}
+  #unit-intro-modal .ui-sec:first-child > .ui-p:first-of-type::first-letter{float:left; font-size:3.2rem; line-height:.9; padding:6px 8px 0 0; color:#0F4A38; font-weight:700;}
+
+  /* Recorrido por materias */
+  #unit-intro-modal .ui-path{list-style:none; padding:0; margin:0;}
+  #unit-intro-modal .ui-step{position:relative; padding:0 0 16px 44px;}
+  #unit-intro-modal .ui-step::before{content:""; position:absolute; left:15px; top:30px; bottom:0; width:2px;
+    background:repeating-linear-gradient(180deg,#8A6B2F 0 6px,transparent 6px 11px); opacity:.7;}
+  #unit-intro-modal .ui-step:last-child::before{display:none;}
+  #unit-intro-modal .ui-dot{position:absolute; left:0; top:2px; width:32px; height:32px; border-radius:50%; display:grid; place-items:center;
+    background:var(--c); color:#fff; font:700 .85rem var(--font-body,sans-serif); box-shadow:0 0 0 3px #F6F0DE, 0 0 0 4.5px #8A6B2F;}
+  #unit-intro-modal .ui-card{background:rgba(255,250,232,.42); border:1px solid rgba(120,95,40,.35); border-left:4px solid var(--c); border-radius:12px; padding:12px 14px;}
+  #unit-intro-modal .ui-card h4{margin:0 0 4px; font-family:Georgia,serif; font-size:1.1rem; color:var(--ct);}
+  #unit-intro-modal .ui-quote{margin:0 0 10px; font-family:Georgia,serif; font-style:italic; font-size:1rem; line-height:1.7; color:#3A2A14;}
+  #unit-intro-modal .ui-quote::before{content:"“"; color:var(--c); font-size:1.4em; line-height:0; vertical-align:-.25em; margin-right:2px;}
+  #unit-intro-modal .ui-quote::after{content:"”"; color:var(--c); font-size:1.4em; line-height:0; vertical-align:-.25em; margin-left:1px;}
+  #unit-intro-modal .ui-topics-l{display:block; margin-bottom:6px; font:700 .66rem var(--font-body,sans-serif); letter-spacing:.12em; text-transform:uppercase; color:#6E5A28;}
+  #unit-intro-modal .ui-topics{display:flex; flex-wrap:wrap; gap:6px;}
+  #unit-intro-modal .ui-topics span{padding:3px 9px; border-radius:8px; font:500 .8rem/1.35 var(--font-body,sans-serif); color:#2E2410;
+    background:rgba(255,252,240,.6); border:1px solid color-mix(in srgb,var(--c) 50%,transparent);}
+
+  /* Cierre y consejo */
+  #unit-intro-modal .ui-close-box{padding:16px 18px; border-radius:6px; border:2px solid rgba(110,85,35,.55); outline:1px solid rgba(110,85,35,.35); outline-offset:3px;
+    background:rgba(120,90,40,.08);}
+  #unit-intro-modal .ui-close-box .ui-p{font-style:italic; margin-bottom:8px;}
+  #unit-intro-modal .ui-close-box .ui-p:last-child{margin-bottom:0;}
+  #unit-intro-modal .ui-tip{display:flex; gap:10px; padding:12px 14px; border-radius:10px; background:rgba(255,240,190,.5); border:1px dashed #8A6B2F; color:#3A2A14;
+    font:.95rem/1.6 var(--font-body,sans-serif);}
+  #unit-intro-modal .ui-tip::before{content:"💡"; font-size:1.25rem; line-height:1.2;}
+  #unit-intro-modal .ui-tip b{color:#6E5A28;}
+  #unit-intro-modal .ui-empty{text-align:center; padding:30px 6px; font:italic 1.05rem Georgia,serif; color:#5C4518;}
+
+  /* Celular: el papel ocupa casi todo el ancho y los rodillos salen por los costados */
+  @media (max-width:640px){
+    #unit-intro-modal{padding:12px 0 50px;}
+    #unit-intro-modal .ui-scroll{--rw:calc((100vw - 8px) / .675);}
+    #unit-intro-modal .ui-paper{padding-left:12px; padding-right:12px;}
+    #unit-intro-modal .ui-title{font-size:1.8rem;}
+    #unit-intro-modal .ui-eyebrow{font-size:.62rem; letter-spacing:.14em;}
+    #unit-intro-modal .ui-sec-h{font-size:1.15rem;}
+    #unit-intro-modal .ui-sec-h small{display:none;}
+    #unit-intro-modal .ui-p{font-size:1rem; line-height:1.72;}
+    #unit-intro-modal .ui-step{padding-left:36px;}
+    #unit-intro-modal .ui-dot{width:26px; height:26px; font-size:.76rem;}
+    #unit-intro-modal .ui-step::before{left:12px; top:26px;}
+    #unit-intro-modal .ui-card{padding:10px 11px;}
+    #unit-intro-modal .ui-close{top:10px; right:10px; width:38px; height:38px;}
+  }
 </style>
 <style>
 .access-panel{margin:20px 0 30px;padding:26px;border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--bg-panel);box-shadow:0 2px 14px rgba(20,59,42,.04)}
@@ -783,16 +878,22 @@
 </div>
 
 
-<div id="unit-intro-modal" style="display:none;position:fixed;inset:0;background:rgba(20,30,25,.82);z-index:999;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--bg-panel,#fff);border-radius:16px;padding:36px;max-width:900px;width:100%;max-height:90vh;display:flex;flex-direction:column">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:20px">
-      <div>
-        <span class="eyebrow">Introducción</span>
-        <strong id="unit-intro-modal-title" style="display:block;font-family:var(--font-display);font-size:1.5rem;margin-top:4px"></strong>
-      </div>
-      <button class="admin-btn secondary small" onclick="closeUnitIntroModal()">Cerrar ✕</button>
+<div id="unit-intro-modal" role="dialog" aria-modal="true" aria-labelledby="unit-intro-modal-title" onclick="if(event.target===this)closeUnitIntroModal()">
+  <div class="ui-progress" aria-hidden="true"><span id="unit-intro-progress"></span></div>
+  <button type="button" class="ui-close" onclick="closeUnitIntroModal()" aria-label="Cerrar introducción">✕</button>
+  <div class="ui-scroll" onclick="if(event.target===this)closeUnitIntroModal()">
+    <img class="ui-roller ui-roller-top" src="caer-rodillo.webp" alt="" width="762" height="137">
+    <div class="ui-paper">
+      <header class="ui-head">
+        <span class="ui-eyebrow" id="unit-intro-modal-eyebrow">Introducción</span>
+        <strong id="unit-intro-modal-title" class="ui-title"></strong>
+        <div class="ui-meta" id="unit-intro-modal-meta"></div>
+        <div class="ui-orn" aria-hidden="true">❦</div>
+        <div class="ui-route" id="unit-intro-modal-route"></div>
+      </header>
+      <div id="unit-intro-modal-body" class="ui-body"></div>
     </div>
-    <div id="unit-intro-modal-body" style="overflow:auto;line-height:1.85;font-size:1.05rem;white-space:pre-wrap"></div>
+    <img class="ui-roller ui-roller-bottom" src="caer-rodillo.webp" alt="" width="762" height="137">
   </div>
 </div>
 
@@ -1461,32 +1562,177 @@ window.refreshOpenUnitAfterEdit = function(){
 };
 
 let currentIntroUnitId = null;
+
+/* Color de cada materia (mismo sistema que la biblioteca y el sendero) */
+function introSubjectColor(name){
+  const n = String(name||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const map = [
+    ['histolog',      '#2E8B70','#22705A'],
+    ['quimica',       '#7B61A8','#634C8E'],
+    ['fisiolog',      '#D95C5C','#B44444'],
+    ['medicina y soc','#347A8A','#286170'],
+    ['fisica',        '#C07A2C','#9A5F1C'],
+    ['biolog',        '#82B440','#5E8A24'],
+    ['anatom',        '#3F5F9F','#334E85'],
+    ['salud mental',  '#A0527A','#844263'],
+    ['crecimiento',   '#B8862B','#8C6519']
+  ];
+  for(const [k,c,t] of map){ if(n.includes(k)) return {c, t}; }
+  return {c:'#9C8438', t:'#6E5A28'};
+}
+
+/* Divide "a, b —c, d—, e y f" por comas, sin cortar lo que está entre rayas o paréntesis */
+function introSplitTopics(s){
+  const out=[]; let buf='', dash=false, par=0;
+  for(const ch of s){
+    if(ch==='—') dash=!dash;
+    if(ch==='(') par++;
+    if(ch===')') par=Math.max(0,par-1);
+    if(ch===',' && !dash && !par){ out.push(buf); buf=''; continue; }
+    buf+=ch;
+  }
+  out.push(buf);
+  return out.map(x=>x.trim().replace(/^y\s+/i,'').replace(/[.;]+$/,'').replace(/\s*etc$/i,'').trim()).filter(x=>x && x.toLowerCase()!=='etc');
+}
+
+/* Lee el guion (con o sin formato Markdown) y lo separa en apertura, puentes, cierre y consejo */
+function parseUnitIntro(raw){
+  const res = {apertura:[], puentes:[], cierre:[], tips:[], otros:[]};
+  let sec = 'apertura', bridge = null;
+  const clean = l => l
+    .replace(/^#{1,6}\s*/,'')
+    .replace(/\*\*(.+?)\*\*/g,'$1')
+    .replace(/^\*(.+)\*$/,'$1')
+    .replace(/\*([^*]+)\*/g,'$1')
+    .trim();
+  const unquote = l => l.replace(/^["“”]+/,'').replace(/["“”]+$/,'').trim();
+  for(let line of String(raw||'').replace(/\r/g,'').split('\n')){
+    line = line.trim();
+    if(!line || /^(-{3,}|_{3,}|\*{3,})$/.test(line)) continue;
+    const c = clean(line);
+    const low = c.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    if(/^apertura\b/.test(low)){ sec='apertura'; bridge=null; continue; }
+    if(/^puentes?\s+entre\s+temas/.test(low)){ sec='puentes'; bridge=null; continue; }
+    if(/^cierre\b/.test(low) && c.length < 40){ sec='cierre'; bridge=null; continue; }
+    if(/^(un\s+)?consejo( practico)?\s*:/.test(low)){ res.tips.push(c.replace(/^(un\s+)?consejo( práctico| practico)?\s*:\s*/i,'')); continue; }
+    if(/^(→|->|=>)/.test(c)){
+      bridge = {name: c.replace(/^(→|->|=>)\s*/,'').trim(), frases:[], temas:[]};
+      res.puentes.push(bridge); sec='puentes'; continue;
+    }
+    const dm = c.match(/^\(?\s*(ac[aá]\s+)?desarroll[aá]s\s*:\s*([\s\S]*?)\)?$/i);
+    if(dm){ if(bridge) bridge.temas.push(...introSplitTopics(dm[2])); continue; }
+    const p = unquote(c);
+    if(!p) continue;
+    if(sec==='puentes' && bridge) bridge.frases.push(p);
+    else if(sec==='puentes') res.otros.push(p);
+    else res[sec].push(p);
+  }
+  return res;
+}
+
+function renderUnitIntro(text, unit){
+  const esc = escapeHtml;
+  const titleEl = document.getElementById('unit-intro-modal-title');
+  const metaEl  = document.getElementById('unit-intro-modal-meta');
+  const routeEl = document.getElementById('unit-intro-modal-route');
+  const bodyEl  = document.getElementById('unit-intro-modal-body');
+  const eyebrow = document.getElementById('unit-intro-modal-eyebrow');
+  const modName = (typeof currentModule!=='undefined' && currentModule && currentModule.name) ? currentModule.name : '';
+  if(eyebrow) eyebrow.textContent = 'Introducción' + (modName ? ' · ' + modName : '');
+  if(titleEl) titleEl.textContent = unit ? unit.name : '';
+
+  if(!text){
+    if(metaEl) metaEl.textContent = '';
+    if(routeEl) routeEl.innerHTML = '';
+    bodyEl.innerHTML = '<div class="ui-empty">Tu profesor todavía no cargó una introducción para esta unidad.</div>';
+    return;
+  }
+  const d = parseUnitIntro(text);
+  const n = d.puentes.length;
+  if(metaEl) metaEl.textContent = n ? `Guion de presentación · recorre ${n} materia${n===1?'':'s'}` : 'Guion de presentación';
+  if(routeEl) routeEl.innerHTML = d.puentes.map((b,i)=>{
+    const col = introSubjectColor(b.name);
+    return `<span style="--c:${col.c}"><b>${i+1}</b>${esc(b.name)}</span>`;
+  }).join('');
+
+  const paras = arr => arr.map(p=>`<p class="ui-p">${esc(p)}</p>`).join('');
+  let html = '', k = 0;
+  if(d.apertura.length){
+    html += `<section class="ui-sec"><h3 class="ui-sec-h"><i>${++k}</i>Apertura<small>Cómo presentás la unidad</small></h3>${paras(d.apertura)}</section>`;
+  }
+  if(n){
+    html += `<section class="ui-sec"><h3 class="ui-sec-h"><i>${++k}</i>Puentes entre temas<small>El orden del recorrido</small></h3>${d.otros.length?paras(d.otros):''}<ol class="ui-path">`;
+    d.puentes.forEach((b,i)=>{
+      const col = introSubjectColor(b.name);
+      html += `<li class="ui-step" style="--c:${col.c};--ct:${col.t}"><span class="ui-dot">${i+1}</span><div class="ui-card">
+        <h4>${esc(b.name)}</h4>
+        ${b.frases.map(f=>`<p class="ui-quote">${esc(f)}</p>`).join('')}
+        ${b.temas.length?`<span class="ui-topics-l">Qué desarrollás</span><div class="ui-topics">${b.temas.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}
+      </div></li>`;
+    });
+    html += `</ol></section>`;
+  } else if(d.otros.length){
+    html += `<section class="ui-sec">${paras(d.otros)}</section>`;
+  }
+  if(d.cierre.length){
+    html += `<section class="ui-sec"><h3 class="ui-sec-h"><i>${++k}</i>Cierre<small>Cómo terminás</small></h3><div class="ui-close-box">${paras(d.cierre)}</div></section>`;
+  }
+  if(d.tips.length){
+    html += `<section class="ui-sec">${d.tips.map(t=>`<div class="ui-tip"><div><b>Consejo práctico:</b> ${esc(t)}</div></div>`).join('')}</section>`;
+  }
+  bodyEl.innerHTML = html || `<section class="ui-sec">${paras(String(text).split(/\n{2,}/))}</section>`;
+  introUpdateProgress();
+}
+
+function introUpdateProgress(){
+  const b = document.getElementById('unit-intro-modal');
+  const bar = document.getElementById('unit-intro-progress');
+  if(!b || !bar) return;
+  const max = b.scrollHeight - b.clientHeight;
+  bar.style.width = (max > 0 ? Math.min(100, b.scrollTop / max * 100) : 100) + '%';
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  const b = document.getElementById('unit-intro-modal');
+  if(b) b.addEventListener('scroll', introUpdateProgress, {passive:true});
+});
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && currentIntroUnitId) closeUnitIntroModal();
+});
+
+function introTextFor(unitId){
+  const data = adminData.unitIntros && adminData.unitIntros[unitId];
+  return data && data.text ? data.text.trim() : '';
+}
 function openUnitIntro(e, unitId){
   if(e && e.stopPropagation) e.stopPropagation();
   const unit = currentModule.units.find(u=>u.id===unitId);
   if(!unit) return;
   currentIntroUnitId = unitId;
-  const data = adminData.unitIntros && adminData.unitIntros[unitId];
-  const text = data && data.text ? data.text.trim() : '';
-  document.getElementById('unit-intro-modal-title').textContent = unit.name;
-  document.getElementById('unit-intro-modal-body').innerHTML = text
-    ? escapeHtml(text)
-    : '<span style="opacity:.7">Tu profesor todavía no cargó una introducción para esta unidad.</span>';
-  document.getElementById('unit-intro-modal').style.display = 'flex';
+  renderUnitIntro(introTextFor(unitId), unit);
+  const ov = document.getElementById('unit-intro-modal');
+  ov.style.display = 'block';
+  ov.scrollTop = 0;
+  /* reinicia la animación de desenrollar cada vez que se abre */
+  ov.querySelectorAll('.ui-paper,.ui-roller-bottom').forEach(el=>{ el.style.animation='none'; void el.offsetWidth; el.style.animation=''; });
+  introUpdateProgress();
+  document.body.style.overflow = 'hidden';
+  const c = document.querySelector('#unit-intro-modal .ui-close'); if(c) c.focus({preventScroll:true});
 }
 function closeUnitIntroModal(){
   document.getElementById('unit-intro-modal').style.display = 'none';
+  document.body.style.overflow = '';
   currentIntroUnitId = null;
 }
 window.refreshOpenUnitIntroModal = function(){
   if(!currentIntroUnitId) return;
   const modal = document.getElementById('unit-intro-modal');
   if(!modal || modal.style.display==='none') return;
-  const data = adminData.unitIntros && adminData.unitIntros[currentIntroUnitId];
-  const text = data && data.text ? data.text.trim() : '';
-  document.getElementById('unit-intro-modal-body').innerHTML = text
-    ? escapeHtml(text)
-    : '<span style="opacity:.7">Tu profesor todavía no cargó una introducción para esta unidad.</span>';
+  const unit = currentModule.units.find(u=>u.id===currentIntroUnitId);
+  const ov = document.getElementById('unit-intro-modal');
+  const keep = ov.scrollTop;
+  renderUnitIntro(introTextFor(currentIntroUnitId), unit);
+  ov.scrollTop = keep;
+  introUpdateProgress();
 };
 window.openUnitIntro = openUnitIntro;
 window.closeUnitIntroModal = closeUnitIntroModal;
