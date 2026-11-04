@@ -428,8 +428,12 @@
   #unit-intro-modal .ui-orn::before, #unit-intro-modal .ui-orn::after{content:""; height:1px; width:70px; background:linear-gradient(90deg,transparent,#8A6B2F);}
   #unit-intro-modal .ui-orn::after{transform:scaleX(-1);}
   #unit-intro-modal .ui-route{display:flex; flex-wrap:wrap; justify-content:center; gap:6px;}
-  #unit-intro-modal .ui-route span{display:inline-flex; align-items:center; gap:6px; padding:3px 10px 3px 3px; border-radius:999px;
-    background:rgba(255,248,226,.5); border:1px solid rgba(110,85,35,.4); font:600 .74rem var(--font-body,sans-serif); color:#2E2410; white-space:nowrap;}
+  #unit-intro-modal .ui-route button{display:inline-flex; align-items:center; gap:6px; padding:3px 10px 3px 3px; border-radius:999px; cursor:pointer;
+    background:rgba(255,248,226,.5); border:1px solid rgba(110,85,35,.4); font:600 .74rem var(--font-body,sans-serif); color:#2E2410; white-space:nowrap;
+    transition:transform .15s ease, background .15s ease, border-color .15s ease;}
+  #unit-intro-modal .ui-route button:hover{transform:translateY(-1px); background:rgba(255,250,232,.95); border-color:var(--c);}
+  #unit-intro-modal .ui-route button:focus-visible{outline:2px solid var(--c); outline-offset:2px;}
+  @media (pointer:coarse){#unit-intro-modal .ui-route button{padding:6px 12px 6px 6px;}}
   #unit-intro-modal .ui-route b{display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; font-size:.66rem; color:#fff; background:var(--c);}
 
   /* Texto */
@@ -448,6 +452,8 @@
   #unit-intro-modal .ui-step::before{content:""; position:absolute; left:15px; top:30px; bottom:0; width:2px;
     background:repeating-linear-gradient(180deg,#8A6B2F 0 6px,transparent 6px 11px); opacity:.7;}
   #unit-intro-modal .ui-step:last-child::before{display:none;}
+  #unit-intro-modal .ui-step.ui-hit .ui-card{animation:uiHit 1.4s ease;}
+  @keyframes uiHit{0%,55%{box-shadow:0 0 0 3px var(--c);} 100%{box-shadow:0 0 0 3px transparent;}}
   #unit-intro-modal .ui-dot{position:absolute; left:0; top:2px; width:32px; height:32px; border-radius:50%; display:grid; place-items:center;
     background:var(--c); color:#fff; font:700 .85rem var(--font-body,sans-serif); box-shadow:0 0 0 3px #F9F4E8, 0 0 0 4.5px #8A6B2F;}
   #unit-intro-modal .ui-card{background:rgba(255,250,232,.42); border:1px solid rgba(120,95,40,.35); border-left:4px solid var(--c); border-radius:12px; padding:12px 14px;}
@@ -1650,7 +1656,7 @@ function renderUnitIntro(text, unit){
   if(metaEl) metaEl.textContent = n ? `Guion de presentación · recorre ${n} materia${n===1?'':'s'}` : 'Guion de presentación';
   if(routeEl) routeEl.innerHTML = d.puentes.map((b,i)=>{
     const col = introSubjectColor(b.name);
-    return `<span style="--c:${col.c}"><b>${i+1}</b>${esc(b.name)}</span>`;
+    return `<button type="button" style="--c:${col.c}" onclick="introGoToStep(${i})" aria-label="Ir a ${esc(b.name)}"><b>${i+1}</b>${esc(b.name)}</button>`;
   }).join('');
 
   const paras = arr => arr.map(p=>`<p class="ui-p">${esc(p)}</p>`).join('');
@@ -1662,7 +1668,7 @@ function renderUnitIntro(text, unit){
     html += `<section class="ui-sec"><h3 class="ui-sec-h"><i>${++k}</i>Puentes entre temas<small>El orden del recorrido</small></h3>${d.otros.length?paras(d.otros):''}<ol class="ui-path">`;
     d.puentes.forEach((b,i)=>{
       const col = introSubjectColor(b.name);
-      html += `<li class="ui-step" style="--c:${col.c};--ct:${col.t}"><span class="ui-dot">${i+1}</span><div class="ui-card">
+      html += `<li class="ui-step" id="ui-step-${i}" style="--c:${col.c};--ct:${col.t}"><span class="ui-dot">${i+1}</span><div class="ui-card">
         <h4>${esc(b.name)}</h4>
         ${b.frases.map(f=>`<p class="ui-quote">${esc(f)}</p>`).join('')}
         ${b.temas.length?`<span class="ui-topics-l">Qué desarrollás</span><div class="ui-topics">${b.temas.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}
@@ -1681,6 +1687,18 @@ function renderUnitIntro(text, unit){
   bodyEl.innerHTML = html || `<section class="ui-sec">${paras(String(text).split(/\n{2,}/))}</section>`;
   introUpdateProgress();
 }
+
+/* Al tocar un número del recorrido, baja hasta esa materia dentro del pergamino */
+function introGoToStep(i){
+  const ov = document.getElementById('unit-intro-modal');
+  const step = document.getElementById('ui-step-' + i);
+  if(!ov || !step) return;
+  const top = step.getBoundingClientRect().top - ov.getBoundingClientRect().top + ov.scrollTop - 16;
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  ov.scrollTo({top, behavior: calm ? 'auto' : 'smooth'});
+  step.classList.remove('ui-hit'); void step.offsetWidth; step.classList.add('ui-hit');
+}
+window.introGoToStep = introGoToStep;
 
 function introUpdateProgress(){
   const b = document.getElementById('unit-intro-modal');
