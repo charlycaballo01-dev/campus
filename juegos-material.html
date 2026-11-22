@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juegos con el material de estudio · C.A.E.R.</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--verde:#1a5c2a;--verde-osc:#0f3a1a;--dorado:#d4a017;--dorado-cl:#f0c040;--crema:#fbf6ea;--crema2:#f3ead3;--tinta:#1f2a22;--gris:#6b7468;--ok:#2e8b45;--mal:#c0392b;--borde:#e3d9bf}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--crema);color:var(--tinta);min-height:100vh}
+h1,h2,h3{font-family:'Playfair Display',serif}
+header{background:linear-gradient(135deg,var(--verde-osc),var(--verde));color:#fff;padding:20px}
+.top{max-width:980px;margin:0 auto;display:flex;align-items:center;gap:14px}
+.logo{width:46px;height:46px;border-radius:50%;background:var(--dorado);display:grid;place-items:center;font:800 14px 'Playfair Display';color:var(--verde-osc);flex:none}
+.top h1{font-size:clamp(19px,3vw,26px)}.top p{opacity:.85;font-size:14px}
+.volver{margin-left:auto;border:2px solid rgba(255,255,255,.5);background:none;color:#fff;font:700 14px 'DM Sans';padding:8px 14px;border-radius:10px;cursor:pointer;display:none}
+main{max-width:980px;margin:0 auto;padding:24px 20px 50px}
+.vista{display:none}.vista.on{display:block;animation:in .3s}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+.lead{color:var(--gris);margin-bottom:18px;max-width:640px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.tarjeta{background:#fff;border:1px solid #ece3cc;border-radius:18px;padding:20px;cursor:pointer;text-align:left;font:inherit;color:inherit;box-shadow:0 4px 18px rgba(15,58,26,.07);display:flex;flex-direction:column;gap:8px;transition:transform .15s}
+.tarjeta:hover{transform:translateY(-3px);border-color:var(--dorado)}
+.tarjeta .ic{font-size:34px}.tarjeta h3{color:var(--verde-osc);font-size:20px}
+.tarjeta p{color:var(--gris);font-size:14px;line-height:1.4}
+.fuente{display:inline-block;background:var(--crema2);color:var(--verde-osc);font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;margin-top:auto;align-self:flex-start}
+.card{background:#fff;border-radius:18px;box-shadow:0 4px 20px rgba(15,58,26,.08);border:1px solid #ece3cc;padding:22px;display:flex;flex-direction:column;gap:16px}
+.cab h2{color:var(--verde-osc);font-size:25px}.cab p{color:var(--gris);margin:4px 0 16px}
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{background:var(--crema2);border-radius:12px;padding:8px 14px;text-align:center;min-width:78px}
+.stat b{display:block;font:700 21px 'Playfair Display';color:var(--verde-osc)}
+.stat span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:2px solid var(--verde);background:#fff;color:var(--verde);font:700 14px 'DM Sans';padding:8px 14px;border-radius:99px;cursor:pointer}
+.chip.on{background:var(--verde);color:#fff}
+.q{font:700 clamp(19px,2.6vw,24px) 'Playfair Display';color:var(--verde-osc);line-height:1.3}
+.item{font:800 clamp(19px,2.8vw,25px) 'Playfair Display';text-align:center;background:var(--dorado-cl);color:var(--verde-osc);padding:20px 16px;border-radius:14px;line-height:1.3}
+.ops{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.op{border:2px solid var(--borde);background:var(--crema);font:700 15px 'DM Sans';padding:13px 10px;border-radius:12px;cursor:pointer;color:var(--tinta);text-align:center}
+.op:hover:not(:disabled){border-color:var(--verde)}
+.op.bien{background:#e3f4e7;border-color:var(--ok);color:var(--ok)}
+.op.malo{background:#fbe5e2;border-color:var(--mal);color:var(--mal)}
+.op.casi{background:#fff4d6;border-color:var(--dorado);color:#8a6400}
+.edades{grid-template-columns:repeat(5,1fr)}
+@media(max-width:520px){.edades{grid-template-columns:repeat(2,1fr)}}
+.fb{border-radius:14px;padding:14px 16px;line-height:1.45;animation:in .25s}
+.fb.bien{background:#e3f4e7;border-left:5px solid var(--ok)}.fb.malo{background:#fbe5e2;border-left:5px solid var(--mal)}.fb.casi{background:#fff4d6;border-left:5px solid var(--dorado)}
+.fb strong{display:block;margin-bottom:6px}
+.src{display:inline-block;background:#fff;border:1px solid var(--borde);color:var(--verde-osc);font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:99px;margin-top:4px}
+.btn{border:0;background:var(--verde);color:#fff;font:700 15px 'DM Sans';padding:12px 22px;border-radius:12px;cursor:pointer;align-self:flex-start}
+.btn.oro{background:var(--dorado);color:var(--verde-osc)}
+.frase{font-size:clamp(17px,2.3vw,20px);line-height:1.9;background:var(--crema);border-radius:14px;padding:18px}
+.hueco{display:inline-block;min-width:92px;border-bottom:3px solid var(--verde);text-align:center;font-weight:800;color:var(--verde-osc);padding:0 6px}
+.hueco.act{background:var(--dorado-cl);border-radius:6px 6px 0 0}
+.hueco.bien{color:var(--ok);border-color:var(--ok)}.hueco.malo{color:var(--mal);border-color:var(--mal)}
+.banco{display:flex;flex-wrap:wrap;gap:8px}
+.final{text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;padding:20px 0}
+.final .big{font:800 52px 'Playfair Display';color:var(--verde)}.final .btn{align-self:center}
+.hint{font-size:13px;color:var(--gris)}
+.tarjeta.star{grid-column:1/-1;background:linear-gradient(135deg,var(--verde-osc),var(--verde));color:#fff;border:2px solid var(--dorado);position:relative;overflow:hidden}
+.tarjeta.star h3{color:var(--dorado-cl);font-size:26px}.tarjeta.star p{color:#e6efe7;font-size:15px;max-width:560px}
+.tarjeta.star .ic{font-size:46px}.tarjeta.star .fuente{background:var(--dorado);color:var(--verde-osc)}
+.tarjeta.star::after{content:"★ NUEVO";position:absolute;top:16px;right:-34px;background:var(--dorado);color:var(--verde-osc);font:800 12px 'DM Sans';padding:5px 40px;transform:rotate(35deg)}
+.card{overflow:hidden}
+.ru{display:grid;grid-template-columns:minmax(260px,380px) 1fr;gap:22px;align-items:start}
+@media(max-width:760px){.ru{grid-template-columns:1fr}}
+.hud{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.vidas{font-size:22px;letter-spacing:2px}
+.mult{background:var(--dorado);color:var(--verde-osc);font-weight:800;padding:4px 10px;border-radius:99px;font-size:13px}
+.sellos{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.sello{width:54px;text-align:center;font-size:10px;font-weight:700;color:var(--gris)}
+.sello i{display:grid;place-items:center;width:46px;height:46px;margin:0 auto 3px;border-radius:50%;border:3px dashed var(--borde);font-style:normal;font-size:22px;filter:grayscale(1);opacity:.5;transition:all .4s}
+.sello.m i{border-style:solid;border-color:var(--dorado);opacity:.85;filter:grayscale(.4)}
+.sello.g i{border:3px solid var(--dorado);background:var(--dorado-cl);filter:none;opacity:1;box-shadow:0 0 0 4px rgba(240,192,64,.3);animation:pop .5s}
+@keyframes pop{50%{transform:scale(1.35) rotate(10deg)}}
+.rueda-w{position:relative;width:100%;max-width:360px;margin:0 auto;aspect-ratio:1}
+.rueda{width:100%;height:100%;transition:transform 3.8s cubic-bezier(.12,.75,.1,1);filter:drop-shadow(0 8px 18px rgba(15,58,26,.3))}
+.puntero{position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border:16px solid transparent;border-top:30px solid var(--mal);z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
+.girar{position:absolute;inset:0;margin:auto;width:92px;height:92px;border-radius:50%;border:5px solid #fff;background:radial-gradient(circle at 35% 30%,var(--dorado-cl),var(--dorado));color:var(--verde-osc);font:800 15px 'DM Sans';cursor:pointer;z-index:3;box-shadow:0 4px 12px rgba(0,0,0,.35)}
+.girar:disabled{opacity:.75;cursor:default}.girar:not(:disabled){animation:late 1.3s infinite}
+@keyframes late{50%{transform:scale(1.08)}}
+.cat{display:inline-flex;align-items:center;gap:8px;color:#fff;font-weight:800;padding:7px 14px;border-radius:99px;align-self:flex-start;animation:in .3s}
+.tbar{height:10px;background:var(--crema2);border-radius:99px;overflow:hidden}
+.tbar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--verde),var(--dorado));border-radius:99px}
+.tbar.fin i{background:var(--mal)}
+.comod{display:flex;gap:8px;flex-wrap:wrap}
+.comod button{border:2px solid var(--dorado);background:#fff8e1;color:#7a5800;font:700 13px 'DM Sans';padding:7px 12px;border-radius:99px;cursor:pointer}
+.comod button:disabled{opacity:.35;cursor:default}
+.op.fuera{visibility:hidden}
+.msg{font:700 20px 'Playfair Display';color:var(--verde-osc);text-align:center;padding:20px 6px;line-height:1.35}
+.elige{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.elige button{border:0;color:#fff;font:700 14px 'DM Sans';padding:12px 8px;border-radius:12px;cursor:pointer}
+#conf{position:fixed;inset:0;pointer-events:none;z-index:50}
+.diploma{border:4px double var(--dorado);border-radius:16px;padding:26px 18px;background:#fffdf5;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.diploma h3{font-size:28px;color:var(--verde-osc)}
+.mute{border:0;background:none;font-size:20px;cursor:pointer}
+.pista{background:linear-gradient(#3f8f4a,#2f7a3a);border-radius:14px;position:relative;overflow:hidden;border:3px solid var(--verde-osc)}
+.carril{position:relative;height:54px;border-bottom:2px dashed rgba(255,255,255,.35)}
+.carril:last-child{border-bottom:0}.carril.yo{background:rgba(240,192,64,.28)}
+.carril .nom{position:absolute;left:8px;top:3px;font-size:11px;font-weight:800;color:rgba(255,255,255,.8);z-index:1}
+.corr{position:absolute;left:0;right:84px;top:0;bottom:0}
+.cbl{position:absolute;bottom:2px;transition:left .5s cubic-bezier(.2,.8,.3,1);width:46px;text-align:center}
+.cbl .fl{display:inline-block;transform:scaleX(-1)}
+.cbl .h{display:inline-block;font-size:34px;line-height:1;animation:galope .42s infinite}
+.cbl.riv{transition:none}.cbl.quieto .h{animation:none}
+.cbl.turbo .h{animation-duration:.2s}
+.cbl.turbo::before{content:"💨";position:absolute;left:-22px;bottom:6px;font-size:20px;animation:in .2s}
+.cbl.caida .h{animation:none;transform:rotate(25deg)}.cbl.caida::after{content:"💫";position:absolute;right:-6px;top:-10px;font-size:18px}
+@keyframes galope{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-6px) rotate(5deg)}}
+.meta{position:absolute;right:36px;top:0;bottom:0;width:14px;background:conic-gradient(#fff 25%,#111 0 50%,#fff 0 75%,#111 0) 0 0/14px 14px;z-index:1}
+.metaF{position:absolute;right:6px;top:4px;font-size:22px;z-index:1}
+.cuenta{position:absolute;inset:0;display:grid;place-items:center;background:rgba(15,58,26,.55);color:#fff;font:800 64px 'Playfair Display';z-index:5}
+.pos{font:800 18px 'DM Sans';color:var(--verde-osc);background:var(--dorado-cl);padding:6px 14px;border-radius:99px}
+.podio{display:flex;flex-direction:column;gap:6px;width:100%;max-width:420px}
+.podio div{display:flex;justify-content:space-between;gap:10px;background:var(--crema);border-radius:10px;padding:10px 14px;font-weight:700}
+.podio div.yo{background:var(--dorado-cl);color:var(--verde-osc)}
+.repaso{width:100%;text-align:left;display:flex;flex-direction:column;gap:8px}
+.repaso>div{background:var(--crema);border-left:4px solid var(--mal);padding:10px 12px;border-radius:10px;font-size:14px;line-height:1.4}
+/* ====== v2: escenas animadas, banderines y movimiento ====== */
+.grid{perspective:900px}
+.tarjeta{transition:transform .18s,box-shadow .18s,border-color .18s;transform-style:preserve-3d;animation:sube .45s backwards}
+.tarjeta:nth-child(2){animation-delay:.06s}.tarjeta:nth-child(3){animation-delay:.12s}.tarjeta:nth-child(4){animation-delay:.18s}.tarjeta:nth-child(5){animation-delay:.24s}.tarjeta:nth-child(6){animation-delay:.3s}.tarjeta:nth-child(7){animation-delay:.36s}
+.tarjeta:hover{box-shadow:0 14px 30px rgba(15,58,26,.2)}
+.tarjeta:active{transform:scale(.98)!important}
+@keyframes sube{from{opacity:0;transform:translateY(16px)}}
+.esc{display:block;position:relative;height:92px;border-radius:12px;background:linear-gradient(180deg,#fffaf0,var(--crema2));overflow:hidden;width:100%}
+.star .esc{background:rgba(255,255,255,.1);max-width:220px}
+.esc>*{position:absolute;display:block}
+.e-rd{left:50%;top:50%;width:70px;height:70px;margin:-33px -35px;border-radius:50%;border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3);animation:gira 7s linear infinite;
+ background:conic-gradient(#b5533c 0 45deg,#2f6fb0 0 90deg,#8a4fa3 0 135deg,#1f8a70 0 180deg,#5b8c2a 0 225deg,#d9822b 0 270deg,#c2417a 0 315deg,#d4a017 0)}
+.e-pt{left:50%;top:3px;margin-left:-7px;border:7px solid transparent;border-top:12px solid #e74c3c;z-index:2}
+.e-c{left:50%;top:50%;width:18px;height:18px;margin:-7px -9px;border-radius:50%;background:var(--dorado-cl);border:2px solid #fff;z-index:2}
+.tarjeta:hover .e-rd,.cab:hover .e-rd{animation-duration:.9s}
+@keyframes gira{to{transform:rotate(360deg)}}
+.e-h{left:50%;top:50%;font-size:42px;line-height:1;margin:-21px -24px;animation:hueso 2.2s ease-in-out infinite}
+.e-h2{left:22%;top:14px;font-size:20px;opacity:.5;animation:hueso 3s ease-in-out infinite reverse}.e-h3{right:20%;bottom:10px;font-size:22px;opacity:.5;animation:hueso 2.6s ease-in-out infinite}
+.tarjeta:hover .e-h,.cab:hover .e-h{animation:gira .7s linear infinite}
+@keyframes hueso{0%,100%{transform:rotate(-22deg)}50%{transform:rotate(22deg) translateY(-4px)}}
+.e-l{left:8%;right:8%;bottom:18px;height:4px;border-radius:9px;background:repeating-linear-gradient(90deg,var(--verde) 0 3px,transparent 3px 11.1%),linear-gradient(var(--dorado),var(--dorado)) 0 100%/100% 2px no-repeat}
+.e-b{bottom:22px;font-size:30px;line-height:1;transform-origin:50% 100%;animation:gatea 4.5s ease-in-out infinite alternate}
+.tarjeta:hover .e-b,.cab:hover .e-b{animation-duration:1.6s}
+@keyframes gatea{from{left:6%;transform:scale(.6)}to{left:76%;transform:scale(1.25)}}
+.e-g{left:30%;top:28px;font-size:38px;line-height:1;animation:birrete 1.7s ease-in-out infinite}
+.e-q{left:58%;top:12px;background:var(--verde);color:#fff;font:800 22px 'Playfair Display';border-radius:12px 12px 12px 2px;padding:0 10px 2px;animation:globo 1.7s ease-in-out infinite}
+.tarjeta:hover .e-g,.cab:hover .e-g{animation-duration:.6s}
+@keyframes birrete{0%,100%{transform:translateY(8px) rotate(-8deg)}50%{transform:translateY(-12px) rotate(14deg)}}
+@keyframes globo{0%,40%{transform:scale(0)}60%,90%{transform:scale(1)}100%{transform:scale(0)}}
+.e-t{height:8px;border-radius:9px;background:#d2c8ad}
+.e-bl{left:38%;top:42px;width:28%;height:12px;border-bottom:3px solid var(--dorado);background:rgba(240,192,64,.25);animation:parp 1s steps(2) infinite}
+.e-p{top:20px;font-size:26px;line-height:1;animation:escribe 2.4s ease-in-out infinite}
+.tarjeta:hover .e-p,.cab:hover .e-p{animation-duration:.9s}
+@keyframes parp{50%{background:rgba(240,192,64,.7)}}
+@keyframes escribe{0%,100%{left:36%;transform:rotate(0)}50%{left:60%;transform:rotate(-12deg) translateY(-3px)}}
+.e-d{top:36px;width:20px;height:20px;border-radius:50%;background:var(--ok);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
+.e-d.r{background:var(--mal);animation:intr 3s ease-in-out infinite}
+.e-lp{top:22px;font-size:38px;line-height:1;animation:lupa 3s ease-in-out infinite;z-index:2}
+.tarjeta:hover .e-lp,.tarjeta:hover .e-d.r,.cab:hover .e-lp,.cab:hover .e-d.r{animation-duration:1.2s}
+@keyframes lupa{0%,100%{left:8%}50%{left:70%}}
+@keyframes intr{0%,35%,100%{transform:scale(1)}50%,70%{transform:scale(1.5) rotate(12deg)}}
+.e-ps{left:0;right:0;bottom:12px;height:30px;background:linear-gradient(#3f8f4a,#2f7a3a);border-top:2px dashed rgba(255,255,255,.6);border-bottom:2px dashed rgba(255,255,255,.6)}
+.e-fl{right:8px;bottom:36px;font-size:22px}
+.e-cb{bottom:16px;font-size:32px;line-height:1;animation:corre 2.8s linear infinite}
+.e-cb i{display:inline-block;font-style:normal;transform:scaleX(-1)}.e-cb b{display:inline-block;font-weight:400;animation:galope .35s infinite}
+.e-cb2{bottom:14px;font-size:24px;animation:corre 3.6s linear infinite .8s;filter:hue-rotate(150deg);opacity:.85}
+.tarjeta:hover .e-cb,.cab:hover .e-cb{animation-duration:1.1s}
+@keyframes corre{from{left:-18%}to{left:104%}}
+.cab{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}
+.cab p{margin:4px 0 0}.cab #jA{flex:0 0 190px}
+@media(max-width:560px){.cab #jA{flex-basis:104px}.cab #jA .esc{height:76px}}
+.cab h2{position:relative;display:inline-block}
+.cab h2::after{content:"";position:absolute;left:0;bottom:-3px;height:3px;width:100%;background:linear-gradient(90deg,var(--dorado),transparent);border-radius:9px}
+.card{border-top:4px solid var(--dorado);animation:sube .4s backwards}
+.stats{position:relative;width:fit-content;gap:12px;padding-top:12px;align-items:flex-start}
+.stats::before{content:"";position:absolute;top:5px;left:-10px;right:-10px;height:3px;border-radius:9px;background:linear-gradient(90deg,transparent,#b8860b 12%,#b8860b 88%,transparent)}
+.stat{position:relative;min-width:88px;padding:12px 14px 26px;border-radius:4px 4px 0 0;background:linear-gradient(160deg,var(--dorado-cl),var(--dorado) 70%,#b8860b);
+ clip-path:polygon(0 0,100% 0,100% 100%,50% 80%,0 100%);transform-origin:50% 0;animation:cuelga .5s backwards,flamea 3.2s ease-in-out .5s infinite;filter:drop-shadow(0 3px 3px rgba(15,58,26,.25))}
+.stat:nth-child(2){animation-delay:.08s,.9s}.stat:nth-child(3){animation-delay:.16s,1.3s}
+.stat::before{content:"";position:absolute;top:3px;left:50%;width:7px;height:7px;margin-left:-3.5px;border-radius:50%;background:var(--verde-osc);opacity:.75}
+.stat b{color:var(--verde-osc);margin-top:4px}.stat span{color:var(--verde-osc);font-weight:700;opacity:.9}
+.stat b span{opacity:1;font:inherit;text-transform:none;letter-spacing:0}
+.stat.pop b{animation:salta .45s}
+@keyframes cuelga{from{opacity:0;transform:translateY(-16px) rotate(-8deg)}}
+@keyframes flamea{0%,100%{transform:rotate(-2.2deg)}50%{transform:rotate(2.2deg)}}
+@keyframes salta{40%{transform:scale(1.5)}}
+.op,.chip{transition:transform .15s,box-shadow .15s,border-color .15s,background .15s}
+.op:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 6px 14px rgba(15,58,26,.14);border-color:var(--dorado)}
+.op:active:not(:disabled){transform:scale(.96)}
+.chip:hover{transform:translateY(-2px)}.chip.on{box-shadow:0 3px 0 var(--dorado)}
+.ops .op,.banco .op{animation:sube .32s backwards}
+.ops .op:nth-child(2),.banco .op:nth-child(2){animation-delay:.05s}.ops .op:nth-child(3),.banco .op:nth-child(3){animation-delay:.1s}.ops .op:nth-child(4),.banco .op:nth-child(4){animation-delay:.15s}.ops .op:nth-child(n+5),.banco .op:nth-child(n+5){animation-delay:.2s}
+.op.bien{animation:acierto .5s}.op.malo{animation:tiembla .4s}.op.casi{animation:acierto .5s}
+@keyframes acierto{30%{transform:scale(1.08)}60%{transform:scale(.97)}}
+@keyframes tiembla{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.btn{position:relative;overflow:hidden;box-shadow:0 3px 0 rgba(15,58,26,.25);transition:transform .12s}
+.btn:hover{transform:translateY(-2px)}
+.btn::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);animation:destello 2.8s infinite}
+@keyframes destello{60%,100%{left:130%}}
+.item{position:relative;animation:voltea .45s;box-shadow:0 6px 0 #b8860b,0 10px 18px rgba(15,58,26,.18);margin-bottom:6px}
+@keyframes voltea{from{transform:perspective(600px) rotateX(-80deg);opacity:0}}
+.q{animation:sube .35s}
+.q.cita{position:relative;padding:6px 0 6px 50px;min-height:54px}
+.q.cita::before{content:"\201C";position:absolute;left:0;top:-22px;font:800 84px 'Playfair Display';color:var(--dorado);line-height:1.2}
+.frase{position:relative;background:#fff;border:1px solid var(--borde);border-top:26px solid var(--verde);border-radius:12px;box-shadow:0 8px 18px rgba(15,58,26,.12);padding:22px 20px;animation:sube .35s}
+.frase::before{content:"● ● ●   DIAPO";position:absolute;top:-21px;left:12px;color:var(--dorado-cl);font:800 11px 'DM Sans';letter-spacing:.12em;white-space:pre}
+.hueco.act{animation:parp 1s steps(2) infinite}.hueco.bien,.hueco.malo{animation:acierto .5s}
+.edades{padding-top:20px;row-gap:28px}
+.edades .op{position:relative}
+.edades .op::after{content:"";position:absolute;top:-15px;left:-8px;right:-8px;height:3px;background:var(--dorado)}
+.edades .op::before{content:"";position:absolute;top:-21px;left:50%;margin-left:-7px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--verde);z-index:1;box-sizing:border-box}
+.edades .op.bien::before{background:var(--ok)}.edades .op.malo::before{background:var(--mal)}.edades .op.casi::before{background:var(--dorado)}
+@media(max-width:520px){.edades{padding-top:0;row-gap:10px}.edades .op::before,.edades .op::after{display:none}}
+.fb{animation:sube .3s}
+.final .big{animation:entra .6s cubic-bezier(.2,1.6,.4,1)}
+@keyframes entra{from{transform:scale(.3);opacity:0}}
+.logo{box-shadow:0 0 0 3px rgba(240,192,64,.35);animation:brillo 3s infinite}
+@keyframes brillo{50%{box-shadow:0 0 0 7px rgba(240,192,64,.12)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ====== v3: sonido, ruleta de madera, trompetas ====== */
+.aud{margin-left:auto;display:flex;gap:6px}.aud button{width:38px;height:38px;border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.12);font-size:17px;cursor:pointer;transition:transform .15s}
+.aud button:hover{transform:scale(1.12)}.aud button.off{opacity:.55}
+.volver{margin-left:4px}
+#decor{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+#decor span{position:absolute;bottom:-60px;opacity:.13;animation:flota linear infinite}
+@keyframes flota{to{transform:translateY(-115vh) rotate(360deg)}}
+main,footer{position:relative;z-index:1}
+#jA{cursor:pointer;transition:transform .15s}#jA:hover{transform:scale(1.04)}
+#jA.feliz{animation:feliz .7s}#jA.triste{animation:triste .6s}#jA.toque{animation:toque .8s}
+#jA.feliz .esc{box-shadow:0 0 0 4px rgba(46,139,69,.55)}#jA.triste .esc{box-shadow:0 0 0 4px rgba(192,57,43,.55)}
+#jA .esc{transition:box-shadow .5s}
+@keyframes feliz{30%{transform:translateY(-12px) scale(1.12) rotate(-3deg)}60%{transform:translateY(0) scale(1.04) rotate(2deg)}}
+@keyframes triste{20%,60%{transform:translateX(-7px) rotate(-3deg)}40%,80%{transform:translateX(7px) rotate(3deg)}}
+@keyframes toque{40%{transform:scale(1.18) rotate(-4deg)}70%{transform:scale(.96) rotate(3deg)}}
+.perf{font:800 clamp(24px,5vw,38px) 'Playfair Display';color:var(--dorado);text-shadow:0 2px 0 var(--verde-osc);letter-spacing:.04em;animation:entra .7s cubic-bezier(.2,1.6,.4,1)}
+.perf span{display:inline-block;animation:toca .28s infinite alternate}.perf span:first-child{transform:scaleX(-1)}
+@keyframes toca{to{translate:0 -5px;scale:1.18}}
+.feria{display:flex;flex-direction:column;align-items:center;padding-top:22px}
+.rueda-w{max-width:370px;z-index:1}
+.rueda{filter:drop-shadow(0 10px 14px rgba(40,20,5,.45))}
+.pie{width:46%;height:74px;margin-top:-34px;background:linear-gradient(90deg,#4a2a10,#a5672d 35%,#7a4a1e 65%,#4a2a10);clip-path:polygon(38% 0,62% 0,100% 100%,0 100%)}
+.feria::after{content:"";width:72%;height:16px;border-radius:6px;background:linear-gradient(#8a5524,#4a2a10);box-shadow:0 6px 10px rgba(40,20,5,.35)}
+.puntero{top:-14px;border:0;width:30px;height:46px;background:linear-gradient(90deg,#8d1f17,#d0392b 50%,#8d1f17);clip-path:polygon(0 0,100% 0,50% 100%);transform:translateX(-50%);transform-origin:50% 6px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
+.rueda-w::before{content:"";position:absolute;top:-20px;left:50%;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3c2,#d4a017 55%,#7a5408);z-index:3;box-shadow:0 2px 3px rgba(0,0,0,.4)}
+.rueda-w.gira .puntero{animation:tic .13s infinite}
+@keyframes tic{0%,100%{transform:translateX(-50%) rotate(0)}50%{transform:translateX(-50%) rotate(-24deg)}}
+.girar{width:84px;height:84px;border:4px solid #5a3515;background:radial-gradient(circle at 35% 30%,#fff3c2,#d4a017 55%,#8a5a12);color:#3b2413;text-shadow:0 1px 0 rgba(255,255,255,.5);box-shadow:0 4px 10px rgba(0,0,0,.45),inset 0 -4px 8px rgba(90,53,21,.5)}
+body[data-juego=ruleta]{background:radial-gradient(circle at 50% 30%,#fff7df,var(--crema) 60%)}
+body[data-juego=huesos]{background:linear-gradient(#f7f1e1,#efe6cf)}
+body[data-juego=edad]{background:linear-gradient(#fdf3ec,#f1f7ea)}
+body[data-juego=autor]{background:linear-gradient(#f8f1dd,#efe3c4)}
+body[data-juego=intruso]{background:linear-gradient(#f4f1e6,#e9e6da)}
+body[data-juego=carrera]{background:linear-gradient(#eef7ea,#fbf6ea)}
+@media(max-width:560px){.top{gap:8px}.top p{display:none}.top h1{font-size:15px;line-height:1.2}.logo{width:36px;height:36px;font-size:11px}.aud button{width:32px;height:32px;font-size:14px}.volver{padding:6px 8px;font-size:12px}}
+.nivbar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:0 0 14px}
+.nivbar .ntit{font:800 13px "DM Sans",system-ui;color:var(--verde);letter-spacing:.3px;margin-right:2px}
+.nivbar .nact{background:var(--verde);color:#fff;border-radius:999px;padding:3px 11px;font:800 12.5px "DM Sans",system-ui}
+.niv{display:inline-flex;align-items:center;gap:5px;border:2px solid #e3dcc6;background:#fff;color:var(--verde);border-radius:999px;padding:5px 11px;font:700 12.5px "DM Sans",system-ui;cursor:pointer;transition:transform .15s,box-shadow .2s}
+.niv:hover:not(.lock){transform:translateY(-2px);box-shadow:0 5px 14px rgba(26,92,42,.16)}
+.niv.on{color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.niv.lock{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
+.niv b{font-weight:800}
+@media(max-width:620px){.niv i{display:none}.niv{padding:5px 9px}}
+.nivmodo{flex:1 0 100%;margin:4px 0 0;font:600 12.5px "DM Sans",system-ui;color:#6b6250;background:#f7f3e4;border:1px dashed #ddd3b4;border-radius:10px;padding:5px 10px}
+.nivmodo b{color:var(--verde);font-weight:800}
+body.ciego #Z .stats b{filter:blur(8px);transition:filter .35s}
+body.ciego #Z .final b,body.ciego #Z .diploma b{filter:none}
+.auto{margin-top:10px;font:600 13.5px "DM Sans",system-ui;color:#6b4e06;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.auto .cuenta{display:inline-grid;place-items:center;min-width:28px;height:28px;border-radius:50%;background:var(--dorado);color:#3a2a00;font-weight:800}
+.auto button{border:1px solid #c9bb8e;background:#fff;color:#6b5a2a;border-radius:99px;padding:5px 12px;font:600 12.5px "DM Sans",system-ui;cursor:pointer}
+.reloj{height:9px;border-radius:9px;background:#efe8d2;overflow:hidden;margin:2px 0 10px}
+.reloj i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#2e8b45,#d4a017);transition:width .95s linear}
+.reloj.fin i{background:#c0392b;animation:palpita .6s infinite}
+@keyframes palpita{50%{opacity:.45}}
+.aud.flot{position:fixed;top:8px;right:10px;z-index:60;margin:0}.aud.flot button{background:var(--verde-osc);border-color:var(--dorado)}
+body.embed header,body.embed footer{display:none}body.embed main{padding-top:14px}
+footer{
+text-align:center;color:var(--gris);font-size:13px;padding:0 20px 30px}
+</style>
+</head>
+<body>
+<header><div class="top">
+  <div class="logo">CAER</div>
+  <div><h1>Juegos con el material de estudio</h1><p>Cada pregunta sale de una diapo del campus</p></div>
+  <span class="aud"><button id="bMus" title="Música">🎵</button><button id="bSfx" title="Sonidos">🔊</button></span><button class="volver" id="volver">← Juegos</button>
+</div></header>
+<main>
+  <section class="vista on" id="menu">
+    <p class="lead">Siete juegos armados con el contenido real de los PDF del campus. Al responder, cada uno te dice de qué unidad, materia y diapo salió, para que vuelvas a repasar.</p>
+    <div class="grid" id="grid"></div>
+  </section>
+  <section class="vista" id="juego"><div class="cab"><div><h2 id="jT"></h2><p id="jD"></p></div><div id="jA"></div></div><div class="nivbar" id="nivbar"></div><div class="card" id="Z"></div></section>
+</main>
+<canvas id="conf"></canvas>
+<footer>C.A.E.R. · Centro de Acompañamiento Estudiantil Rosarino · campus.caerosarino.com</footer>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const mez=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const stats=a=>`<div class="stats">${a.map(([v,l])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>`;
+const src=s=>`<span class="src">📖 ${s}</span>`;
+const fb0=(c,t,d,s)=>`<div class="fb ${c}"><strong>${t}</strong>${d?d+'<br>':''}${src(s)}</div>`;
+const fb=(c,t,d,s)=>{reac(c);return fb0(c,t,d,s)};
+const PERF='<div class="perf"><span>🎺</span> ¡PERFECTO! <span>🎺</span></div>';
+const fin=(big,t,sub,again)=>{pararRelojes();const m=/^(\d+)\/(\d+)$/.exec(big),perf=m&&m[1]===m[2];let sube=0,flojo=false;if(JACT&&m&&+m[2]>0){const r=+m[1]/+m[2];if(r>=.8){sube=NIV.abrir(JACT.id,NIV.get(JACT.id));if(sube)NIV.set(JACT.id,sube)}else flojo=NIV.get(JACT.id)<10}if(sube||flojo){setTimeout(()=>{montaNiv(JACT.id,JACT.re)},400)}setTimeout(()=>perf?festejo():melod([523,659,784]),60);$('#Z').innerHTML=`<div class="final">${perf?PERF:''}<div class="big">${big}</div><h3>${t}</h3><p class="hint">${sub}</p>${sube?`<div class="fb bien" style="margin:4px 0 2px"><strong>🔓 ¡Ganaste! Pasás al nivel ${sube}: ${NIVELES[sube-1].e} ${NIVELES[sube-1].t} · ${MODOS[sube-1].t}</strong><span class="auto" id="auM"></span></div>`:''}${flojo?`<div class="fb malo" style="margin:4px 0 2px"><strong>💪 Para pasar al nivel ${NIV.get(JACT.id)+1} necesitás al menos el 80% de aciertos</strong>Seguís en el nivel ${NIV.get(JACT.id)}. ¡Dale de nuevo!</div>`:''}<button class="btn oro" id="otra">Jugar otra vez</button></div>`;$('#otra').onclick=again;if(sube&&JACT){const j=JACT;autoNivel($('#auM'),sube,()=>{montaNiv(j.id,j.re);j.re()})}};
+/* ================= NIVELES ================= */
+const NIVELES=[{t:'Aprendiz',e:'🌱',c:'#2e8b45'},{t:'Practicante',e:'📘',c:'#2f6fb0'},{t:'Residente',e:'🩺',c:'#8a4fa3'},
+ {t:'Jefe de residentes',e:'⭐',c:'#d9822b'},{t:'Especialista',e:'👑',c:'#8d1f17'},{t:'Docente',e:'🎓',c:'#1f8a70'},
+ {t:'Investigador',e:'🔬',c:'#4a5fc1'},{t:'Jefe de cátedra',e:'🏛️',c:'#b5533c'},{t:'Eminencia',e:'🏅',c:'#c2417a'},
+ {t:'Leyenda de la facultad',e:'🐎',c:'#8a5a12'}];
+const MODOS=[
+ {t:'Sin apuro',d:'Sin reloj y con todas las pistas. Para agarrarle la mano.'},
+ {t:'Más contenido',d:'Más preguntas por partida, todavía sin reloj.'},
+ {t:'Contrarreloj',d:'Aparece el reloj: cada respuesta tiene su tiempo.'},
+ {t:'Menos ayudas',d:'Se recortan pistas, comodines y vidas.'},
+ {t:'Mazo nuevo',d:'Cambia el set de contenido y se endurece el puntaje.'},
+ {t:'A ciegas',d:'El marcador se tapa: jugás sin saber cómo venís.'},
+ {t:'Reloj corto',d:'Menos segundos y más opciones para elegir.'},
+ {t:'Sin red',d:'Cero pistas, cero comodines, casi sin margen de error.'},
+ {t:'Mezcla total',d:'Todo el contenido mezclado y el marcador tapado.'},
+ {t:'Modo leyenda',d:'Todo junto y al máximo. Acá se ve quién estudió.'}];
+const CIEGO=[0,0,0,0,0,1,0,0,1,1];
+const NIV={
+ lee(k,d){try{const v=+localStorage.getItem(k);return v>=1&&v<=10?v:d}catch(e){return d}},
+ esc(k,v){try{localStorage.setItem(k,v)}catch(e){}},
+ max(id){return NIV.lee('caerMax_m'+id,1)},
+ get(id){return Math.min(NIV.lee('caerNiv_m'+id,1),NIV.max(id))},
+ set(id,n){NIV.esc('caerNiv_m'+id,n)},
+ abrir(id,n){if(n>=NIV.max(id)&&n<10){NIV.esc('caerMax_m'+id,n+1);return n+1}return 0}};
+const cfg=(id,tabla)=>{const n=NIV.get(id),o={n,nivel:NIVELES[n-1]};for(const k in tabla)o[k]=tabla[k][n-1];return o};
+let JACT=null;
+function montaNiv(id,re){JACT={id,re};const n=NIV.get(id),mx=NIV.max(id);
+ document.body.classList.toggle('ciego',!!CIEGO[n-1]);
+ $('#nivbar').innerHTML=`<span class="ntit">Nivel</span><span class="nact">${n}. ${NIVELES[n-1].t}</span>`+
+  NIVELES.map((v,k)=>{const j=k+1,ab=j<=mx;
+   return `<button class="niv ${j===n?'on':''} ${ab?'':'lock'}" data-n="${j}" ${ab?'':'disabled'} style="${j===n?`background:${v.c};border-color:${v.c}`:''}" title="${ab?v.t:'Ganá el nivel '+k+' para abrirlo'}">${ab?v.e:'🔒'} <b>${j}</b> <i>${v.t}</i></button>`}).join('')+`<div class="nivmodo"><b>${MODOS[n-1].t}</b> · ${MODOS[n-1].d}</div>`;
+ $$('#nivbar .niv').forEach(b=>b.onclick=()=>{if(b.disabled)return;NIV.set(id,+b.dataset.n);beep&&beep(660,.08);montaNiv(id,re);re()})}
+function autoNivel(cont,n,arrancar){if(!cont)return;let t=5,h=null;
+ const pinta=()=>{cont.innerHTML=`<span class="cuenta">${t}</span> Arrancamos el nivel ${n} solo… <button type="button">Quedarme acá</button>`;
+  cont.querySelector('button').onclick=()=>{clearInterval(h);cont.innerHTML='Cuando quieras, tocá «Jugar otra vez».'}};
+ pinta();h=setInterval(()=>{t--;if(t<=0){clearInterval(h);arrancar();return}pinta()},1000)}
+const REL=[];
+const tic=(f,ms)=>{const h=setInterval(f,ms);REL.push(()=>clearInterval(h));return h};
+const pararRelojes=()=>{while(REL.length)REL.pop()()};
+function Reloj(seg,onFin){let t=seg,h=null;const id='rj'+(Math.random()*1e6|0);
+ return {html:seg?`<div class="reloj" id="${id}"><i style="width:100%"></i></div>`:'',
+  arrancar(){if(!seg)return;const bar=document.getElementById(id);if(!bar)return;
+   h=tic(()=>{t--;const b=document.getElementById(id);if(!b){return}
+    b.querySelector('i').style.width=Math.max(0,t/seg*100)+'%';
+    if(t<=Math.max(3,seg*.25))b.classList.add('fin');
+    if(t<=0){pararRelojes();onFin()}},1000)},
+  parar(){pararRelojes()},queda(){return t}}}
+const sig=(ult,fn)=>{$('#Z').insertAdjacentHTML('beforeend',`<button class="btn ${ult?'oro':''}" id="sg">${ult?'Ver resultado':'Siguiente →'}</button>`);$('#sg').onclick=fn;$('#sg').focus()};
+
+/* ============ 1. MESA DE HUESOS ============ */
+const AC='U1 · Anatomía Cráneo y Columna · Diapo ';
+const HUESOS={
+ 'Cráneo':{ops:['Frontal','Etmoides','Esfenoides','Occipital','Parietal','Temporal'],it:[
+  ['Apófisis crista galli','Etmoides',39],['Lámina horizontal o cribosa','Etmoides',40],['Cornetes superior y medio','Etmoides',40],
+  ['Silla turca','Esfenoides',42],['Apófisis pterigoides','Esfenoides',48],['Alas menores y alas mayores','Esfenoides',44],['Agujero (conducto) óptico','Esfenoides',44],
+  ['Agujero occipital o foramen magnum','Occipital',50],['Protuberancia externa o inión','Occipital',51],['Descansa sobre el atlas','Occipital',50],
+  ['Sutura metópica y glabela','Frontal',36],['Senos frontales','Frontal',37],
+  ['Eminencia parietal y líneas curvas temporales','Parietal',54],
+  ['Peñasco (porción petrosa)','Temporal',57],['Porción mastoidea','Temporal',63],['Conducto auditivo interno','Temporal',58],['Contiene los órganos de la audición','Temporal',57]]},
+ 'Columna':{ops:['Atlas (C1)','Axis (C2)','6ª cervical','7ª cervical','Dorsales','Lumbares','Sacro'],it:[
+  ['Hueso anular: 2 masas laterales unidas por 2 arcos','Atlas (C1)',11],['Sus cavidades glenoideas articulan con los cóndilos del occipital','Atlas (C1)',11],
+  ['Apófisis odontoides','Axis (C2)',12],
+  ['Tubérculo carotídeo o de Chassaignac','6ª cervical',14],
+  ['"Vértebra prominente", de transición a las dorsales','7ª cervical',14],
+  ['Carillas articulares costales en el cuerpo','Dorsales',15],
+  ['Cuerpo voluminoso y reniforme, pedículos muy gruesos','Lumbares',16],
+  ['Forma el promontorio con la columna lumbar','Sacro',17],['Resulta de la unión de cinco vértebras','Sacro',17]]}
+};
+const T_HUE={pzs:[6,8,10,10,12,12,14,14,16,17],seg:[0,0,0,20,16,14,12,11,10,9],ops:[0,0,0,1,1,1,1,1,1,1]};
+function jHuesos(){let mazo='Cráneo',fijoH=false,S;
+ const ini=()=>{pararRelojes();const D=cfg('huesos',T_HUE);
+  if(!fijoH){const ks=Object.keys(HUESOS);mazo=ks[(D.n-1)%ks.length]}S={D,l:mez(HUESOS[mazo].it).slice(0,D.pzs),i:0,ok:0,r:0};pinta()};
+ const pinta=()=>{const [t,r,d]=S.l[S.i],n=S.l.length;
+  pararRelojes();
+  const opc=S.D.ops?mez([r,...mez(HUESOS[mazo].ops.filter(o=>o!==r)).slice(0,3)]):HUESOS[mazo].ops;
+  S.rj=S.D.seg?Reloj(S.D.seg,()=>resolver(null)):null;
+  $('#Z').innerHTML=`<div class="chips">${Object.keys(HUESOS).map(m=>`<button class="chip ${m===mazo?'on':''}" data-m="${m}">${m}</button>`).join('')}</div>`+
+  (S.rj?S.rj.html:'')+
+  stats([[`${S.i+1}/${n}`,'Pieza'],[S.ok,'Aciertos'],[S.r+'🔥','Racha']])+`<div class="hint">¿A qué hueso pertenece?</div><div class="item">${t}</div>
+  <div class="ops">${opc.map(o=>`<button class="op" data-o="${o}">${o}</button>`).join('')}</div>`;
+  $$('.chip').forEach(c=>c.onclick=()=>{mazo=c.dataset.m;fijoH=true;ini()});
+  const resolver=b=>{pararRelojes();const ok=!!b&&b.dataset.o===r;$$('.op').forEach(x=>{x.disabled=true;if(x.dataset.o===r)x.classList.add('bien')});
+   if(ok){S.ok++;S.r++}else{if(b)b.classList.add('malo');S.r=0}
+   $('#Z').insertAdjacentHTML('beforeend',fb(ok?'bien':'malo',ok?'¡Correcto!':(b?`Es del ${r}.`:`¡Se acabó el tiempo! Es del ${r}.`),'',AC+d));
+   const u=S.i===n-1;sig(u,()=>{S.i++;u?fin(`${S.ok}/${n}`,S.ok>=n-1?'¡Mesa de huesos aprobada! 🦴':'A repasar esas diapos y revancha',`Mazo: ${mazo} · Nivel ${S.D.n}. ${S.D.nivel.t}`,ini):pinta()})};
+  $$('.op').forEach(b=>b.onclick=()=>resolver(b));
+  if(S.rj)S.rj.arrancar();
+ };ini()}
+
+/* ============ 2. ¿A QUÉ EDAD? ============ */
+const PD='U5 · Pediatría Parte 2 · Diapo ';
+const EDADES=['4 sem','16 sem','28 sem','40 sem','12 meses','18 meses','2 años','3 años','4 años','5 años'];
+const HITOS=[['La cabeza bambolea. Manos cerradas.',0,23],['Cabeza firme, postura simétrica, manos abiertas.',1,23],['Se sienta inclinándose hacia adelante, apoyado sobre las manos.',2,23],['Permanece sentado solo. Gatea. Se para.',3,23],['Camina con ayuda. Toma con precisión la bolita.',4,23],['Camina sin caerse. Torre de 3 cubos.',5,23],['Corre. Construye una torre de 6 cubos.',6,23],['Se para sobre un pie. Torre de 10 cubos.',7,23],['Salta sobre un pie.',8,23],['Salta alternativamente sobre cada pie.',9,23],
+ ['Edifica un puente con 3 cubos. Imita una cruz.',7,24],['Construye una puerta con 5 cubos. Dibuja un hombre.',8,24],['Pasa un cubo de una mano a la otra.',2,24],
+ ['Murmullos. Ríe. Vocalización social.',1,25],['"Laleo". Escucha sus propias vocalizaciones.',2,25],['Dice una palabra. Atiende a su nombre.',3,25],['Dice dos o más palabras.',4,25],['Jerga. Nombra dibujos.',5,25],['Usa frases. Comprende órdenes sencillas.',6,25],['Usa oraciones. Contesta preguntas sencillas.',7,25],['Habla sin articulación infantil. Pregunta "¿por qué?"',9,25],
+ ['Usa la cuchara, derrama algo.',5,26],['Ayuda a vestirse. Come con los dedos.',4,26],['Se pone los zapatos. Usa bien la cuchara.',7,26],['Se viste sin ayuda.',9,26]];
+const REF_OPS=['2 meses','4 meses','1 año'];
+const REFLEJOS=[['Reflejo de búsqueda (hociqueo o "puntos cardinales")',0,14],['Reflejo de succión o de Oppenheim',2,14],['Reflejo de deglución',2,15],['Reflejo de ojos de muñeca u óculo-cefálico',0,15],['Reflejo cócleo-palpebral',2,16],['Reflejo palmo-mentoniano de Marinesco-Radovici',0,16],['Reflejo de prensión palmar',1,17],['Reflejo de prensión plantar',2,17],['Reflejo de incurvación del tronco de Galant',0,17],['Reflejo de extensión cruzada',0,18],['Reflejo tónico cervical asimétrico',1,18],['Reflejo de Moro',1,19]];
+const T_EDA={tar:[6,8,10,10,12,12,14,14,16,18],seg:[0,0,0,18,15,13,12,11,10,9],tol:[1,1,1,1,0,0,0,0,0,0]};
+function jEdad(){let modo='hitos',fijoE=false,S;
+ const ini=()=>{pararRelojes();const D=cfg('edad',T_EDA);
+  if(!fijoE)modo=(D.n%2)?'hitos':'reflejos';S={D,l:mez(modo==='hitos'?HITOS:REFLEJOS).slice(0,D.tar),i:0,pts:0};pinta()};
+ const pinta=()=>{const [t,r,d]=S.l[S.i],n=S.l.length,H=modo==='hitos',ops=H?EDADES:REF_OPS,max=H?n*2:n;
+  pararRelojes();S.rj=S.D.seg?Reloj(S.D.seg,()=>resolver(null)):null;
+  $('#Z').innerHTML=`<div class="chips"><button class="chip ${H?'on':''}" data-m="hitos">Hitos del desarrollo</button><button class="chip ${H?'':'on'}" data-m="reflejos">Reflejos arcaicos</button></div>`+
+  (S.rj?S.rj.html:'')+
+  stats([[`${S.i+1}/${n}`,'Tarjeta'],[`${S.pts}/${max}`,'Puntos']])+`<div class="hint">${H?(S.D.tol?'¿A qué edad lo esperás? Exacto = 2 puntos · una casilla de diferencia = 1 punto':'¿A qué edad lo esperás? Desde este nivel sólo cuenta la edad exacta (2 puntos)'):'¿Cuándo desaparece?'}</div>
+  <div class="item">${t}</div><div class="ops ${H?'edades':''}">${ops.map((o,k)=>`<button class="op" data-k="${k}">${o}</button>`).join('')}</div>`;
+  $$('.chip').forEach(c=>c.onclick=()=>{modo=c.dataset.m;fijoE=true;ini()});
+  const resolver=b=>{pararRelojes();const k=b?+b.dataset.k:-99,dif=Math.abs(k-r);$$('.op').forEach(x=>{x.disabled=true;if(+x.dataset.k===r)x.classList.add('bien')});
+   let c='bien',m='¡Exacto!';
+   if(dif===0)S.pts+=H?2:1;else if(H&&dif===1&&S.D.tol){S.pts+=1;c='casi';m=`Casi: era a los/las ${ops[r]}.`;b.classList.add('casi')}
+   else{c='malo';m=(b?'':'¡Se acabó el tiempo! ')+`${H?'Se espera a':'Desaparece a'} los/las ${ops[r]}.`;if(b)b.classList.add('malo')}
+   $('#Z').insertAdjacentHTML('beforeend',fb(c,m,'',PD+d));
+   const u=S.i===n-1;sig(u,()=>{S.i++;u?fin(`${S.pts}/${max}`,S.pts>=max*.8?'¡Pediatra en camino! 👶':'Repasá la sucesión evolutiva y volvé',`${H?'Hitos del desarrollo':'Reflejos arcaicos'} · Nivel ${S.D.n}. ${S.D.nivel.t}`,ini):pinta()})};
+  $$('.op').forEach(b=>b.onclick=()=>resolver(b));
+  if(S.rj)S.rj.arrancar();
+ };ini()}
+
+/* ============ 3. ¿QUIÉN LO DIJO? ============ */
+const AUT=[
+ ['Introdujo el término homeostasis en 1926.','Walter Cannon','U1 · Fisiología · Diapo 10'],
+ ['Introdujo el concepto de medio interno en 1857.','Claude Bernard','U1 · Fisiología · Diapo 14'],
+ ['Con sus trabajos sobre estrés (1993) introdujo el término alostasis.','McEwen','U1 · Fisiología · Diapo 10'],
+ ['Propuso clasificar a los seres vivos en 5 reinos.','Whittaker','U1 · Histología · Diapo 6'],
+ ['Teoría de la selección natural.','Darwin','U1 · Biología · Diapo 4'],
+ ['Aportó la Genética al Neodarwinismo (pool de genes).','Dobzhansky','U1 · Biología · Diapo 6'],
+ ['Aportó desde la Biología el concepto de especie.','Ernst Mayr','U1 · Biología · Diapo 11'],
+ ['Aportó desde la Paleontología: micro y macroevolución.','Simpson','U1 · Biología · Diapos 12–13'],
+ ['Teoría del Equilibrio Puntuado.','Eldredge y Gould','U1 · Biología · Diapo 16'],
+ ['Define la cultura como la producción de sentido de una sociedad; habla de hibridación cultural.','García Canclini','U1 · Medicina y Sociedad'],
+ ['Cultura y reproducción social.','Bourdieu','U1 · Medicina y Sociedad'],
+ ['Predijo la existencia de los genes, a los que llamó "factores individuales".','Mendel','U2 · Biología · Diapo 2'],
+ ['Interpreta el desarrollo infantil como cambio cognoscitivo; padre de la epistemología genética.','Piaget','U5 · Pediatría Parte 2 · Diapo 21 / Paidopsiquiatría · Diapo 2'],
+ ['Interpreta el desarrollo infantil como maduración.','Gesell','U5 · Pediatría Parte 2 · Diapo 21'],
+ ['Interpreta el desarrollo infantil como resolución de conflictos.','Freud','U5 · Pediatría Parte 2 · Diapo 21'],
+ ['Interpreta el desarrollo como cambios de identidad, crisis y desarrollo psicosexual.','Erikson','U5 · Pediatría Parte 2 · Diapo 21'],
+ ['Propuso la definición actualizada de hormona.','Guillemin','U8 · Fisiología · Diapo 3'],
+ ['Designó al dolor como "el complemento físico de un reflejo protector imperativo".','Sherrington','U10 · Fisiología · Diapo 2']];
+const T_AUT={preg:[6,8,10,10,12,12,14,14,16,18],ops:[4,4,4,4,5,5,6,6,6,6],seg:[0,0,0,20,16,14,13,12,11,10]};
+function jAutor(){let S;const todos=[...new Set(AUT.map(a=>a[1]))];
+ const ini=()=>{pararRelojes();const D=cfg('autor',T_AUT);S={D,l:mez(AUT).slice(0,D.preg),i:0,ok:0,r:0};pinta()};
+ const pinta=()=>{pararRelojes();const [t,r,s]=S.l[S.i],n=S.l.length,ops=mez([r,...mez(todos.filter(x=>x!==r)).slice(0,S.D.ops-1)]);
+  S.rj=S.D.seg?Reloj(S.D.seg,()=>resolver(null)):null;
+  $('#Z').innerHTML=(S.rj?S.rj.html:'')+stats([[`${S.i+1}/${n}`,'Pregunta'],[S.ok,'Aciertos'],[S.r+'🔥','Racha']])+`<div class="hint">¿Quién fue?</div><div class="q cita">${t}</div><div class="ops">${ops.map(o=>`<button class="op" data-o="${o}">${o}</button>`).join('')}</div>`;
+  const resolver=b=>{pararRelojes();const ok=!!b&&b.dataset.o===r;$$('.op').forEach(x=>{x.disabled=true;if(x.dataset.o===r)x.classList.add('bien')});
+   if(ok){S.ok++;S.r++}else{if(b)b.classList.add('malo');S.r=0}
+   $('#Z').insertAdjacentHTML('beforeend',fb(ok?'bien':'malo',ok?'¡Correcto!':(b?`Fue ${r}.`:`¡Se acabó el tiempo! Fue ${r}.`),'',s));
+   const u=S.i===n-1;sig(u,()=>{S.i++;u?fin(`${S.ok}/${n}`,S.ok>=n*.8?'¡Te sabés los autores! 🎓':'En el oral los piden: repasalos',`Autores de todas las unidades · Nivel ${S.D.n}. ${S.D.nivel.t}`,ini):pinta()})};
+  $$('.op').forEach(b=>b.onclick=()=>resolver(b));
+  if(S.rj)S.rj.arrancar();
+ };ini()}
+
+/* ============ 4. COMPLETÁ LA DIAPO ============ */
+const CLOZE=[
+ ['El término ___ fue introducido por Walter Cannon en 1926.',['HOMEOSTASIS'],['ALOSTASIS','HOMEODINAMIA','MEDIO INTERNO'],'U1 · Fisiología · Diapo 10'],
+ ['Los sistemas abiertos intercambian ___ y ___ con el entorno.',['materia','energía'],['información','calor'],'U1 · Fisiología · Diapo 5'],
+ ['En la retroalimentación ___ la señal de salida estimula la de entrada. Ej.: potencial de acción, ovulación, cascada de coagulación.',['positiva'],['negativa','lineal'],'U1 · Fisiología · Diapo 7'],
+ ['Tanto el LIC como el LEC presentan una miliosmolaridad de ~___ mOsm/l.',['300'],['70','140','7,4'],'U1 · Fisiología · Diapo 15'],
+ ['La diferencia de potencial a través de la membrana es de ___ mV, con el interior ___ respecto del exterior.',['-70','negativo'],['+70','-300','positivo'],'U1 · Fisiología · Diapo 15'],
+ ['La columna de un adulto consta de ___ vértebras: 7 cervicales, ___ torácicas, 5 lumbares, 5 sacras y 4 coccígeas.',['33','12'],['24','26','10'],'U1 · Anatomía Cráneo y Columna · Diapo 3'],
+ ['Las curvaturas torácica y sacra tienen concavidad anterior (___); la cervical y la lumbar, concavidad posterior (___).',['cifosis','lordosis'],['escoliosis'],'U1 · Anatomía Cráneo y Columna · Diapo 3'],
+ ['El neurocráneo está formado por ___ huesos: cuatro impares y dos ___.',['ocho','pares'],['seis','catorce','medios'],'U1 · Anatomía Cráneo y Columna · Diapo 35'],
+ ['Las bases pirimídicas son timina, citosina y ___; las púricas son guanina y ___.',['uracilo','adenina'],['ribosa','purina'],'U2 · Química · Diapo 2'],
+ ['Las membranas plasmáticas tienen un espesor de ___ nm y están constituidas por ___ y proteínas.',['6 a 10','lípidos'],['60 a 100','ácidos nucleicos'],'U3 · Química · Diapo 3'],
+ ['El crecimiento es un fenómeno ___; el desarrollo es un fenómeno ___.',['cuantitativo','cualitativo'],['genético','ambiental'],'U5 · Pediatría Parte 1 · Diapo 3'],
+ ['A lo largo del primer año el niño crece ___ cm y al cumplir el año pesa aproximadamente ___ kilos.',['25','10'],['50','15','6'],'U5 · Pediatría Parte 2 · Diapos 3–4'],
+ ['El tejido nervioso deriva de la hoja germinativa ___.',['ectodérmica'],['mesodérmica','endodérmica'],'U5 · Histología · Diapo 3'],
+ ['El tejido conectivo deriva de la hoja germinativa ___.',['mesodérmica'],['ectodérmica','endodérmica'],'U9 · Histología y Embriología · Diapo 2'],
+ ['Los órganos primarios del sistema inmunitario son el ___ y la ___.',['timo','médula ósea'],['bazo','tiroides'],'U9 · Inmunología · Diapo 3'],
+ ['El sistema ___ produce respuestas rápidas, localizadas y de corta duración; el ___, respuestas lentas, generalizadas y duraderas.',['nervioso','endócrino'],['inmune','digestivo'],'U8 · Histología y Embriología · Diapo 3']];
+const T_CLO={fr:[5,6,8,8,10,10,12,12,14,16],seg:[0,0,0,45,35,30,27,24,21,18],ext:[0,0,0,0,1,1,2,2,3,3]};
+function jCloze(){let S;
+ const ini=()=>{pararRelojes();const D=cfg('cloze',T_CLO);S={D,l:mez(CLOZE).slice(0,D.fr),i:0,ok:0};ronda()};
+ const ronda=()=>{pararRelojes();const [f,r,dis,s]=S.l[S.i];S.e=[];
+  const extra=S.D.ext?mez(CLOZE.filter(c=>c!==S.l[S.i]).flatMap(c=>c[2])).slice(0,S.D.ext):[];
+  S.b=mez([...r,...dis,...extra]);
+  S.rj=S.D.seg?Reloj(S.D.seg,()=>{while(S.e.length<r.length)S.e.push('—');pinta()}):null;
+  pinta();if(S.rj)S.rj.arrancar()};
+ const pinta=()=>{const [f,r,dis,s]=S.l[S.i],n=S.l.length;let k=0;const lleno=S.e.length===r.length;
+  const frase=f.replace(/___/g,()=>{const j=k++,v=S.e[j];return `<span class="hueco ${j===S.e.length?'act':''} ${lleno?(v===r[j]?'bien':'malo'):''}">${v??'&nbsp;'}</span>`});
+  $('#Z').innerHTML=(S.rj&&!lleno?S.rj.html:'')+stats([[`${S.i+1}/${n}`,'Diapo'],[S.ok,'Completas']])+`<div class="hint">Tocá las palabras en el orden de los huecos.</div><div class="frase">${frase}</div>
+  <div class="banco">${S.b.map(w=>`<button class="op" style="flex:0 1 auto;padding:10px 16px" data-w="${w}" ${S.e.includes(w)||lleno?'disabled':''}>${w}</button>`).join('')}</div>`;
+  if(!lleno){$$('.banco .op').forEach(b=>b.onclick=()=>{S.e.push(b.dataset.w);const q=S.rj?S.rj.queda():0;pinta();if(S.rj&&S.e.length<r.length){const bar=$('.reloj i');if(bar)bar.style.width=Math.max(0,q/S.D.seg*100)+'%'}});return}
+  pararRelojes();
+  const ok=r.every((x,j)=>x===S.e[j]);if(ok)S.ok++;
+  $('#Z').insertAdjacentHTML('beforeend',fb(ok?'bien':'malo',ok?'¡Diapo completa!':'Así dice el material:',ok?'':f.replace(/___/g,(()=>{let j=0;return()=>`<b>${r[j++]}</b>`})()),s));
+  const u=S.i===n-1;sig(u,()=>{S.i++;u?fin(`${S.ok}/${n}`,S.ok>=n*.85?'¡Te sabés las diapos de memoria! 📚':'Las que fallaste tienen la diapo anotada: repasalas',`Frases del material · Nivel ${S.D.n}. ${S.D.nivel.t}`,ini):ronda()});
+ };ini()}
+
+/* ============ 5. EL INTRUSO ============ */
+const INTR=[
+ [['Frontal','Etmoides','Esfenoides','Temporal'],3,'El temporal es un hueso par; los otros tres son impares.','U1 · Anatomía Cráneo y Columna · Diapo 35'],
+ [['Queratina','Colágeno','Elastina','Hemoglobina'],3,'Las tres primeras son proteínas fibrosas; la hemoglobina no.','U1 · Química · Diapos 41–47'],
+ [['Potencial de acción','Ovulación','Cascada de coagulación','Regulación de la glucemia'],3,'La glucemia se regula por retroalimentación negativa; los otros son ejemplos de retroalimentación positiva.','U1 · Fisiología · Diapos 6–7'],
+ [['Fijación','Inclusión','Coloración','Frotis'],3,'El frotis es una técnica para células dispersas; los otros son pasos del corte histológico.','U1 · Histología · Diapos 35–50'],
+ [['RER','Golgi','Mitocondria','Ribosomas'],3,'Los ribosomas son organoides no membranosos.','U2 · Histología · Diapo 2'],
+ [['Timina','Citosina','Uracilo','Adenina'],3,'La adenina es una base púrica; las otras son pirimídicas.','U2 · Química · Diapo 2'],
+ [['Fosfolípidos','Glucolípidos','Colesterol','Queratina'],3,'Los tres primeros son los lípidos de la membrana plasmática.','U3 · Química · Diapo 4'],
+ [['Reflejo de búsqueda','Reflejo de Galant','Extensión cruzada','Reflejo de Moro'],3,'El de Moro desaparece a los 4 meses; los otros, a los 2 meses.','U5 · Pediatría Parte 2 · Diapos 14–19'],
+ [['Gesell','Freud','Piaget','Cannon'],3,'Cannon introdujo la homeostasis; los otros tres interpretaron el desarrollo infantil.','U5 · Pediatría Parte 2 · Diapo 21 / U1 · Fisiología · Diapo 10'],
+ [['Ganglios linfáticos','Bazo','MALT','Timo'],3,'El timo es un órgano primario; los otros son secundarios.','U9 · Inmunología · Diapo 3'],
+ [['Termo perfectamente sellado','El Universo','El cuerpo humano'],2,'El cuerpo humano es un sistema abierto; los otros dos son ejemplos de sistemas aislados.','U1 · Fisiología · Diapo 5'],
+ [['Atlas','Axis','Tubérculo de Chassaignac','Promontorio'],3,'El promontorio corresponde al sacro; los otros son de la columna cervical.','U1 · Anatomía Cráneo y Columna · Diapos 11–17']];
+const T_INT={rond:[5,6,8,8,10,10,12,12,12,12],seg:[0,0,0,16,14,12,11,10,9,8],pista:[1,1,1,1,1,1,0,0,0,0]};
+function jIntruso(){let S;
+ const ini=()=>{pararRelojes();const D=cfg('intruso',T_INT);S={D,l:mez(INTR).slice(0,D.rond),i:0,ok:0,r:0};pinta()};
+ const pinta=()=>{pararRelojes();const [ops,r,x,s]=S.l[S.i],n=S.l.length,ord=mez(ops.map((o,k)=>k));
+  S.rj=S.D.seg?Reloj(S.D.seg,()=>resolver(null)):null;
+  $('#Z').innerHTML=(S.rj?S.rj.html:'')+stats([[`${S.i+1}/${n}`,'Ronda'],[S.ok,'Intrusos'],[S.r+'🔥','Racha']])+`<div class="q">¿Cuál no pertenece al grupo?</div><div class="ops">${ord.map(k=>`<button class="op" data-k="${k}">${ops[k]}</button>`).join('')}</div>`;
+  const resolver=b=>{pararRelojes();const ok=!!b&&+b.dataset.k===r;$$('.op').forEach(y=>{y.disabled=true;if(+y.dataset.k===r)y.classList.add('bien')});
+   if(ok){S.ok++;S.r++}else{if(b)b.classList.add('malo');S.r=0}
+   $('#Z').insertAdjacentHTML('beforeend',fb(ok?'bien':'malo',ok?'¡Lo encontraste!':(b?`El intruso era: ${ops[r]}.`:`¡Se acabó el tiempo! El intruso era: ${ops[r]}.`),S.D.pista||!ok?x:'',s));
+   const u=S.i===n-1;sig(u,()=>{S.i++;u?fin(`${S.ok}/${n}`,S.ok>=n*.85?'¡Ojo clínico para las clasificaciones! 🔎':'Las clasificaciones se toman mucho: a repasar',`Clasificaciones de todas las unidades · Nivel ${S.D.n}. ${S.D.nivel.t}`,ini):pinta()})};
+  $$('.op').forEach(b=>b.onclick=()=>resolver(b));
+  if(S.rj)S.rj.arrancar();
+ };ini()}
+
+
+/* ============ 6. LA RULETA DEL ORAL ============ */
+const CATS=[
+ {k:'ana',n:'Anatomía',e:'🦴',c:'#b5533c'},{k:'fis',n:'Fisiología',e:'⚡',c:'#2f6fb0'},{k:'his',n:'Histología',e:'🔬',c:'#8a4fa3'},
+ {k:'qui',n:'Química',e:'🧪',c:'#1f8a70'},{k:'bio',n:'Biología',e:'🧬',c:'#5b8c2a'},{k:'ped',n:'Pediatría',e:'👶',c:'#d9822b'},
+ {k:'mys',n:'Medicina y Sociedad',e:'🌎',c:'#c2417a'},{k:'oro',n:'Mesa especial',e:'👑',c:'#d4a017'}];
+const RQ={
+ana:[['¿Qué hueso presenta la apófisis crista galli?',['Etmoides','Esfenoides','Frontal','Occipital'],'U1 · Anatomía Cráneo y Columna · Diapo 39'],
+ ['¿En qué hueso se encuentra la silla turca?',['Esfenoides','Etmoides','Temporal','Occipital'],'U1 · Anatomía Cráneo y Columna · Diapo 42'],
+ ['¿Qué vértebra tiene la apófisis odontoides?',['Axis','Atlas','7ª cervical','1ª dorsal'],'U1 · Anatomía Cráneo y Columna · Diapo 12'],
+ ['¿Cuántas vértebras tiene la columna de un adulto?',['33','24','26','31'],'U1 · Anatomía Cráneo y Columna · Diapo 3'],
+ ['El tubérculo carotídeo o de Chassaignac está en la…',['6ª vértebra cervical','7ª vértebra cervical','Atlas','1ª lumbar'],'U1 · Anatomía Cráneo y Columna · Diapo 14'],
+ ['¿Cuáles son los huesos pares del neurocráneo?',['Temporales y parietales','Frontal y occipital','Etmoides y esfenoides','Parietales y frontal'],'U1 · Anatomía Cráneo y Columna · Diapo 35'],
+ ['¿Qué curvaturas de la columna tienen concavidad posterior (lordosis)?',['Cervical y lumbar','Torácica y sacra','Cervical y torácica','Lumbar y sacra'],'U1 · Anatomía Cráneo y Columna · Diapo 3'],
+ ['La fontanela anterior o bregmática se cierra entre los…',['12 y 18 meses','2 y 3 meses','6 y 8 meses','3 y 4 años'],'U1 · Anatomía Cráneo y Columna · Diapo 76'],
+ ['El agujero occipital o foramen magnum pertenece al hueso…',['Occipital','Esfenoides','Temporal','Atlas'],'U1 · Anatomía Cráneo y Columna · Diapo 50'],
+ ['¿Qué hueso contiene en su espesor los órganos de la audición?',['Temporal','Parietal','Esfenoides','Etmoides'],'U1 · Anatomía Cráneo y Columna · Diapo 57']],
+fis:[['¿Quién introdujo el término homeostasis en 1926?',['Walter Cannon','Claude Bernard','McEwen','Sherrington'],'U1 · Fisiología · Diapo 10'],
+ ['¿Quién introdujo el concepto de medio interno?',['Claude Bernard','Walter Cannon','Guillemin','McEwen'],'U1 · Fisiología · Diapo 14'],
+ ['Un sistema que sólo intercambia energía con el entorno es…',['Cerrado','Abierto','Aislado','Estocástico'],'U1 · Fisiología · Diapo 5'],
+ ['¿Cuál es un ejemplo de retroalimentación positiva?',['Cascada de coagulación','Regulación de la glucemia','Regulación de la presión arterial','Ejes hormonales endócrinos'],'U1 · Fisiología · Diapo 7'],
+ ['La miliosmolaridad del LIC y del LEC es de aproximadamente…',['300 mOsm/l','70 mOsm/l','140 mOsm/l','1000 mOsm/l'],'U1 · Fisiología · Diapo 15'],
+ ['La diferencia de potencial a través de la membrana es de…',['-70 mV','+70 mV','-300 mV','0 mV'],'U1 · Fisiología · Diapo 15'],
+ ['Alostasis significa…',['Estabilidad a través del cambio','Ausencia total de variaciones','Intercambio de materia','Respuesta al azar'],'U1 · Fisiología · Diapos 10–11'],
+ ['El enfoque que pregunta "¿para qué?" es el…',['Teleológico','Mecanicista','Determinista','Estocástico'],'U1 · Fisiología · Diapo 3'],
+ ['¿Qué mantiene la diferencia entre el LIC y el LEC?',['Bomba Na+/K+ ATPasa','La osmolaridad','El glucocáliz','El set point'],'U1 · Fisiología · Diapo 14'],
+ ['Los componentes de un sistema de control son…',['Receptores, centro y efector','Entrada, ruido y salida','LIC, LEC y membrana','Estímulo, umbral y dosis'],'U1 · Fisiología · Diapo 13']],
+his:[['La histología también se llama…',['Anatomía microscópica','Anatomía topográfica','Citoquímica','Fisiología celular'],'U1 · Histología · Diapo 2'],
+ ['¿Cuál es un organoide no membranoso?',['Ribosoma','Mitocondria','Lisosoma','Golgi'],'U2 · Histología · Diapo 2'],
+ ['El tejido nervioso deriva de la hoja germinativa…',['Ectodérmica','Mesodérmica','Endodérmica','Ninguna'],'U5 · Histología · Diapo 3'],
+ ['El tejido conectivo deriva de la hoja germinativa…',['Mesodérmica','Ectodérmica','Endodérmica','Las tres'],'U9 · Histología y Embriología · Diapo 2'],
+ ['Dentro de los tejidos conectivos, los cartílagos son…',['Avasculares','Muy vascularizados','Líquidos','De origen ectodérmico'],'U9 · Histología y Embriología · Diapo 2'],
+ ['Las células musculares se tiñen de rosa con eosina porque son muy…',['Acidófilas','Basófilas','Argirófilas','Metacromáticas'],'U10 · Histología · Diapo 3'],
+ ['¿En qué tejido la sustancia intercelular es líquida?',['Sangre','Cartílago','Hueso','Tejido nervioso'],'U9 · Histología y Embriología · Diapo 2'],
+ ['La clasificación de Whittaker divide a los seres vivos en…',['5 reinos','2 reinos','3 dominios','7 reinos'],'U1 · Histología · Diapo 6'],
+ ['El glucocáliz y el plasmalema forman…',['La superficie celular','El hialoplasma','La envoltura nuclear','El morfoplasma'],'U2 · Histología · Diapo 3'],
+ ['El contacto entre células nerviosas para conducir el impulso se llama…',['Sinapsis','Mielinización','Plasmalema','Aponeurosis'],'U5 · Histología · Diapo 3']],
+qui:[['¿Cuáles son las bases púricas?',['Adenina y guanina','Timina y citosina','Uracilo y timina','Citosina y guanina'],'U2 · Química · Diapo 2'],
+ ['Los ácidos nucleicos son biopolímeros de…',['Nucleótidos','Aminoácidos','Monosacáridos','Ácidos grasos'],'U2 · Química · Diapo 2'],
+ ['El espesor de la membrana plasmática es de…',['6 a 10 nm','60 a 100 nm','1 a 2 µm','0,1 nm'],'U3 · Química · Diapo 3'],
+ ['¿Qué lípido regula la fluidez de la bicapa?',['Colesterol','Esfingomielina','Fosfatidilserina','Glucolípidos'],'U3 · Química · Diapo 5'],
+ ['En la hemicapa externa de la membrana predominan…',['Fosfatidilcolina y esfingomielina','Fosfatidilserina y fosfatidiletanolamina','Colesterol y queratina','Glucógeno y pigmentos'],'U3 · Química · Diapo 5'],
+ ['Químicamente, las inmunoglobulinas son…',['Glicoproteínas','Fosfolípidos','Ácidos nucleicos','Monosacáridos'],'U9 · Química Biológica · Diapo 2'],
+ ['¿Cuál de estas es una proteína fibrosa?',['Colágeno','Hemoglobina','Insulina','Albúmina'],'U1 · Química · Diapos 41–44'],
+ ['Las moléculas extrañas que desencadenan la producción de anticuerpos se llaman…',['Antígenos','Tautómeros','Nucleótidos','Oligoelementos'],'U9 · Química Biológica · Diapo 2'],
+ ['¿Cuántos tipos de inmunoglobulinas se distinguen?',['5','3','4','7'],'U9 · Química Biológica · Diapo 3']],
+bio:[['¿Quién propuso la teoría de la selección natural?',['Darwin','Mendel','Mayr','Simpson'],'U1 · Biología · Diapo 4'],
+ ['La Teoría del Equilibrio Puntuado es de…',['Eldredge y Gould','Darwin y Wallace','Dobzhansky','Mayr'],'U1 · Biología · Diapo 16'],
+ ['Mendel llamó a los genes…',['Factores individuales','Cromosomas','Promotores','Alelos'],'U2 · Biología · Diapo 2'],
+ ['El promotor es la secuencia de ADN a la que se une…',['La ARN polimerasa','El ribosoma','La ADN ligasa','El ARN de transferencia'],'U2 · Biología · Diapo 2'],
+ ['El ejemplo clásico de melanismo industrial es…',['Biston betularia','Lucy','Drosophila','Homo habilis'],'U1 · Biología · Diapo 8'],
+ ['Los dos tipos de especiación son…',['Alopátrica y simpátrica','Anagénesis y cladogénesis','Micro y macroevolución','Genotipo y fenotipo'],'U1 · Biología · Diapo 10'],
+ ['"Lucy" pertenece al género…',['Australopithecus','Homo','Biston','Pan'],'U1 · Biología · Diapos 21–23'],
+ ['Los percentilos dividen un conjunto de datos en…',['100 porciones','10 porciones','4 porciones','2 porciones'],'U8 · Biología · Diapo 3'],
+ ['Anagénesis y cladogénesis son…',['Patrones evolutivos','Tipos de especiación','Tipos de selección','Fases de la mitosis'],'U1 · Biología · Diapo 14']],
+ped:[['¿Cuántos cm crece el niño en su primer año?',['25 cm','10 cm','15 cm','50 cm'],'U5 · Pediatría Parte 2 · Diapo 3'],
+ ['Un niño que nació con 3400 g, al cumplir el año pesa aproximadamente…',['10 kilos','6 kilos','8 kilos','14 kilos'],'U5 · Pediatría Parte 2 · Diapo 4'],
+ ['El reflejo de Moro desaparece a los…',['4 meses','2 meses','1 año','2 años'],'U5 · Pediatría Parte 2 · Diapo 19'],
+ ['¿A qué edad camina con ayuda?',['12 meses','28 semanas','18 meses','2 años'],'U5 · Pediatría Parte 2 · Diapo 23'],
+ ['¿A qué edad construye una torre de 6 cubos?',['2 años','18 meses','3 años','4 años'],'U5 · Pediatría Parte 2 · Diapo 23'],
+ ['El crecimiento es un fenómeno…',['Cuantitativo','Cualitativo','Reflejo','Voluntario'],'U5 · Pediatría Parte 1 · Diapo 3'],
+ ['El recién nacido o neonato es el bebé de…',['1 a 28 días','1 a 7 días','29 días a 2 años','0 a 12 meses'],'U6 · Pediatría · Diapo 3'],
+ ['El complejo catenario del recién nacido es…',['Respiración-llanto-succión-deglución','Búsqueda-succión-marcha','Moro-prensión-Babinski','Gateo-marcha-lenguaje'],'U5 · Pediatría Parte 2 · Diapo 12'],
+ ['En el primer trimestre de vida la talla aumenta…',['8 cm','4 cm','6 cm','12 cm'],'U5 · Pediatría Parte 2 · Diapo 3'],
+ ['El pre-escolar es el niño de…',['3 a 5 años','6 a 12 años','1 a 2 años','2 a 3 años'],'U6 · Pediatría · Diapo 4']],
+mys:[['Según la OMS, la salud es un estado de completo bienestar…',['Físico, mental y social','Físico y biológico','Económico y social','Individual y familiar'],'U2 · Medicina y Sociedad'],
+ ['La definición de salud de la OMS entró en vigor en…',['1948','1978','1926','2000'],'U2 · Medicina y Sociedad'],
+ ['La estrategia de Atención Primaria de Salud se definió en la Conferencia de…',['Alma Ata','Nueva York','Ottawa','Ginebra'],'U3 · Medicina y Sociedad'],
+ ['El objetivo que la OMS se planteó en 1977 fue…',['Salud para todos en el año 2000','Erradicar la viruela','Crear la APS','Definir la cultura'],'U3 · Medicina y Sociedad'],
+ ['¿Quién define la cultura como "la producción de sentido de una sociedad"?',['García Canclini','Bourdieu','Piaget','Cannon'],'U1 · Medicina y Sociedad'],
+ ['El concepto de reproducción social se asocia a…',['Bourdieu','García Canclini','Freud','Erikson'],'U1 · Medicina y Sociedad'],
+ ['La mayor crítica a la definición de salud de la OMS apunta a la palabra…',['"Completo"','"Social"','"Mental"','"Estado"'],'U2 · Medicina y Sociedad'],
+ ['¿En qué año fue la Conferencia de Alma Ata?',['1978','1948','1993','2000'],'U3 · Medicina y Sociedad']]};
+/* ---------- motor de sonido: todo sintetizado, sin archivos ---------- */
+const pref=(k,d)=>{try{const v=localStorage.getItem('caer_'+k);return v===null?d:+v}catch(e){return d}},gpref=(k,v)=>{try{localStorage.setItem('caer_'+k,v)}catch(e){}};
+const SND={ac:null,mg:null,sg:null,mus:pref('mus',1),sfx:pref('sfx',1),timer:null,nz:null};
+function ac(){try{if(!SND.ac){const A=window.AudioContext||window.webkitAudioContext;if(!A)return null;const a=SND.ac=new A();SND.mg=a.createGain();SND.mg.gain.value=SND.mus?1:0;SND.sg=a.createGain();SND.sg.gain.value=SND.sfx?1:0;SND.mg.connect(a.destination);SND.sg.connect(a.destination);
+  const b=a.createBuffer(1,a.sampleRate,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;SND.nz=b}
+ if(SND.ac.state==='suspended')SND.ac.resume();return SND.ac}catch(e){return null}}
+function tono(f,t,d,w,v,dest,atk){const a=SND.ac,o=a.createOscillator(),g=a.createGain();o.type=w||'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+(atk||.008));g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(dest);o.start(t);o.stop(t+d+.02)}
+function ruido(t,d,v,fq,dest,tipo){const a=SND.ac,n=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();n.buffer=SND.nz;f.type=tipo||'highpass';f.frequency.value=fq;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);n.connect(f);f.connect(g);g.connect(dest);n.start(t);n.stop(t+d+.02)}
+const mf=m=>440*Math.pow(2,(m-69)/12);
+const beep=(f,d=.07,t='sine',v=.08)=>{const a=ac();if(!a||!SND.sfx)return;try{tono(f,a.currentTime,d,t,v,SND.sg)}catch(e){}};
+const melod=(ns,gap=110)=>{const a=ac();if(!a||!SND.sfx)return;try{ns.forEach((f,i)=>tono(f,a.currentTime+i*gap/1000,.2,'triangle',.11,SND.sg))}catch(e){}};
+const clac=()=>{const a=ac();if(!a||!SND.sfx)return;try{tono(1500,a.currentTime,.025,'triangle',.12,SND.sg);ruido(a.currentTime,.02,.08,2500,SND.sg)}catch(e){}};
+function trompetas(){const a=ac();if(!a||!SND.sfx)return;try{const t0=a.currentTime+.05,e=.13,lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2100;lp.connect(SND.sg);
+ const tr=(m,t,d,v=.07)=>[0,7,-6].forEach(c=>{const o=a.createOscillator(),g=a.createGain();o.type='sawtooth';o.frequency.value=mf(m);o.detune.value=c;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(v,t+.035);g.gain.setValueAtTime(v*.85,t+d*.8);g.gain.linearRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(lp);o.start(t);o.stop(t+d+.05)});
+ [[67,0,.9],[67,1,.9],[67,2,.9],[72,3,3],[67,6,.9],[72,7,.9],[76,8,.9],[79,9,3.6],[76,13,.9],[79,14,.9],[84,15,9]].forEach(([m,p,d])=>tr(m,t0+p*e,d*e));
+ [[64,3,3],[72,9,3.6],[76,15,9],[79,15,9]].forEach(([m,p,d])=>tr(m,t0+p*e,d*e,.045));
+ for(let k=0;k<10;k++)tono(70,t0+(15+k*.45)*e,.12,'sine',.12,SND.sg);ruido(t0+15*e,1.3,.07,5000,SND.sg)}catch(e){}}
+function festejo(){trompetas();confeti(300);setTimeout(()=>confeti(220),900);setTimeout(()=>confeti(160),1800)}
+/* música de ambiente: una melodía original distinta por juego */
+const R3=(a,n)=>Array.from({length:n},()=>a).flat();
+const PISTAS={
+ ruleta:{st:.34,parts:[
+  {w:'triangle',v:.075,d:.95,s:[76,79,84,83,79,76,77,81,86,84,81,77,79,83,86,89,86,83,84,79,76,72,0,0]},
+  {w:'square',v:.018,d:.6,o:12,s:[76,79,84,83,79,76,77,81,86,84,81,77,79,83,86,89,86,83,84,79,76,72,0,0]},
+  {w:'triangle',v:.1,d:1.1,s:[48,0,0,43,0,0,41,0,0,41,0,0,43,0,0,43,0,0,48,0,0,48,0,43]},
+  {w:'sine',v:.05,d:.5,s:[0,64,64,0,62,62,0,65,65,0,65,65,0,62,62,0,65,65,0,64,64,0,64,64]},
+  {w:'sine',v:.05,d:.5,s:[0,67,67,0,67,67,0,69,69,0,69,69,0,67,67,0,67,67,0,67,67,0,67,67]}]},
+ huesos:{st:.2,parts:[
+  {w:'sine',v:.11,d:1.4,s:[69,0,72,69,0,67,64,0,69,0,72,74,76,0,72,0,69,0,72,69,0,67,64,0,62,0,64,67,69,0,0,0]},
+  {w:'sine',v:.03,d:.5,o:12,s:[69,0,72,69,0,67,64,0,69,0,72,74,76,0,72,0,69,0,72,69,0,67,64,0,62,0,64,67,69,0,0,0]},
+  {w:'triangle',v:.09,d:1.6,s:[45,0,0,45,0,0,52,0,45,0,0,45,0,0,48,50]},
+  {s:[0,0,'c',0,0,0,'c','c',0,0,'c',0,0,'c',0,0],v:.05}]},
+ edad:{st:.42,parts:[
+  {w:'sine',v:.08,d:2.2,o:12,s:[69,0,72,77,0,76,74,0,70,72,0,0,70,0,74,72,0,69,67,69,70,65,0,0]},
+  {w:'triangle',v:.02,d:.4,o:24,s:[69,0,72,77,0,76,74,0,70,72,0,0,70,0,74,72,0,69,67,69,70,65,0,0]},
+  {w:'triangle',v:.045,d:1.6,s:[53,60,65,53,60,65,58,62,65,53,60,65,58,62,67,53,60,65,48,55,64,53,60,65]}]},
+ autor:{st:.17,parts:[
+  {w:'sawtooth',v:.028,d:1.1,s:[...R3([62,69,65,69],2),...R3([62,70,67,70],2),...R3([61,69,64,69],2),62,69,65,69,62,69,65,74]},
+  {w:'sawtooth',v:.04,d:3,s:[38,0,0,0,0,0,0,0,43,0,0,0,0,0,0,0,45,0,0,0,0,0,0,0,38,0,0,0,45,0,0,0]},
+  {w:'triangle',v:.06,d:3.5,s:[77,0,0,0,76,0,0,0,74,0,0,0,79,0,0,0,76,0,0,0,73,0,0,0,74,0,0,0,0,0,0,0]}]},
+ cloze:{st:.4,sw:.14,parts:[
+  {w:'triangle',v:.04,d:3.8,a:.15,s:[60,0,0,0,57,0,0,0,53,0,0,0,55,0,0,0]},{w:'triangle',v:.03,d:3.8,a:.15,s:[64,0,0,0,60,0,0,0,57,0,0,0,59,0,0,0]},{w:'sine',v:.03,d:3.8,a:.15,s:[71,0,0,0,67,0,0,0,64,0,0,0,62,0,0,0]},
+  {w:'sine',v:.06,d:1.6,s:[0,76,0,79,0,72,76,0,0,77,0,81,0,74,0,0,0,76,0,79,0,84,83,0,0,81,0,77,0,74,0,0]},
+  {s:['k',0,'h',0,'s',0,'h',0,'k','k','h',0,'s',0,'h',0],v:.05}]},
+ intruso:{st:.27,sw:.2,parts:[
+  {w:'triangle',v:.13,d:1.1,s:[45,0,48,0,50,0,51,52,45,0,48,0,43,0,44,0]},
+  {s:[0,0,'s',0,0,0,'s',0,0,0,'s',0,0,0,'s',0],v:.05},
+  {w:'square',v:.018,d:.9,s:[...Array(24).fill(0),76,0,75,76,0,72,69,0,...Array(24).fill(0),81,0,80,81,0,76,72,0]}]},
+ carrera:{st:.105,parts:[
+  {s:R3(['c',0,'c','c'],4),v:.045},
+  {w:'triangle',v:.1,d:1.5,s:[43,0,0,43,0,0,43,0,48,0,0,48,0,0,50,0]},
+  {w:'square',v:.022,d:1.8,s:[67,0,71,0,74,0,71,0,72,0,76,0,74,0,69,0,67,0,71,0,74,0,79,0,78,0,74,0,71,0,74,0]}]}
+};
+function pararMusica(){clearInterval(SND.timer);SND.timer=null}
+function musica(id){pararMusica();const T=PISTAS[id],a=ac();if(!T||!a)return;let i=0,nx=a.currentTime+.12;
+ SND.timer=setInterval(()=>{try{if(nx<a.currentTime)nx=a.currentTime+.05;while(nx<a.currentTime+.3){T.parts.forEach(p=>{const n=p.s[i%p.s.length];if(!n)return;
+   if(n==='k')tono(75,nx,.14,'sine',p.v*2.2,SND.mg);else if(n==='s')ruido(nx,.09,p.v,1800,SND.mg,'bandpass');else if(n==='h')ruido(nx,.03,p.v*.5,7000,SND.mg);else if(n==='c'){tono(900,nx,.03,'triangle',p.v,SND.mg);ruido(nx,.025,p.v*.6,1800,SND.mg)}
+   else tono(mf(n+(p.o||0)),nx,p.d*T.st,p.w,p.v,SND.mg,p.a)});
+  nx+=T.st*(T.sw?(i%2?1-T.sw:1+T.sw):1);i++}}catch(e){}},70)}
+function reac(c,mudo){const ic=$('#jA');if(ic){ic.classList.remove('feliz','triste','toque');void ic.offsetWidth;ic.classList.add(c==='malo'?'triste':'feliz')}
+ if(mudo)return;if(c==='bien')melod([660,880],90);else if(c==='casi')melod([587,659],90);else beep(160,.3,'sawtooth',.09)}
+function confeti(n=90){const c=$('#conf'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;const col=['#d4a017','#f0c040','#1a5c2a','#2e8b45','#fff','#c2417a','#2f6fb0'];
+ const P=Array.from({length:n},()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.4,vx:(Math.random()-.5)*4,vy:2+Math.random()*4,s:5+Math.random()*7,r:Math.random()*6,c:col[Math.random()*col.length|0]}));let t=0;
+ (function f(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.05;p.r+=.15;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/3,p.s,p.s*.6);x.restore()});if(++t<200)requestAnimationFrame(f);else x.clearRect(0,0,c.width,c.height)})()}
+const T_RUL={T:[30,26,20,18,16,15,14,13,12,10],NEC:[1,1,2,2,2,2,3,3,3,3],v:[5,4,3,3,3,2,2,2,1,1],c50:[3,3,2,2,1,1,1,0,0,0]};
+function jRuleta(){let S,rot=0,tm=null;const mat=CATS.slice(0,7);let T=20,NEC=2;
+ const rueda=()=>{const R=150,pt=(a,r)=>[(r*Math.sin(a*Math.PI/180)).toFixed(1),(-r*Math.cos(a*Math.PI/180)).toFixed(1)];
+  return `<svg class="rueda" id="rd" viewBox="-176 -176 352 352" style="transform:rotate(${rot}deg)">
+   <defs><filter id="veta" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.011 0.32" numOctaves="3" seed="7"/><feColorMatrix values="0 0 0 0 .2  0 0 0 0 .1  0 0 0 0 .03  0 0 0 -1.5 1.05"/><feComposite in2="SourceGraphic" operator="in"/></filter>
+   <radialGradient id="aro" r="50%"><stop offset=".86" stop-color="#5a3414"/><stop offset=".93" stop-color="#a5672d"/><stop offset="1" stop-color="#4a2a10"/></radialGradient>
+   <radialGradient id="lustre" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></radialGradient>
+   <radialGradient id="laton" cx="35%" cy="30%"><stop offset="0" stop-color="#fff3c2"/><stop offset=".5" stop-color="#d4a017"/><stop offset="1" stop-color="#7a5408"/></radialGradient></defs>
+   <circle r="174" fill="url(#aro)"/><circle r="174" fill="#000" filter="url(#veta)" opacity=".55"/>
+   <circle r="153" fill="none" stroke="url(#laton)" stroke-width="3"/>
+   ${CATS.map((c,i)=>{const [x1,y1]=pt(i*45-22.5,R),[x2,y2]=pt(i*45+22.5,R);return `<path d="M0,0 L${x1},${y1} A${R},${R} 0 0 1 ${x2},${y2} Z" fill="${c.c}" stroke="#3b2413" stroke-width="3.5"/>`}).join('')}
+   <circle r="150" fill="#000" filter="url(#veta)" opacity=".5"/><circle r="150" fill="url(#lustre)"/>
+   ${CATS.map((c,i)=>{const [tx,ty]=pt(i*45,102);return `<circle cx="${tx}" cy="${ty}" r="25" fill="#fbf1d6" stroke="#3b2413" stroke-width="2" opacity=".92"/><text x="${tx}" y="${ty}" font-size="30" text-anchor="middle" dominant-baseline="central" transform="rotate(${i*45} ${tx} ${ty})">${c.e}</text>`}).join('')}
+   ${CATS.map((c,i)=>{const [x,y]=pt(i*45-22.5,163);return `<circle cx="${x}" cy="${y}" r="6.5" fill="url(#laton)" stroke="#5a3d06"/>`}).join('')}
+   <circle r="40" fill="#4a2a10"/><circle r="40" fill="#000" filter="url(#veta)" opacity=".5"/><circle r="40" fill="none" stroke="url(#laton)" stroke-width="3"/></svg>`};
+
+ const hud=()=>`<div class="hud"><span class="vidas">${'❤️'.repeat(S.v)}${'🤍'.repeat(Math.max(0,S.v0-S.v))}</span><div class="stats"><div class="stat"><b>${S.pts}</b><span>Puntos</span></div></div>
+   <span>${S.r>=2?`<span class="mult">🔥 Racha x${Math.min(S.r,5)}</span>`:''}</span></div>
+   <div class="sellos">${mat.map(c=>{const p=S.pr[c.k];return `<div class="sello ${p>=NEC?'g':p?'m':''}" data-k="${c.k}"><i>${c.e}</i>${p>=NEC?'✔ ':p+'/'+NEC+' '}${c.n.split(' ')[0]}</div>`}).join('')}</div>`;
+ const base=(panel)=>{$('#Z').innerHTML=hud()+`<div class="ru"><div class="feria"><div class="rueda-w" id="rw"><div class="puntero"></div>${rueda()}<button class="girar" id="gi">GIRAR</button></div><div class="pie"></div></div><div id="pn" style="display:flex;flex-direction:column;gap:14px">${panel}</div></div>`;
+  $('#gi').onclick=girar};
+ const ini=()=>{clearInterval(tm);pararRelojes();const D=cfg('ruleta',T_RUL);T=D.T;NEC=D.NEC;S={D,v:D.v,v0:D.v,pts:0,r:0,pr:Object.fromEntries(mat.map(c=>[c.k,0])),pool:{},c50:D.c50,ct:1,n:0,ok:0};base(`<div class="msg">Girá la ruleta.<br>Ganá los 7 sellos antes de quedarte sin vidas.</div><p class="hint" style="text-align:center">Cada sello necesita ${NEC} respuestas correctas de esa materia.<br>Si cae en 👑, elegís materia y ganás el sello de una.</p>`)};
+ const girar=()=>{const g=$('#gi');g.disabled=true;const falt=mat.filter(c=>S.pr[c.k]<NEC).map(c=>CATS.indexOf(c));
+  let i=Math.random()<.14?7:(Math.random()<.85?falt[Math.random()*falt.length|0]:Math.random()*7|0);
+  const off=(Math.random()-.5)*30,cur=((rot%360)+360)%360,tg=(360-i*45+off+360)%360;rot+=1800+((tg-cur+360)%360);
+  const d=window._ruFast?60:3800;$('#rd').style.transitionDuration=d+'ms';$('#rd').style.transform=`rotate(${rot}deg)`;
+  $('#rw').classList.add('gira');if(!window._ruFast){let k=0;const tk=()=>{if(k++<26){clac();setTimeout(tk,60+k*k*.42)}};tk()}
+  setTimeout(()=>{const w=$('#rw');if(w)w.classList.remove('gira');if(i===7)especial();else preg(CATS[i],false)},d+250)};
+ const especial=()=>{melod([523,659,784]);$('#pn').innerHTML=`<span class="cat" style="background:${CATS[7].c}">👑 Mesa especial</span><div class="q">Elegí la materia. Si acertás, te llevás el sello directo.</div>
+  <div class="elige">${mat.filter(c=>S.pr[c.k]<NEC).map(c=>`<button style="background:${c.c}" data-k="${c.k}">${c.e} ${c.n}</button>`).join('')}</div>`;
+  $$('.elige button').forEach(b=>b.onclick=()=>preg(mat.find(c=>c.k===b.dataset.k),true))};
+ const preg=(c,esp)=>{if(!S.pool[c.k]||!S.pool[c.k].length)S.pool[c.k]=mez(RQ[c.k]);const [q,o,s]=S.pool[c.k].pop(),ok=o[0],ops=mez(o);let t=T,hecho=false;S.n++;S._ok=ok;
+  $('#pn').innerHTML=`<span class="cat" style="background:${c.c}">${c.e} ${c.n}${esp?' · 👑 por el sello':''}</span><div class="tbar" id="tb"><i id="ti"></i></div><div class="q">${q}</div>
+   <div class="ops" style="grid-template-columns:1fr 1fr">${ops.map(x=>`<button class="op" data-o="${x.replace(/"/g,'&quot;')}">${x}</button>`).join('')}</div>
+   <div class="comod"><button id="c50" ${S.c50?'':'disabled'}>✂️ 50:50 (${S.c50})</button><button id="ct" ${S.ct?'':'disabled'}>⏳ +15 seg (${S.ct})</button></div><div id="rs"></div>`;
+  const fin1=(bien,el)=>{if(hecho)return;hecho=true;clearInterval(tm);$$('#pn .op').forEach(x=>{x.disabled=true;if(x.dataset.o===ok)x.classList.add('bien')});$$('.comod button').forEach(x=>x.disabled=true);
+   let m;if(bien){S.r++;S.ok++;const g=(100+t*5)*Math.min(S.r,5);S.pts+=g;const antes=S.pr[c.k];S.pr[c.k]=esp?NEC:Math.min(NEC,antes+1);
+     const sello=antes<NEC&&S.pr[c.k]>=NEC;m=`¡Correcto! +${g} puntos${sello?` · ¡Ganaste el sello de ${c.n}! ${c.e}`:''}`;if(sello){melod([523,659,784,1047]);confeti(70)}else melod([660,880],90)}
+   else{S.r=0;S.v--;if(el)el.classList.add('malo');m=(el?'Incorrecto.':'¡Se acabó el tiempo!')+` Era: ${ok}`;beep(160,.35,'sawtooth',.09)}
+   const gano=mat.every(x=>S.pr[x.k]>=NEC),perdio=S.v<=0;
+   reac(bien?'bien':'malo',1);$('#rs').innerHTML=fb0(bien?'bien':'malo',m,'',s)+`<button class="btn ${gano||perdio?'oro':''}" id="sg" style="margin-top:12px">${gano?'🎓 Recibir el diploma':perdio?'Ver resultado':'Seguir girando →'}</button>`;
+   const h=document.createElement('div');h.innerHTML=hud();const z=$('#Z');z.replaceChild(h.children[1],z.children[1]);z.replaceChild(h.children[0],z.children[0]);
+   $('#sg').onclick=()=>gano?final(true):perdio?final(false):base(`<div class="msg">${bien?'¡Bien! Seguí girando.':'A no aflojar. Girá de nuevo.'}</div>`);$('#sg').focus()};
+  $$('#pn .op').forEach(b=>b.onclick=()=>fin1(b.dataset.o===ok,b));
+  $('#c50').onclick=()=>{if(!S.c50)return;S.c50--;mez($$('#pn .op').filter(x=>x.dataset.o!==ok)).slice(0,2).forEach(x=>{x.classList.add('fuera');x.disabled=true});$('#c50').disabled=true;$('#c50').textContent='✂️ 50:50 ('+S.c50+')';beep(900,.1)};
+  $('#ct').onclick=()=>{if(!S.ct)return;S.ct--;t+=15;$('#ct').disabled=true;$('#ct').textContent='⏳ +15 seg (0)';beep(900,.1)};
+  clearInterval(tm);tm=setInterval(()=>{if(!$('#ti')){clearInterval(tm);return}t--;$('#ti').style.width=Math.min(100,t/T*100)+'%';if(t<=5){$('#tb').classList.add('fin');beep(440,.05)}if(t<=0)fin1(false,null)},1000)};
+ const final=g=>{clearInterval(tm);let rec=0;try{rec=+localStorage.getItem('caer_ruleta')||0;if(S.pts>rec)localStorage.setItem('caer_ruleta',S.pts)}catch(e){}
+  const sel=mat.filter(c=>S.pr[c.k]>=NEC).length;
+  const perf=g&&S.v===S.v0&&S.ok===S.n;if(perf)festejo();else if(g){confeti(260);melod([523,659,784,1047,784,1047,1319],140)}
+  const sube=g?NIV.abrir('ruleta',NIV.get('ruleta')):0;if(sube){NIV.set('ruleta',sube);setTimeout(()=>{montaNiv('ruleta',jRuleta);autoNivel($('#auM'),sube,jRuleta)},400)}
+  $('#Z').innerHTML=`<div class="diploma">${perf?PERF:''}<div style="font-size:56px">${g?'🎓':'📚'}</div><h3>${g?'¡Aprobaste el oral!':'Te quedaste sin vidas'}</h3>${sube?`<div class="fb bien" style="margin:6px 0"><strong>🔓 ¡Pasás al nivel ${sube}: ${NIVELES[sube-1].e} ${NIVELES[sube-1].t} · ${MODOS[sube-1].t}!</strong><span class="auto" id="auM"></span></div>`:''}
+   <p>${g?'Conseguiste los 7 sellos de la mesa examinadora.':`Llegaste a ${sel} de 7 sellos. La próxima sale.`}</p>
+   <div class="sellos">${mat.map(c=>`<div class="sello ${S.pr[c.k]>=NEC?'g':''}"><i>${c.e}</i>${c.n.split(' ')[0]}</div>`).join('')}</div>
+   <div class="final" style="padding:6px 0"><div class="big">${S.pts}</div><p class="hint">puntos · ${S.ok} de ${S.n} correctas · ${S.pts>rec?'🏆 ¡nuevo récord!':'récord: '+rec}</p></div>
+   <button class="btn oro" id="otra" style="align-self:center">Jugar otra vez</button></div>`;$('#otra').onclick=ini};
+ window._ru=()=>S;ini()}
+
+
+/* ============ 7. EL GRAN PREMIO ============ */
+function poolCarrera(){const P=[];
+ Object.values(RQ).forEach(l=>l.forEach(([q,o,f])=>P.push([q,o[0],o.slice(1),f])));
+ const hs=HUESOS['Cráneo'];hs.it.forEach(([t,r,d])=>P.push([`¿De qué hueso es? ${t}`,r,mez(hs.ops.filter(x=>x!==r)).slice(0,3),AC+d]));
+ const au=[...new Set(AUT.map(a=>a[1]))];AUT.forEach(([t,r,f])=>P.push([t,r,mez(au.filter(x=>x!==r)).slice(0,3),f]));
+ REFLEJOS.forEach(([t,r,d])=>P.push([`¿Cuándo desaparece el ${t.toLowerCase()}?`,REF_OPS[r],REF_OPS.filter((_,k)=>k!==r),PD+d]));
+ return mez(P)}
+const T_CAR={dif:[0,0,1,1,1,2,2,2,2,2],M:[1.18,1.08,1,.96,.92,.88,.84,.8,.76,.72],pen:[1,1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,2]};
+function jCarrera(){let S,dif=1,raf=0;let DCAR=cfg('carrera',T_CAR);
+ const DIF=[['Trote',1.3,'🙂'],['Galope',1,'😤'],['Final de mesa',.78,'🔥']],RIV=[['La Residente',72],['Dr. Apuro',86],['El Recursante',102]];
+ let ultN=null;
+ const inicio=()=>{cancelAnimationFrame(raf);pararRelojes();DCAR=cfg('carrera',T_CAR);if(ultN!==DCAR.n){ultN=DCAR.n;dif=DCAR.dif}$('#Z').innerHTML=`<div class="msg">🏇 Corré con Charly contra tres rivales.<br>Cada respuesta correcta es un galope. Las rachas dan turbo.</div>
+  <p class="hint" style="text-align:center">Si te equivocás, Charly tropieza y perdés tiempo. Los rivales no frenan nunca.</p>
+  <div class="chips" style="justify-content:center">${DIF.map((d,k)=>`<button class="chip ${k===dif?'on':''}" data-k="${k}">${d[2]} ${d[0]}</button>`).join('')}</div>
+  <button class="btn oro" id="lg" style="align-self:center;font-size:18px;padding:14px 34px">🏁 ¡A la pista!</button>`;
+  $$('.chip').forEach(c=>c.onclick=()=>{dif=+c.dataset.k;inicio()});$('#lg').onclick=largar};
+ const largar=()=>{S={p:0,r:0,ok:0,n:0,mal:[],pool:poolCarrera(),riv:RIV.map(([n,t])=>({n,v:100/(t*DIF[dif][1]*DCAR.M),m:1,p:0,fin:0})),t0:0,fin:false,lleg:0,bloq:true};
+  $('#Z').innerHTML=`<div class="hud"><span class="pos" id="ps">Vas 1°</span><span id="rc"></span><div class="stats"><div class="stat"><b id="tt">0.0</b><span>Segundos</span></div><div class="stat"><b id="okc">0</b><span>Correctas</span></div></div></div>
+   <div class="pista" id="pista"><div class="meta"></div><span class="metaF">🏁</span>
+   <div class="carril yo"><span class="nom">CHARLY (VOS)</span><div class="corr"><div class="cbl quieto" id="yo" style="left:0%"><span class="fl"><span class="h">🐎</span></span></div></div></div>
+   ${S.riv.map((r,k)=>`<div class="carril"><span class="nom">${r.n.toUpperCase()}</span><div class="corr"><div class="cbl riv quieto" id="rv${k}" style="left:0%;filter:hue-rotate(${[150,250,60][k]}deg) saturate(1.4)"><span class="fl"><span class="h">🐎</span></span></div></div></div>`).join('')}
+   <div class="cuenta" id="cu">3</div></div><div id="pn" style="display:flex;flex-direction:column;gap:12px;min-height:210px"></div>`;
+  const paso=window._ruFast?30:800;let c=3;beep(440,.15);const iv=setInterval(()=>{c--;if(!$('#cu')){clearInterval(iv);return}
+   if(c>0){$('#cu').textContent=c;beep(440,.15)}else{clearInterval(iv);$('#cu').textContent='¡Largaron!';beep(880,.4);setTimeout(()=>{if(!$('#cu'))return;$('#cu').remove();$$('.cbl').forEach(x=>x.classList.remove('quieto'));S.t0=performance.now();S.ult=S.t0;S.bloq=false;preg();raf=requestAnimationFrame(loop)},paso*.7)}},paso)};
+ const loop=now=>{if(!$('#pista')||S.fin)return;const dt=(now-S.ult)/1000;S.ult=now;const T=(now-S.t0)/1000;$('#tt').textContent=T.toFixed(1);
+  S.riv.forEach((r,k)=>{if(r.fin)return;if(Math.random()<dt/1.5)r.m=.55+Math.random()*.9;r.p=Math.min(100,r.p+r.v*r.m*dt);$('#rv'+k).style.left=r.p+'%';if(r.p>=100){r.fin=T;$('#rv'+k).classList.add('quieto');beep(300,.2,'square',.05)}});
+  const pos=1+S.riv.filter(r=>r.p>S.p).length;$('#ps').textContent=`Vas ${pos}°`;
+  if(S.riv.every(r=>r.fin)){fin(T);return}raf=requestAnimationFrame(loop)};
+ const preg=()=>{if(S.fin)return;if(!S.pool.length)S.pool=poolCarrera();const [q,ok,mal,f]=S.pool.pop();S._ok=ok;S.bloq=false;
+  $('#pn').innerHTML=`<div class="q">${q}</div><div class="ops" style="grid-template-columns:1fr 1fr">${mez([ok,...mal]).map(x=>`<button class="op" data-o="${x.replace(/"/g,'&quot;')}">${x}</button>`).join('')}</div><div id="rs"></div>`;
+  $$('#pn .op').forEach(b=>b.onclick=()=>{if(S.bloq||S.fin)return;S.bloq=true;S.n++;const yo=$('#yo'),bien=b.dataset.o===ok;
+   $$('#pn .op').forEach(x=>{x.disabled=true;if(x.dataset.o===ok)x.classList.add('bien')});
+   if(bien){S.r++;S.ok++;$('#okc').textContent=S.ok;S.p=Math.min(100,S.p+Math.min(14,8+2*(S.r-1)));yo.style.left=S.p+'%';yo.classList.toggle('turbo',S.r>=3);$('#rc').innerHTML=S.r>=3?`<span class="mult">💨 Turbo x${S.r}</span>`:'';
+    reac('bien',1);beep(660+S.r*40,.09,'triangle',.1);if(S.p>=100){setTimeout(()=>fin((performance.now()-S.t0)/1000),450);return}setTimeout(preg,window._ruFast?20:380)}
+   else{S.r=0;b.classList.add('malo');S.mal.push([q,ok,f]);yo.classList.remove('turbo');yo.classList.add('caida');$('#rc').innerHTML='';reac('malo',1);beep(160,.3,'sawtooth',.09);
+    $('#rs').innerHTML=`<div class="fb malo"><strong>¡Tropezón! Era: ${ok}</strong>${src(f)}</div>`;setTimeout(()=>{const y=$('#yo');if(y)y.classList.remove('caida');preg()},window._ruFast?30:1900*DCAR.pen)}})};
+ const fin=T=>{if(S.fin)return;S.fin=true;cancelAnimationFrame(raf);pararRelojes();const llego=S.p>=100,tab=[{n:'Charly (vos)',t:llego?T:null,yo:1,p:S.p},...S.riv.map(r=>({n:r.n,t:r.fin||null,p:r.p}))].sort((a,b)=>(a.t??1e9)-(b.t??1e9)||b.p-a.p);
+  const pos=tab.findIndex(x=>x.yo)+1,med=['🥇','🥈','🥉','4°'];let rec=null;
+  if(llego){try{const k='caer_gp_'+dif;rec=+localStorage.getItem(k)||0;if(!rec||T<rec){localStorage.setItem(k,T.toFixed(1));rec=-1}}catch(e){}}
+  const sube=pos===1?NIV.abrir('carrera',NIV.get('carrera')):0;if(sube){NIV.set('carrera',sube);setTimeout(()=>{montaNiv('carrera',jCarrera);autoNivel($('#auM'),sube,jCarrera)},400)}
+  const perf=pos===1&&!S.mal.length;if(perf)festejo();else if(pos===1){confeti(240);melod([523,659,784,1047,784,1047,1319],140)}else if(pos<=3)melod([523,659,784]);
+  $('#Z').innerHTML=`<div class="diploma">${perf?PERF:''}<div style="font-size:56px">${pos===1?'🏆':pos<=3?'🏇':'🐴'}</div><h3>${pos===1?'¡Ganaste el Gran Premio!':pos===2?'¡Segundo puesto!':pos===3?'Tercer puesto: al podio':'Te ganaron esta vez'}</h3>
+   <div class="podio">${tab.map((x,k)=>`<div class="${x.yo?'yo':''}"><span>${med[k]} ${x.n}</span><span>${x.t?x.t.toFixed(1)+' s':'no llegó'}</span></div>`).join('')}</div>
+   ${sube?`<div class="fb bien" style="margin:6px 0"><strong>🔓 ¡Pasás al nivel ${sube}: ${NIVELES[sube-1].e} ${NIVELES[sube-1].t} · ${MODOS[sube-1].t}!</strong><span class="auto" id="auM"></span></div>`:''}
+   <p class="hint">Nivel ${DCAR.n}. ${DCAR.nivel.t} · ${DIF[dif][0]} · ${S.ok} de ${S.n} correctas${rec===-1?' · 🏆 ¡tu mejor tiempo!':rec?` · tu mejor tiempo: ${rec} s`:''}</p>
+   ${S.mal.length?`<div class="repaso"><h3 style="font-size:18px">Para repasar</h3>${S.mal.map(m=>`<div><b>${m[0]}</b><br>${m[1]} ${src(m[2])}</div>`).join('')}</div>`:''}
+   <button class="btn oro" id="otra" style="align-self:center">Correr otra vez</button></div>`;$('#otra').onclick=inicio};
+ window._gp=()=>S;inicio()}
+
+/* ============ MENÚ ============ */
+const ARTE={
+ ruleta:'<span class="e-pt"></span><span class="e-rd"></span><span class="e-c"></span>',
+ huesos:'<span class="e-h2">🦴</span><span class="e-h">🦴</span><span class="e-h3">💀</span>',
+ edad:'<span class="e-l"></span><span class="e-b">👶</span>',
+ autor:'<span class="e-g">🎓</span><span class="e-q">?</span>',
+ cloze:'<span class="e-t" style="left:12%;top:20px;width:64%"></span><span class="e-t" style="left:12%;top:44px;width:22%"></span><span class="e-bl"></span><span class="e-t" style="left:70%;top:44px;width:16%"></span><span class="e-t" style="left:12%;top:66px;width:46%"></span><span class="e-p">✏️</span>',
+ intruso:'<span class="e-d" style="left:16%"></span><span class="e-d" style="left:34%"></span><span class="e-d r" style="left:52%"></span><span class="e-d" style="left:70%"></span><span class="e-lp">🔎</span>',
+ carrera:'<span class="e-ps"></span><span class="e-fl">🏁</span><span class="e-cb2"><i>🐎</i></span><span class="e-cb"><i><b>🐎</b></i></span>'};
+const arte=id=>`<span class="esc" aria-hidden="true">${ARTE[id]}</span>`;
+
+const JUEGOS=[
+ {id:'ruleta',star:1,ic:'🎡',t:'La Ruleta del Oral',d:'Girá la ruleta, respondé contra reloj y ganá los 7 sellos de la mesa examinadora antes de quedarte sin vidas. Con rachas, comodines y diploma al final.',f:'Todo el material · 7 materias · 66 preguntas',fn:jRuleta},
+ {id:'huesos',ic:'🦴',t:'Mesa de huesos',d:'Te muestran un accidente óseo y decís de qué hueso o vértebra es. Como en la mesa de anatomía.',f:'U1 · Anatomía Cráneo y Columna',fn:jHuesos},
+ {id:'edad',ic:'👶',t:'¿A qué edad?',d:'Hitos del desarrollo y reflejos arcaicos: ubicá cada uno en su edad. Si le pegás cerca, suma medio.',f:'U5 · Pediatría Parte 2',fn:jEdad},
+ {id:'autor',ic:'🎓',t:'¿Quién lo dijo?',d:'Cannon, Bernard, Piaget, García Canclini… cada concepto con su autor, de todas las unidades.',f:'U1 a U10 · varias materias',fn:jAutor},
+ {id:'cloze',ic:'✍️',t:'Completá la diapo',d:'Una frase del material con huecos y un banco de palabras. Datos, números y definiciones.',f:'U1 a U9 · varias materias',fn:jCloze},
+ {id:'intruso',ic:'🔎',t:'El intruso',d:'Cuatro elementos y uno no pertenece. Para fijar las clasificaciones que se toman en el oral.',f:'U1 a U9 · varias materias',fn:jIntruso},
+ {id:'carrera',ic:'🏇',t:'El Gran Premio',d:'Corré con Charly contra tres rivales: cada respuesta correcta es un galope y las rachas dan turbo. Tres niveles de dificultad.',f:'Todo el material · más de 110 preguntas',fn:jCarrera}];
+$('#grid').innerHTML=JUEGOS.map(j=>`<button class="tarjeta ${j.star?'star':''}" data-id="${j.id}">${arte(j.id)}<h3>${j.t}</h3><p>${j.d}</p><span class="fuente">📖 ${j.f}</span></button>`).join('');
+const ver=id=>{const j=JUEGOS.find(x=>x.id===id);$('#menu').classList.toggle('on',!j);$('#juego').classList.toggle('on',!!j);$('#volver').style.display=j?'block':'none';document.body.dataset.juego=j?j.id:'';decor(j&&j.id);if(j){$('#jT').textContent=j.t;$('#jA').innerHTML=arte(j.id);$('#jA').title='Tocame';$('#jA').onclick=()=>{const e=$('#jA');e.classList.remove('feliz','triste','toque');void e.offsetWidth;e.classList.add('toque');melod(FIRMA[j.id],100)};$('#jD').textContent=j.d;ac();musica(j.id);montaNiv(j.id,j.fn);j.fn()}else{pararMusica();pararRelojes();JACT=null;document.body.classList.remove('ciego');$('#nivbar').innerHTML='';$('#Z').innerHTML=''}window.scrollTo(0,0)};
+const FIRMA={ruleta:[523,659,784,1047],huesos:[880,1047,880,659],edad:[1397,1175,1047,1397],autor:[587,698,880,1175],cloze:[523,659,784,988],intruso:[440,415,440,523],carrera:[784,784,988,1175]};
+const DECOR={ruleta:'⭐🎪🎟️🎠',huesos:'🦴💀🦷🦴',edad:'🍼🧸👣🎈',autor:'📜🖋️🎓📚',cloze:'📄✏️📚💡',intruso:'🧩🔎❓🧩',carrera:'🏁🥕🏆🍀'};
+function decor(id){let d=$('#decor');if(!d){d=document.createElement('div');d.id='decor';document.body.prepend(d)}d.innerHTML='';if(!id)return;const e=[...DECOR[id]].filter(x=>x!=='️');for(let k=0;k<12;k++){const s=document.createElement('span');s.textContent=e[k%e.length];s.style.cssText=`left:${(k*8.3+Math.random()*5).toFixed(1)}%;font-size:${22+Math.random()*26|0}px;animation-duration:${14+Math.random()*14|0}s;animation-delay:-${Math.random()*20|0}s`;d.appendChild(s)}}
+const pintaAud=()=>{$('#bMus').textContent=SND.mus?'🎵':'🔇';$('#bMus').classList.toggle('off',!SND.mus);$('#bSfx').textContent=SND.sfx?'🔊':'🔈';$('#bSfx').classList.toggle('off',!SND.sfx)};
+$('#bMus').onclick=()=>{SND.mus=SND.mus?0:1;gpref('mus',SND.mus);ac();if(SND.mg)SND.mg.gain.value=SND.mus?1:0;pintaAud()};
+$('#bSfx').onclick=()=>{SND.sfx=SND.sfx?0:1;gpref('sfx',SND.sfx);ac();if(SND.sg)SND.sg.gain.value=SND.sfx?1:0;pintaAud();beep(880,.1)};pintaAud();
+document.addEventListener('pointerdown',e=>{if(e.target.closest('.op,.chip,.btn,.tarjeta,.elige button,.comod button'))beep(520,.03,'triangle',.05)},true);
+document.addEventListener('visibilitychange',()=>{if(SND.ac)document.hidden?SND.ac.suspend():SND.ac.resume()});
+
+$$('.tarjeta').forEach(b=>b.onclick=()=>ver(b.dataset.id));$('#volver').onclick=()=>ver(null);
+const _eh=/^#e-([a-z]+)$/.exec(location.hash);if(_eh&&JUEGOS.some(j=>j.id===_eh[1])){document.body.classList.add('embed');const au=$('.aud');au.classList.add('flot');document.body.appendChild(au);ver(_eh[1])}
+
+/* v2: inclinación 3D de las tarjetas, saltito de banderines y confeti al terminar */
+if(matchMedia('(hover:hover)').matches)$$('.tarjeta').forEach(t=>{t.addEventListener('pointermove',e=>{const r=t.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;t.style.transform=`translateY(-4px) rotateX(${(-y*7).toFixed(1)}deg) rotateY(${(x*7).toFixed(1)}deg)`});t.addEventListener('pointerleave',()=>t.style.transform='')});
+let _uc=0;new MutationObserver(ms=>{let f=false;ms.forEach(m=>{m.addedNodes.forEach(n=>{if(n.nodeType===1&&n.matches?.('.final')&&!n.closest('.diploma'))f=true});
+ const st=(m.target.nodeType===3?m.target.parentElement:m.target)?.closest?.('.stat');if(st){st.classList.remove('pop');void st.offsetWidth;st.classList.add('pop')}});
+ if(f&&Date.now()-_uc>1500){_uc=Date.now();confeti(110)}}).observe($('main'),{childList:true,subtree:true,characterData:true});
+</script>
+</body>
+</html>
