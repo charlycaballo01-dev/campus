@@ -1006,12 +1006,12 @@ body.modo-animado #mesa-juegos{display:block}
 .mj-mini .mj-cajas{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
 .mj-mini .caja .tapa{min-height:140px}
 /* mesa de juego abierta (aquí se monta cada juego) */
-#juego-ov{position:fixed; inset:0; z-index:950; display:none; align-items:center; justify-content:center; padding:16px;
+#juego-ov{position:fixed; inset:0; z-index:950; display:none; align-items:stretch; justify-content:center; padding:0;
   background:radial-gradient(ellipse at 50% 38%,#24210f,#0E0D02 72%)}
 #juego-ov.on{display:flex; animation:temaIn .35s ease}
-#juego-ov .jv-marco{position:relative; width:min(1000px,100%); height:min(680px,calc(100vh - 32px)); display:flex; flex-direction:column; border-radius:10px; overflow:hidden;
-  background:radial-gradient(ellipse at center,#1F6A52,#0F4A38 60%,#08301F); box-shadow:0 0 0 10px #4A2E19,0 0 0 11px #9C8438,0 30px 60px rgba(0,0,0,.7)}
-#juego-ov .jv-bar{display:flex; align-items:center; gap:12px; padding:10px 14px; background:linear-gradient(#5A3820,#24150B); color:#E7D9A0; font-family:Georgia,serif}
+#juego-ov .jv-marco{position:relative; width:100%; height:100%; display:flex; flex-direction:column; border-radius:0; overflow:hidden;
+  background:radial-gradient(ellipse at center,#1F6A52,#0F4A38 60%,#08301F); box-shadow:none}
+#juego-ov .jv-bar{display:flex; align-items:center; gap:12px; padding:8px 14px; background:linear-gradient(#5A3820,#24150B); color:#E7D9A0; font-family:Georgia,serif; border-bottom:1px solid #9C8438}
 #juego-ov .jv-bar b{flex:1; font-size:1.05rem}
 #juego-ov .jv-x{font:inherit; color:#E7D9A0; background:rgba(6,42,32,.85); border:1px solid #C7B26A; border-radius:3px; padding:6px 12px; cursor:pointer}
 #juego-ov .jv-zona{flex:1; overflow:auto; position:relative; color:#EFE3BC}
@@ -6526,8 +6526,8 @@ function animIds(s, u){
     for (let k = 0; k < 6; k++) { const a = (-90 + 60 * k) * Math.PI / 180; pts.push((x + Math.cos(a) * Rr).toFixed(1) + ' ' + (y + Math.sin(a) * Rr).toFixed(1)); }
     const d = 'M' + pts.join(' L') + 'Z';
     const claro = mix(T, CREMA, 0.55);
-    const fill = estado === 'hecha' ? claro : estado === 'ahora' ? 'url(#sNow)' : 'url(#sDark)';
-    const borde = estado === 'hecha' ? mix(T, CREMA, 0.3) : estado === 'ahora' ? shade(T, -0.4) : '#25221C';
+    const fill = estado === 'hecha' ? claro : estado === 'ahora' ? 'url(#sNow)' : estado === 'empezada' ? mix(T, CREMA, 0.12) : 'url(#sDark)';
+    const borde = estado === 'hecha' ? mix(T, CREMA, 0.3) : estado === 'ahora' ? shade(T, -0.4) : estado === 'empezada' ? shade(T, -0.3) : '#25221C';
     el('ellipse', { cx: x + 1, cy: y + Rr + 5, rx: Rr * 0.95, ry: Rr * 0.26, fill: '#2a1d0c', opacity: 0.22 }, g);
     el('path', { d, fill: borde, stroke: borde, 'stroke-width': sz * 0.5 + 2.4, 'stroke-linejoin': 'round' }, g);
     el('path', { class: 's-cuerpo', d, fill, stroke: fill, 'stroke-width': sz * 0.5, 'stroke-linejoin': 'round' }, g);
@@ -6628,7 +6628,10 @@ function animIds(s, u){
       });
     });
     const etAct = !orden.length ? 0 : completo ? 3 : etapaDe(orden[sig]);
-    const dHecho = completo ? S.total : (sig >= 0 && items.length ? items[sig].d : 0);
+    // el camino se enciende apenas hay una vista: llega hasta el primer material sin ver
+    const dSig = (sig >= 0 && items.length ? items[sig].d : 0);
+    const virgen = items.findIndex(it => !((it.t.reps || 0) > 0));
+    const dHecho = completo ? S.total : Math.max(dSig, virgen < 0 ? S.total : (virgen > 0 ? items[virgen].d : 0));
     const tiempo = d => 0.45 + 1.25 * d / S.total;
     const aparece = (e, d) => { if (ent) { e.classList.add('s-fade'); e.style.setProperty('--d', Math.max(0, d).toFixed(2) + 's'); } return e; };
 
@@ -6689,8 +6692,8 @@ function animIds(s, u){
     const choca = (r, propia) => cajas.some(c => c !== propia && r[0] < c[2] && r[2] > c[0] && r[1] < c[3] && r[3] > c[1]);
     items.forEach((it, i) => {
       const t = it.t, x = it.x, y = it.y, sz = it.sz;
-      const estado = t.hecho ? 'hecha' : (i === sig ? 'ahora' : 'pendiente');
-      const g = el('g', { class: 's-roca', role: 'button', tabindex: '0', 'aria-label': `${t.titulo} (${NOMBRE_TIPO[t.tipo] || t.tipo}) · ${estado === 'hecha' ? 'hecho' : estado === 'ahora' ? 'siguiente' : 'pendiente'}` }, rocas);
+      const estado = t.hecho ? 'hecha' : (i === sig ? 'ahora' : ((t.reps || 0) > 0 ? 'empezada' : 'pendiente'));
+      const g = el('g', { class: 's-roca', role: 'button', tabindex: '0', 'aria-label': `${t.titulo} (${NOMBRE_TIPO[t.tipo] || t.tipo}) · ${estado === 'hecha' ? 'hecho' : estado === 'ahora' ? 'siguiente' : estado === 'empezada' ? `empezado, ${t.reps} de 3` : 'pendiente'}` }, rocas);
       el('title', {}, g).textContent = t.titulo; g.dataset.id = t.id || '';
       if (ent) { g.classList.add('s-in'); g.style.setProperty('--d', tiempo(it.d).toFixed(2) + 's'); }
       if (estado === 'ahora') el('ellipse', { class: 's-ahora', cx: x, cy: y, rx: sz * 2, ry: sz * 1.9, fill: mix(T, '#FFFFFF', 0.4), opacity: 0.75, filter: 'url(#sGlow)' }, g);
@@ -6720,7 +6723,7 @@ function animIds(s, u){
       const { tx, ty } = pos || LADOS.arr;
       if (pos && (it.paso >= 25 || estado === 'ahora')) {
         cajas.push(caja);
-        const a = { x: pos.lx.toFixed(1), y: pos.ly.toFixed(1), 'font-size': FS, 'text-anchor': pos.anchor, fill: estado === 'hecha' ? '#A39A80' : estado === 'ahora' ? '#2A2418' : '#4A4030' };
+        const a = { x: pos.lx.toFixed(1), y: pos.ly.toFixed(1), 'font-size': FS, 'text-anchor': pos.anchor, fill: estado === 'hecha' ? '#A39A80' : estado === 'ahora' ? '#2A2418' : estado === 'empezada' ? '#332D1E' : '#4A4030' };
         if (estado === 'hecha') a['text-decoration'] = 'line-through';
         if (estado === 'ahora') a['font-weight'] = 'bold';
         txt(g, texto, a);
@@ -6730,7 +6733,7 @@ function animIds(s, u){
       insignia(mv, x, y, sz, estado, t.tipo, T);
       // veces visto (3 puntos)
       const cy = y + sz * 1.08 + sz * 0.25 + 7.5;
-      el('rect', { x: x - 13.5, y: cy - 4.6, width: 27, height: 9.2, rx: 4.6, fill: estado === 'hecha' ? mix(T, CREMA, 0.25) : estado === 'ahora' ? T : '#4B463C', stroke: '#FFF8E7', 'stroke-width': 0.8 }, mv);
+      el('rect', { x: x - 13.5, y: cy - 4.6, width: 27, height: 9.2, rx: 4.6, fill: estado === 'hecha' ? mix(T, CREMA, 0.25) : estado === 'ahora' ? T : estado === 'empezada' ? shade(T, -0.1) : '#4B463C', stroke: '#FFF8E7', 'stroke-width': 0.8 }, mv);
       for (let k = 0; k < 3; k++) el('circle', { cx: x - 8 + k * 8, cy, r: 2.5, fill: '#FFFFFF', opacity: k < (t.reps || 0) ? 1 : 0.3 }, mv);
 
       if (estado === 'ahora') {
