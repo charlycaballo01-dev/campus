@@ -550,6 +550,24 @@
 .anim-toggle[aria-pressed="true"] .knob{background:#3a7a55}
 .anim-toggle[aria-pressed="true"] .knob::after{transform:translateX(12px);background:#E7D9A0}
 .anim-toggle:focus-visible{outline:2px solid #E7D9A0;outline-offset:2px}
+/* pelota dorada con la guía · sólo en modo animado */
+.anim-guia{display:none}
+body.modo-animado .anim-guia{display:inline-flex; align-items:center; justify-content:center; position:relative;
+  width:38px; height:38px; margin:14px 0 0 12px; border-radius:50%; vertical-align:middle; text-decoration:none;
+  border:1px solid #6E5212; cursor:pointer; isolation:isolate;
+  background:radial-gradient(circle at 34% 26%,#FFFDF0 0%,#FFEFB4 12%,#F3C94A 34%,#D1A12E 62%,#8A6418 100%);
+  box-shadow:0 4px 8px rgba(0,0,0,.4), inset 0 -4px 8px rgba(110,78,12,.55), inset 0 4px 7px rgba(255,255,255,.5);
+  animation:guiaFlota 4.6s ease-in-out infinite}
+body.modo-animado .anim-guia span{font:700 .46rem/1 Georgia,serif; letter-spacing:.03em; text-transform:uppercase;
+  color:#3A2606; text-shadow:0 1px 0 rgba(255,248,215,.75)}
+body.modo-animado .anim-guia::after{content:""; position:absolute; left:17%; top:11%; width:34%; height:22%;
+  border-radius:50%; background:linear-gradient(#FFFFFF,rgba(255,255,255,0)); opacity:.75; pointer-events:none}
+body.modo-animado .anim-guia:hover{filter:brightness(1.07); animation-play-state:paused; transform:translateY(-2px)}
+body.modo-animado .anim-guia:focus-visible{outline:2px solid #E7D9A0; outline-offset:3px}
+@keyframes guiaFlota{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@media(prefers-reduced-motion:reduce){body.modo-animado .anim-guia{animation:none}}
+@media(max-width:560px){body.modo-animado .anim-guia{width:34px;height:34px;margin-left:9px}
+  body.modo-animado .anim-guia span{font-size:.42rem;letter-spacing:.02em}}
 #anim-lib{border:1px solid #4A3D1E;box-shadow:0 10px 30px rgba(0,0,0,.35);background:#0F4A38;overflow:hidden;border-radius:6px;margin-top:6px}
 #anim-lib.entra,.anim-fade{animation:libIn .6s cubic-bezier(.22,1,.36,1) backwards}
 @keyframes libIn{from{opacity:0;transform:translateY(16px) scale(.985)}}
@@ -7013,6 +7031,12 @@ function animIds(s, u){
       const b = document.createElement('button'); b.type = 'button'; b.id = 'anim-toggle'; b.className = 'anim-toggle';
       b.innerHTML = '<span class="knob"></span><span class="t"></span>'; b.addEventListener('click', toggleModoAnimado);
       head.appendChild(b);
+    }
+    if (head && !$('anim-guia')) {   // botón dorado: la guía para el alumno
+      const g = document.createElement('a'); g.id = 'anim-guia'; g.className = 'anim-guia';
+      g.href = 'guia.html'; g.target = '_blank'; g.rel = 'noopener';
+      g.innerHTML = '<span>Guía</span>'; g.title = 'Cómo usar el campus'; g.setAttribute('aria-label', 'Guía: cómo usar el campus');
+      head.appendChild(g);
     }
     if (!$('anim-lib')) { const g = $('units-grid'); if (g) { const d = document.createElement('div'); d.id = 'anim-lib'; d.style.display = 'none'; g.parentNode.insertBefore(d, g.nextSibling); } }
     aplicarModo();
