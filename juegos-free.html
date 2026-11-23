@@ -361,7 +361,19 @@ nav button.feliz{animation:navFeliz .6s}nav button.triste{animation:navTriste .5
 .niv.on{background:var(--nc);color:#fff;box-shadow:0 3px 0 rgba(0,0,0,.2)}
 .niv.bloq{border-color:var(--borde);color:var(--gris);background:var(--crema);cursor:default;opacity:.7}
 .niv.bloq i{display:none}
-@media(max-width:560px){.niv i{display:none}.niv{padding:7px 11px}}
+@media(max-width:560px){
+ /* los niveles en una sola fila que se desliza, para no comerse la pantalla */
+ .nivbar{gap:5px;margin:-4px 0 10px}
+ .nivbar .nivs,.nivs{display:flex;flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto;gap:6px;
+  padding:2px 2px 5px;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+ .nivbar .nivs::-webkit-scrollbar,.nivs::-webkit-scrollbar{display:none}
+ .niv{flex:0 0 auto;padding:5px 9px;font-size:12px;scroll-snap-align:center}
+ .niv b{font-size:13px}
+ .niv i,.niv.bloq i{display:none}
+ .niv.on i{display:inline;font-size:11.5px;font-weight:700}
+ .nivbar .nivtit,.nivtit{display:none!important}   /* el chip activo ya dice el nivel */
+ .nivmodo{font-size:11.5px;padding:5px 9px;margin:2px 0 0}
+}
 .nivtit{display:flex;align-items:center;gap:8px;font:700 14px 'DM Sans',sans-serif;color:var(--verde-osc)}
 .nivtit span{background:var(--nc,#2e8b45);color:#fff;border-radius:99px;padding:3px 11px;font-size:12.5px}
 /* barra de tiempo */
@@ -2011,5 +2023,26 @@ function jMill(){const ID='mill',T={comod:[3,3,2,1,0,0,0,0,0,0],seg:[0,0,30,22,1
  window.abrirJuego=abrir;
 })();
 </script>
+<style id="movil-niveles">
+@media(max-width:560px){
+ /* los 10 niveles entran en una sola fila: chips chicos, sin candado ni nombre */
+ .nivbar{gap:5px!important;margin:-4px 0 10px!important}
+ .nivbar .nivs,.nivs{display:flex!important;flex:1 1 100%!important;flex-wrap:nowrap!important;overflow-x:auto!important;
+  gap:5px!important;padding:2px 2px 5px!important;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .nivbar .nivs::-webkit-scrollbar,.nivs::-webkit-scrollbar{display:none}
+ .niv{flex:0 0 auto!important;font-size:0!important;gap:0!important;padding:5px 8px!important}
+ .niv b{font-size:12.5px!important}
+ .niv i,.niv.bloq i{display:none!important}
+ .niv.on i{display:inline!important;font-size:11px!important;margin-left:5px;font-weight:700}
+ .nivbar .nivtit,.nivtit{display:none!important}
+ .nivmodo{font-size:11.5px!important;padding:5px 9px!important;margin:2px 0 0!important}
+ .chips{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:6px!important;
+  padding:2px 2px 4px!important;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .chips::-webkit-scrollbar{display:none}
+ .chips>*{flex:0 0 auto!important}
+ .intro h2{font-size:1.4rem;margin-bottom:3px}
+ .intro p{font-size:12.6px;line-height:1.36}
+}
+</style>
 </body>
 </html>

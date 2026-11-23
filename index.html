@@ -654,12 +654,16 @@ body.anim-ov-open{overflow:hidden}
 .ov-stage.abierto .s-fade{animation:sFade .55s ease backwards;animation-delay:var(--d,0s)}
 @keyframes sFade{from{opacity:0}}
 @media (max-width:700px){
-  .ov-stage{height:74vh}
+  .ov-stage{height:86vh}
   /* En el teléfono el mapa se hace más grande y se desliza con el dedo (empieza en INICIO) */
-  .ov-map{display:block;overflow:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-radius:8px}
+  /* el libro no entra a lo ancho: se ancla a la izquierda (si no, el principio queda fuera de alcance) */
+  .ov-map{display:block;place-items:start;justify-items:start;align-items:start;
+   overflow:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-radius:8px}
   .ov-map::-webkit-scrollbar{display:none}
-  .sen-wrap{width:210vw;margin-top:calc((74vh - 134vw) / 2)}
-  .ov-map::after{content:"deslizá →";position:sticky;left:calc(100% - 96px);bottom:6px;display:block;width:max-content;margin-left:auto;font:italic .78rem Georgia,serif;color:#E7D9A0;opacity:.8;pointer-events:none}
+  .sen-wrap{width:240vw;margin-top:calc((86vh - 153.6vw) / 2)}
+  .ov-map::after{content:"deslizá para ver todo el camino ⟷";position:sticky;left:0;bottom:8px;display:block;width:max-content;
+  margin:0 auto;padding:5px 13px;border-radius:99px;background:rgba(10,30,18,.82);border:1px solid rgba(231,217,160,.45);
+  font:italic .76rem Georgia,serif;color:#F0E3B4;opacity:.92;pointer-events:none}
 }
 @media (prefers-reduced-motion:reduce){.ov-cover,.ov-map,#anim-ov,.libro-materia,.s-mov,.ov-chip{transition:none}
   #anim-lib.entra,.anim-fade,.b-in,.s-ahora,.s-tag,.cv-bar i,.ov-cover .cv-body,.ov-cover .cv-frame,.ov-stage.abierto .s-camino,.ov-stage.abierto .s-in,.ov-stage.abierto .s-fade{animation:none}}
@@ -6938,6 +6942,20 @@ function animIds(s, u){
     const primera = sig === ''; sig = key;   // sólo la primera vez el camino se dibuja y las rocas aparecen de a una
     renderAnimPath($('ov-sen'), { name: subject.name, color: cur.subject.color, unidad: 'Unidad ' + (cur.unit ? cur.unit.unit : ''), forma: (cur.unit && cur.unit.unit % 2) ? 'sube' : 'baja', pct: p.pct, tema: subject.topic || subject.tema || subject.subtitle || '', tareas: T },
       { onItemClick: t => mostrarChip(t), bg: $('ov-sen-bg'), entrada: primera && !calmo() });
+    centrarSendero(); setTimeout(centrarSendero, primera ? 1250 : 120);
+  }
+  // en el celular el camino no entra entero: lo dejamos centrado en el material de AHORA
+  function centrarSendero() {
+    try {
+      if (window.innerWidth > 700) return;
+      const map = document.querySelector('.ov-map'); if (!map) return;
+      const rocas = [...map.querySelectorAll('.s-roca')];
+      if (!rocas.length) return;
+      const act = rocas.find(g => /siguiente/.test(g.getAttribute('aria-label') || '')) || rocas[0];
+      const r = act.getBoundingClientRect(), m = map.getBoundingClientRect();
+      const d = (r.left + r.width / 2) - (m.left + m.width / 2);
+      if (Math.abs(d) > 4) map.scrollTo({ left: map.scrollLeft + d, behavior: 'smooth' });
+    } catch (e) { }
   }
   function mostrarChip(t) {
     selTarea = t; const ch = $('ov-chip');
