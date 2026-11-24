@@ -763,7 +763,45 @@ body.anim-ov-open{overflow:hidden}
 .dashboard-updates.admin-card{margin-bottom:24px}
 .dashboard-updates .update-card:last-child{margin-bottom:0}
 @media(max-width:850px){.admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.admin-grid,.admin-form{grid-template-columns:1fr}.admin-form .full{grid-column:auto}.admin-topbar{align-items:flex-start;flex-direction:column}}
+@media(max-width:560px){.admin-form{grid-template-columns:1fr}.admin-form .full{grid-column:auto}.admin-topbar{align-items:flex-start;flex-direction:column}}
+/* ---------- El panel en el celular ---------- */
+@media(max-width:700px){
+  .admin-shell{padding:20px 12px 60px}
+  .admin-topbar{margin-bottom:18px;padding-bottom:14px;gap:10px}
+  .admin-title{font-size:1.6rem;margin:4px 0}
+  .admin-nav{flex-wrap:nowrap;overflow-x:auto;width:auto;max-width:100%;border-radius:14px;gap:4px;margin-bottom:18px;
+    padding:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .admin-nav::-webkit-scrollbar{display:none}
+  .admin-nav button{flex:0 0 auto;padding:8px 14px;font-size:.8rem;white-space:nowrap}
+  .admin-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px}
+  .admin-stat{padding:14px 13px}
+  .admin-stat span{font-size:.72rem}
+  .admin-stat strong{font-size:1.5rem;margin-top:4px}
+  .admin-card{padding:16px 14px}
+  .admin-card h3{font-size:1.15rem}
+  /* nada puede empujar el ancho de la pantalla */
+  .admin-card input,.admin-card select,.admin-card textarea,.admin-form input,.admin-form select,.admin-form textarea{
+    width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+  .admin-form label,.admin-card label{min-width:0}
+  /* las tablas se vuelven fichas: en el celular no se puede scrollear a lo ancho */
+  .admin-table,.admin-table tbody,.admin-table tr,.admin-table td{display:block;width:100%}
+  .admin-table thead{display:none}
+  .admin-table tr{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:0 0 12px;
+    background:var(--bg-panel);box-shadow:0 1px 6px rgba(20,59,42,.04)}
+  .admin-table tr[hidden]{display:none}
+  .admin-table td{border:0;padding:5px 0;display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+    text-align:right;font-size:.88rem}
+  .admin-table td[data-l]::before{content:attr(data-l);flex:0 0 auto;text-align:left;font-size:.67rem;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--text-muted);font-weight:700;padding-top:2px}
+  .admin-table td.celda-titulo{display:block;text-align:left;border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:4px}
+  .admin-table td.celda-titulo::before{display:none}
+  .admin-table td.celda-acciones{display:block;text-align:left;border-top:1px solid var(--line);margin-top:8px;padding-top:10px}
+  .admin-table td.celda-acciones::before{display:none}
+  .admin-table tr.st-empty td{display:block;text-align:center}
+  .admin-actions{display:flex;flex-wrap:wrap;gap:8px}
+  .admin-actions .admin-btn{flex:1 1 auto;min-height:38px;justify-content:center}
+  .presencia{justify-content:flex-start}
+}
 </style>
 
 <style id="tema-animado">
@@ -3740,6 +3778,37 @@ setInterval(() => {
   });
 }, 45000);
 
+/* En el celular las tablas se muestran como fichas: cada celda necesita saber
+   de qué columna viene. Copiamos el encabezado en un data-l y el CSS lo dibuja. */
+function etiquetarTablasMovil(){
+  document.querySelectorAll('.admin-table').forEach(t=>{
+    const ths = [...t.querySelectorAll('thead th')].map(th=>th.textContent.trim());
+    if(!ths.length) return;
+    t.querySelectorAll('tbody tr, tr').forEach(tr=>{
+      if(tr.closest('thead')) return;
+      const tds = [...tr.children].filter(c=>c.tagName==='TD');
+      if(tds.length < 2) return;
+      tds.forEach((td,i)=>{
+        const txt = ths[i] || '';
+        if(txt && td.getAttribute('data-l') !== txt) td.setAttribute('data-l', txt);
+        td.classList.toggle('celda-titulo', i === 0);
+        td.classList.toggle('celda-acciones', i === tds.length - 1 && !!td.querySelector('.admin-actions'));
+      });
+    });
+  });
+}
+(function(){
+  let t = null;
+  const programar = () => { clearTimeout(t); t = setTimeout(etiquetarTablasMovil, 120); };
+  const arrancar = () => {
+    const sh = document.getElementById('admin-shell');
+    if(!sh) return;
+    etiquetarTablasMovil();
+    try{ new MutationObserver(programar).observe(sh, { childList:true, subtree:true }); }catch(e){}
+  };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar();
+})();
+
 function renderAdmin(){
   const set=(id,val)=>{const e=document.getElementById(id);if(e)e.textContent=val};
   set('stat-students',adminData.students.filter(s=>isStudentActive(s)).length);set('stat-packages',adminData.packages.length);set('stat-subjects',flatSubjects.length);
@@ -3769,6 +3838,7 @@ function renderAdmin(){
     </div>
   </td></tr>`}).join('');
   applyStudentSearch();
+  etiquetarTablasMovil();
   const pl=document.getElementById('packages-list');if(pl)pl.innerHTML=adminData.packages.map((p,i)=>`<div class="package-card"><strong>${escapeHtml(p.name)}</strong><div class="package-meta"><span class="admin-badge">${p.days} días de acceso</span><span class="admin-badge" style="${p.mentoria?'':'opacity:.6'}">${p.mentoria?`✓ Mentoría · ${p.classes} clases privadas`:'Sin mentoría'}</span></div>${p.description?`<div style="opacity:.75;margin-bottom:6px">${escapeHtml(p.description)}</div>`:''}<div style="opacity:.75">Materias: ${escapeHtml(p.subjects.join(', '))}</div><div class="admin-actions" style="margin-top:10px"><button class="admin-btn small" onclick="editPackage(${i})">Editar</button> <button class="admin-btn danger" onclick="removePackage(${i})">Eliminar</button></div></div>`).join('');
   const su=document.getElementById('subjects-table');
   if(su){
