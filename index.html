@@ -1051,6 +1051,16 @@ body.modo-animado #mesa-juegos{display:block}
 }
 @media (prefers-reduced-motion:reduce){body.modo-animado #app-shell.tema-entra,.caja,.caja .tapa,#juego-ov.on{animation:none; transition:none}}
 </style>
+<style id="presencia-admin">
+.presencia{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px;font-size:.78rem;color:#5b6660}
+.presencia.off{opacity:.68}
+.pdot{width:9px;height:9px;border-radius:50%;background:#b9bdb7;flex:0 0 auto}
+.pdot.on{background:#27ae60;box-shadow:0 0 0 3px rgba(39,174,96,.18);animation:presPulso 2.4s ease-in-out infinite}
+@keyframes presPulso{0%,100%{box-shadow:0 0 0 3px rgba(39,174,96,.18)}50%{box-shadow:0 0 0 6px rgba(39,174,96,.05)}}
+.pchip{font-size:.7rem;line-height:1.5;padding:1px 8px;border-radius:99px;border:1px solid rgba(0,0,0,.14);background:#f1efe6;color:#4a4a42;white-space:nowrap}
+.pchip.anim{background:linear-gradient(#FFF3B8,#E7C14A);border-color:#C9992C;color:#3A2606;font-weight:700}
+@media(prefers-reduced-motion:reduce){.pdot.on{animation:none}}
+</style>
 </head>
 <body>
 <div id="boot-loading" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg-page,#F8F6EE);">
@@ -3682,10 +3692,58 @@ function showAdminTab(name,button){
 function openAdmin(){document.getElementById('view-auth')?.style.setProperty('display','none');document.getElementById('app-shell')?.style.setProperty('display','none');document.getElementById('admin-shell')?.style.setProperty('display','block');renderAdmin();}
 function logoutAdmin(){document.getElementById('admin-shell')?.style.setProperty('display','none');const auth=document.getElementById('view-auth');if(auth){auth.style.display='';auth.classList.add('active')}setAuthMode('login');fitAuthScale()}
 
+/* ---------- Presencia en el panel del admin ----------
+   Lee lo que el alumno dejó escrito en su ficha. No consulta nada extra. */
+const PRES_EN_LINEA_MS = 6 * 60 * 1000;   // margen sobre el latido de 3 min
+
+function presUltimaVez(s){
+  const t = Date.parse(s && (s.lastSeen || s.lastActiveAt) || '');
+  return isNaN(t) ? 0 : t;
+}
+function enLineaAhora(s){
+  const t = presUltimaVez(s);
+  return !!t && (Date.now() - t) < PRES_EN_LINEA_MS;
+}
+function haceCuanto(t){
+  const min = Math.floor((Date.now() - t) / 60000);
+  if(min < 1) return 'recién';
+  if(min < 60) return `hace ${min} min`;
+  const hs = Math.floor(min / 60);
+  if(hs < 24) return `hace ${hs} h`;
+  const d = Math.floor(hs / 24);
+  if(d === 1) return 'ayer';
+  if(d < 30) return `hace ${d} días`;
+  return new Date(t).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+function presenciaHTML(s){
+  const t = presUltimaVez(s);
+  const on = !!t && (Date.now() - t) < PRES_EN_LINEA_MS;
+  const disp = s.dispositivo ? ` · ${s.dispositivo}` : '';
+  const txt = !t ? 'Nunca entró' : (on ? `En línea ahora${disp}` : `Última vez: ${haceCuanto(t)}`);
+  const modo = (typeof s.modoAnim === 'boolean') ? s.modoAnim : null;
+  const chip = modo === null ? ''
+    : `<span class="pchip ${modo ? 'anim' : ''}">${modo ? '📚 Modo animado' : '📋 Vista clásica'}</span>`;
+  return `<div class="presencia${on ? '' : ' off'}" data-pres="${t}" data-disp="${escapeHtml(s.dispositivo || '')}">`
+       + `<span class="pdot${on ? ' on' : ''}"></span><span class="ptxt">${escapeHtml(txt)}</span>${chip}</div>`;
+}
+// refresca los textos ("hace 5 min") sin volver a dibujar todo el panel
+setInterval(() => {
+  if(!window.__isAdmin) return;
+  document.querySelectorAll('.presencia[data-pres]').forEach(el => {
+    const t = +el.dataset.pres;
+    const on = !!t && (Date.now() - t) < PRES_EN_LINEA_MS;
+    const disp = el.dataset.disp ? ` · ${el.dataset.disp}` : '';
+    el.classList.toggle('off', !on);
+    const dot = el.querySelector('.pdot'); if(dot) dot.classList.toggle('on', on);
+    const txt = el.querySelector('.ptxt');
+    if(txt) txt.textContent = !t ? 'Nunca entró' : (on ? `En línea ahora${disp}` : `Última vez: ${haceCuanto(t)}`);
+  });
+}, 45000);
+
 function renderAdmin(){
   const set=(id,val)=>{const e=document.getElementById(id);if(e)e.textContent=val};
   set('stat-students',adminData.students.filter(s=>isStudentActive(s)).length);set('stat-packages',adminData.packages.length);set('stat-subjects',flatSubjects.length);
-  const inlineCount=document.getElementById('stat-students-inline');if(inlineCount){const activeCount=adminData.students.filter(s=>isStudentActive(s)).length;inlineCount.textContent=`${activeCount} activo${activeCount===1?'':'s'} · ${adminData.students.length} en total`;}
+  const inlineCount=document.getElementById('stat-students-inline');if(inlineCount){const activeCount=adminData.students.filter(s=>isStudentActive(s)).length;const enLinea=adminData.students.filter(enLineaAhora).length;inlineCount.textContent=`${activeCount} activo${activeCount===1?'':'s'} · ${adminData.students.length} en total${enLinea?` · ${enLinea} en línea ahora`:''}`;}
   const seedCard=document.getElementById('seed-card');if(seedCard)seedCard.style.display=(adminData.packages.length===0&&flatSubjects.length===0)?'block':'none';
   const recent=document.getElementById('admin-recent');if(recent)recent.innerHTML=adminData.recent.slice(0,10).map(x=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)">• ${escapeHtml(x)}</div>`).join('');
   renderAdminUpdates();
@@ -3699,7 +3757,7 @@ function renderAdmin(){
   const studentsSorted = adminData.students
     .map((s, origIdx)=>({s, origIdx}))
     .sort((a,b)=>(typeof b.s.overallPct==='number'?b.s.overallPct:0) - (typeof a.s.overallPct==='number'?a.s.overallPct:0));
-  if(st)st.innerHTML=studentsSorted.map(({s,origIdx:i})=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s);const hasGoal=adminData.weeklyGoals.some(g=>g.studentId===s.id)||adminData.monthlyGoals.some(g=>g.studentId===s.id);const goalBtn=hasGoal?'':`<button class="admin-btn secondary small" onclick="inviteGoalSetup(${i})">${s.goalInviteSent?'🔁 Reenviar meta':'📨 Enviar meta'}</button>`;return `<tr data-q="${escapeHtml(normSearch((s.name||'')+' '+(s.email||'')))}"><td><strong class="st-name">${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${p?p.classes:0} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td>
+  if(st)st.innerHTML=studentsSorted.map(({s,origIdx:i})=>{const p=getPackage(s),exp=getStudentExpiry(s),rem=remainingClasses(s),active=isStudentActive(s);const hasGoal=adminData.weeklyGoals.some(g=>g.studentId===s.id)||adminData.monthlyGoals.some(g=>g.studentId===s.id);const goalBtn=hasGoal?'':`<button class="admin-btn secondary small" onclick="inviteGoalSetup(${i})">${s.goalInviteSent?'🔁 Reenviar meta':'📨 Enviar meta'}</button>`;return `<tr data-q="${escapeHtml(normSearch((s.name||'')+' '+(s.email||'')))}"><td><strong class="st-name">${escapeHtml(s.name)}</strong><div class="admin-mini">${escapeHtml(s.email)}</div>${presenciaHTML(s)}${s.bookingException?'<div class="admin-mini" style="color:var(--gold-soft,#b8860b)">⚡ Excepción de reservas activa</div>':''}</td><td><span class="admin-badge">${escapeHtml(s.package)}</span></td><td>${escapeHtml(s.status)}<div class="admin-mini ${active?'expiry-ok':'expiry-bad'}">${active?'Vence':'Vencido'}: ${exp||'—'}</div></td><td>${p?p.subjects.join(', '):'—'}</td><td><strong>${typeof s.overallPct==='number'?s.overallPct:0}%</strong></td><td>${p?p.classes:0} ${p?cycleLabel(p.bookingCycle):''}</td><td><strong>${rem}</strong></td><td>
     <div class="admin-actions">
       <button class="admin-btn small" onclick="openStudentProfile(${i})">Ver perfil</button>
       <button class="admin-btn small" onclick="editStudent(${i})">Editar</button>
@@ -5412,6 +5470,42 @@ function markStudentActiveNow(uid){
   setDoc(doc(db,'students',uid), { lastActiveAt: new Date().toISOString() }, { merge: true }).catch(()=>{});
 }
 
+/* ---------- Presencia: quién está conectado (solo lo ve el admin) ----------
+   Cada alumno escribe en SU PROPIA ficha cada pocos minutos: cuándo se lo vio por
+   última vez y si está usando el modo animado. El panel del admin lo lee de ahí.
+   El latido es de 3 minutos y solo con la pestaña a la vista, para no gastar
+   escrituras de Firestore al pedo. */
+const PRESENCIA_MS = 3 * 60 * 1000;
+let presUid = null, presTimer = null, presUltima = 0, presEnganchada = false;
+
+function presenciaAhora(forzar){
+  if(!presUid || window.__isAdmin) return;
+  const ahora = Date.now();
+  if(!forzar && ahora - presUltima < PRESENCIA_MS - 15000) return;
+  presUltima = ahora;
+  let modoAnim = false;
+  try{ modoAnim = localStorage.getItem('caer_modo_animado') === '1'; }catch(e){}
+  setDoc(doc(db,'students',presUid), {
+    lastSeen: new Date(ahora).toISOString(),
+    lastActiveAt: new Date(ahora).toISOString(),
+    modoAnim,
+    dispositivo: (window.innerWidth <= 700 ? 'celular' : 'computadora')
+  }, { merge: true }).catch(()=>{});
+}
+
+function iniciarPresencia(uid){
+  presUid = uid;
+  presenciaAhora(true);
+  clearInterval(presTimer);
+  presTimer = setInterval(()=>{ if(document.visibilityState === 'visible') presenciaAhora(); }, 60000);
+  if(!presEnganchada){
+    presEnganchada = true;
+    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') presenciaAhora(); });
+  }
+}
+// la usa el interruptor del modo animado para que el cambio se vea al toque
+window.caerPresencia = () => presenciaAhora(true);
+
 // Cola de push instantáneo: cualquier parte de la app escribe acá un "pedido" de
 // notificación y el Cloud Function onPushQueued (lado servidor) la manda y borra el pedido.
 function queuePush(studentId, title, body){
@@ -5858,6 +5952,7 @@ async function routeUser(user){
       document.getElementById('app-shell').style.display='block';
       window.showTab('dashboard');
       markStudentActiveNow(user.uid);
+      iniciarPresencia(user.uid);
       setupPushNotifications(user.uid);
       startAttendanceTracking(user.uid);
       safeMaybeShowSleepCheckin();
@@ -6876,7 +6971,8 @@ function animIds(s, u){
     if (conAnim && !on && !calmo()) { grid.classList.remove('anim-fade'); void grid.offsetWidth; grid.classList.add('anim-fade'); }
     if (on) { if (conAnim) pedirEntrada = true; dibujarLibrero(); }
   }
-  window.toggleModoAnimado = function () { setOn(!isOn()); aplicarModo(true); };
+  window.toggleModoAnimado = function () { setOn(!isOn()); aplicarModo(true);
+    setTimeout(() => { try { window.caerPresencia && window.caerPresencia(); } catch (e) { } }, 80); };
   window.animRefrescar = function () { if (isOn()) { dibujarLibrero(); } };
 
   /* ---------- libro abierto ---------- */
