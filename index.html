@@ -573,10 +573,15 @@ body.modo-animado .anim-guia:focus-visible{outline:2px solid #E7D9A0; outline-of
 @keyframes libIn{from{opacity:0;transform:translateY(16px) scale(.985)}}
 .lib-wrap{position:relative}
 #anim-lib svg{display:block;width:100%;height:auto}
+/* Alta definición: textos y curvas del librero y del camino con precisión geométrica (sin ajuste a la grilla de píxeles) */
+#anim-lib svg,.sen-wrap svg,.ov-cover{text-rendering:geometricPrecision;shape-rendering:geometricPrecision;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+#anim-lib img,.est img,.ov-stage img{image-rendering:auto}
 /* la capa de arriba (libros de materia) va en su propia capa de composición: moverla no repinta el mueble */
-#anim-lib svg.lib-top{position:absolute;inset:0;height:100%;will-change:transform}
+#anim-lib svg.lib-top{position:absolute;inset:0;height:100%}
 #anim-lib.movil{display:grid;gap:10px;border:0;box-shadow:none;background:none;overflow:visible}
 #anim-lib.movil .lib-wrap{border:1px solid #4A3D1E;box-shadow:0 8px 22px rgba(0,0,0,.35);border-radius:6px;overflow:hidden}
+/* celular: el librero va casi de borde a borde (la página deja 36px por lado) para que los libros se lean mejor */
+@media (max-width:700px){#anim-lib.movil{margin-left:-26px;margin-right:-26px}}
 .libro-materia{cursor:pointer;outline:none;transition:transform .36s cubic-bezier(.34,1.56,.64,1),filter .28s ease,opacity .3s ease}
 .libro-materia:hover,.libro-materia:focus-visible{transform:translateY(-2.2px);filter:brightness(1.14) drop-shadow(0 0 .6px #E7D9A0)}
 .libro-materia:active{transform:translateY(-.7px);transition-duration:.12s}
@@ -590,15 +595,15 @@ body.modo-animado .anim-guia:focus-visible{outline:2px solid #E7D9A0; outline-of
 body.anim-ov-open{overflow:hidden}
 .anim-close{position:absolute;left:max(12px,env(safe-area-inset-left,0px));top:max(12px,env(safe-area-inset-top,0px));z-index:5;font:inherit;font-size:.9rem;color:#E7D9A0;background:rgba(6,42,32,.85);border:1px solid #C7B26A;padding:7px 14px;border-radius:3px;cursor:pointer}
 .ov-stage{position:relative;width:min(1000px,96vw);height:min(660px,82vh);display:grid;place-items:center;transform-style:preserve-3d}
-.ov-map{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transform:scale(.52) translateZ(0);pointer-events:none;will-change:transform,opacity;transition:opacity .5s .3s ease,transform .88s .22s cubic-bezier(.22,1,.36,1)}
+.ov-map{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transform:scale(.52);pointer-events:none;transition:opacity .5s .3s ease,transform .88s .22s cubic-bezier(.22,1,.36,1)}
 .sen-wrap{position:relative;aspect-ratio:1000/640;width:min(100%,calc(min(660px,82vh) * 1000 / 640))}
 .sen-wrap svg{display:block;width:100%;height:100%}
-.sen-wrap #ov-sen{position:absolute;inset:0;will-change:transform}
+.sen-wrap #ov-sen{position:absolute;inset:0}
 .ov-stage.abierto .ov-map{opacity:1;transform:none;pointer-events:auto}
 #anim-ov.cerrando .ov-map{opacity:0;transform:scale(.95);transition:opacity .3s ease,transform .42s ease}
 .ov-cover{--b:#2E5B41;--l:#4a7d5c;--d:#10281c;--s:#1f3f2d;position:absolute;width:min(380px,72vw,58vh);aspect-ratio:320/460;transform-origin:left center;border-radius:4px 10px 10px 4px;
   background:linear-gradient(135deg,var(--l),var(--b) 45%,var(--d));box-shadow:0 18px 40px rgba(0,0,0,.55),inset 0 0 40px rgba(0,0,0,.35);color:#EFE3BC;font-family:Georgia,'Times New Roman',serif;
-  transition:transform .7s cubic-bezier(.22,1,.36,1),opacity .3s ease;backface-visibility:hidden;will-change:transform;container-type:inline-size}
+  transition:transform .7s cubic-bezier(.22,1,.36,1),opacity .3s ease;backface-visibility:hidden;container-type:inline-size}
 .ov-stage.abierto .ov-cover{transform:rotateY(-158deg) translateZ(3px);opacity:0;pointer-events:none;animation:tapaAbre 1.02s cubic-bezier(.45,.02,.22,1) forwards}
 @keyframes tapaAbre{
   0%{transform:rotateY(0deg) translateZ(0);opacity:1;box-shadow:0 18px 40px rgba(0,0,0,.55),inset 0 0 40px rgba(0,0,0,.35)}
@@ -956,7 +961,7 @@ body.modo-animado #estandartes{display:block; position:fixed; left:0; right:0; t
 .est .solo-movil{display:none}
 .est-barra{position:absolute; inset:0; z-index:2}
 .est-barra img{clip-path:inset(0 0 95.4% 0)}
-.est-tela{position:absolute; inset:0; transform-origin:50% 4.6%; container-type:inline-size; will-change:transform}
+.est-tela{position:absolute; inset:0; transform-origin:50% 4.6%; container-type:inline-size}
 .est-tela img{clip-path:inset(4% 0 0 0)}
 .est:hover,.est:focus-visible{filter:drop-shadow(0 12px 14px rgba(0,0,0,.5)) brightness(1.07); outline:none}
 .est:focus-visible .est-barra{outline:2px solid #E7D9A0; outline-offset:2px; border-radius:8px}
@@ -992,9 +997,13 @@ body.modo-animado #estandartes{display:block; position:fixed; left:0; right:0; t
 #est-pop .update-date{font:400 .74rem var(--font-body,sans-serif); color:#6E5A3A}
 /* el contenido deja libre la zona de los estandartes cuando la pantalla no tiene margen de sobra */
 @media (min-width:701px){
+  /* En pantallas grandes (Full HD y más) el contenido usa todo el ancho libre entre los dos estandartes */
   body.modo-animado #app-shell .view > .page{
-    padding-left:max(36px,calc(clamp(150px,14.6vw,222px) + 30px - (100vw - 1100px) / 2));
-    padding-right:max(36px,calc(clamp(150px,14.6vw,222px) + 30px - (100vw - 1100px) / 2))}
+    --est:clamp(150px,14.6vw,222px);
+    --pw:max(1100px,min(1640px,calc(100vw - 2 * (var(--est) + 24px))));
+    max-width:var(--pw);
+    padding-left:max(36px,calc(var(--est) + 30px - (100vw - var(--pw)) / 2));
+    padding-right:max(36px,calc(var(--est) + 30px - (100vw - var(--pw)) / 2))}
 }
 /* ======= CELULAR: banda dorada horizontal ======= */
 @media (max-width:700px){
@@ -6396,7 +6405,7 @@ function animIds(s, u){
     const bays = data.bays || 3;
     const nUnits = (data.units || []).length, rows = Math.max(1, Math.ceil(nUnits / bays));
     const openings = Array.from({ length: rows }, (_, i) => (i === 0 ? 28 : 27));
-    const mg = bays === 1 ? 3 : M.margin;
+    const mg = bays === 1 ? 1.2 : 3;   // el mueble ocupa casi todo el recuadro: libros más grandes y fáciles de leer
     const innerH = openings.reduce((a, b) => a + b, 0) + M.shelfT * (openings.length - 1);
     const caseW = bays * M.bayW + (bays + 1) * M.stile;
     const caseH = M.crownH + M.rail + innerH + M.rail + M.toeH;
@@ -6566,7 +6575,8 @@ function animIds(s, u){
 })(typeof window !== 'undefined' ? window : globalThis);
 /* ============================================================
    Sendero C.A.E.R. — libro abierto con camino de rocas (SVG)
-   Orden fijo: INICIO → Lectura → Videos → Mapas Conceptuales → Examen → META
+   Orden fijo: INICIO → Lectura → Mapas Conceptuales → Videos → Examen → META
+   Cada cartel va primero y su material lo sigue por el camino.
    Uso: renderAnimPath(svg, materia, { onItemClick, arte })
    materia = { name, color, unidad, forma: 'arco'|'valle', tareas: [{tipo, titulo, hecho}] }
    ============================================================ */
@@ -6575,11 +6585,11 @@ function animIds(s, u){
   const VW = 1000, VH = 640;
   const ETAPAS = [
     { id: 'lectura', nombre: 'Lectura', tipos: ['pdf', 'libro', 'resumen', 'guia', 'atlas'] },
+    { id: 'mapas', nombre: 'Mapas Conceptuales', tipos: ['mapa', 'mapamental', 'imagenes', 'cuadro', 'practica'] },
     { id: 'videos', nombre: 'Videos', tipos: ['clase', 'vivo', 'video'] },
-    { id: 'mapas', nombre: 'Mapas Conceptuales', tipos: ['mapa', 'mapamental', 'cuadro', 'practica'] },
     { id: 'examen', nombre: 'Examen', tipos: ['examen'] }
   ];
-  const NOMBRE_TIPO = { pdf: 'PDF', libro: 'Libro', resumen: 'Resumen', guia: 'Guía', atlas: 'Atlas', practica: 'Práctica', clase: 'Clase grabada', vivo: 'Clase en vivo', video: 'Video', mapa: 'Mapa conceptual', mapamental: 'Mapa mental', cuadro: 'Cuadro', examen: 'Examen' };
+  const NOMBRE_TIPO = { imagenes: 'Imágenes', pdf: 'PDF', libro: 'Libro', resumen: 'Resumen', guia: 'Guía', atlas: 'Atlas', practica: 'Práctica', clase: 'Clase grabada', vivo: 'Clase en vivo', video: 'Video', mapa: 'Mapa conceptual', mapamental: 'Mapa mental', cuadro: 'Cuadro', examen: 'Examen' };
   const C = { ink: '#1F3A2C', ink2: '#3A2A14', paperA: '#FBF6E8', paperB: '#E4D8B8', goldL: '#E7D9A0', gold: '#C7B26A', goldD: '#9C8438', goldDD: '#6E5A28', stone: '#8E8676', stoneD: '#4B463C' };
 
   function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
@@ -6609,19 +6619,22 @@ function animIds(s, u){
   // mismo tono de la materia, oscurecido sólo lo necesario para que el texto blanco se lea
   function tinta(color) { let c = color, k = 0; while (lum(c) > 112 && k++ < 14) c = shade(c, -0.08); return c; }
 
-  /* ---------- recorrido: INICIO → 1. Lectura → 2. Videos → 3. Mapas → 4. Examen → META ---------- */
+  /* ---------- recorrido: INICIO → 1. Lectura → 2. Mapas → 3. Videos → 4. Examen → META ----------
+     Tramos: A (Lectura) · B (Mapas) · C (Videos) · D (Examen). Cada cartel abre su tramo. */
   const RUTAS = {
     sube: { // empieza abajo a la izquierda, sube, cruza por arriba y baja por la página derecha
-      ini: [100, 548], p: [[256, 548], [272, 216], [734, 246], [762, 532]], meta: [912, 532],
+      ini: [100, 548], p: [[256, 548], [272, 216], [736, 222], [700, 452]], meta: [912, 500],
       A: [[256, 548], [292, 452], [228, 372], [268, 300], [272, 216]],
-      B: [[272, 216], [380, 192], [452, 206], [548, 268], [640, 264], [734, 246]],
-      C: [[734, 246], [712, 330], [790, 408], [752, 468], [762, 532]]
+      B: [[272, 216], [380, 192], [452, 206], [548, 268], [640, 244], [736, 222]],
+      C: [[736, 222], [836, 262], [870, 320], [800, 380], [700, 452]],
+      D: [[700, 452], [732, 528], [812, 562], [878, 548], [912, 500]]
     },
     baja: { // empieza arriba a la izquierda, baja, cruza por abajo y sube por la página derecha
-      ini: [92, 224], p: [[246, 224], [262, 548], [722, 530], [748, 240]], meta: [900, 240],
+      ini: [92, 224], p: [[246, 224], [262, 548], [722, 530], [700, 326]], meta: [906, 236],
       A: [[246, 224], [214, 302], [286, 382], [250, 462], [262, 548]],
       B: [[262, 548], [380, 540], [442, 522], [546, 566], [640, 548], [722, 530]],
-      C: [[722, 530], [762, 440], [704, 352], [752, 292], [748, 240]]
+      C: [[722, 530], [830, 520], [872, 462], [812, 392], [700, 326]],
+      D: [[700, 326], [716, 256], [790, 222], [862, 214], [906, 236]]
     }
   };
   function suave(P, n = 18) { // curva suave que pasa por todos los puntos (Catmull-Rom)
@@ -6635,12 +6648,12 @@ function animIds(s, u){
   function ruta(R) {
     const pts = [], idx = [];
     const add = arr => { arr.forEach((p, i) => { if (!(pts.length && i === 0)) pts.push(p); }); idx.push(pts.length - 1); };
-    add([R.ini, R.A[0]]); add(suave(R.A)); add(suave(R.B)); add(suave(R.C)); add([R.C[R.C.length - 1], R.meta]);
+    add([R.ini, R.A[0]]); add(suave(R.A)); add(suave(R.B)); add(suave(R.C)); add(suave(R.D));
     const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     const total = L[L.length - 1];
     function at(d) { d = Math.max(0, Math.min(total, d)); let i = L.findIndex(v => v >= d); if (i <= 0) return pts[0]; const f = (d - L[i - 1]) / ((L[i] - L[i - 1]) || 1); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f]; }
     function hasta(d) { const o = pts.filter((_, i) => L[i] < d); o.push(at(d)); return o; }
-    return { pts, total, marks: idx.slice(0, 4).map(i => L[i]), at, hasta };
+    return { pts, total, marks: idx.slice(0, 5).map(i => L[i]), at, hasta };
   }
   const dstr = pts => 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L');
 
@@ -6698,6 +6711,7 @@ function animIds(s, u){
       case 'clase': case 'video': P('M4 6h16v12H4z'); F('M10 9l5 3-5 3z'); break;
       case 'vivo': el('circle', { cx: 12, cy: 12, r: 2.6, fill: col, stroke: 'none' }, grp); P('M7.5 7.5a6.5 6.5 0 000 9M16.5 7.5a6.5 6.5 0 010 9M4.5 4.5a10.5 10.5 0 000 15M19.5 4.5a10.5 10.5 0 010 15'); break;
       case 'mapa': case 'mapamental': P('M7 7l10 10M17 7L7 17'); [[6, 6], [18, 6], [6, 18], [18, 18]].forEach(([cx, cy]) => el('circle', { cx, cy, r: 2.6, fill: col, stroke: 'none' }, grp)); el('circle', { cx: 12, cy: 12, r: 2.2, fill: col, stroke: 'none' }, grp); break;
+      case 'imagenes': P('M4 5h16v14H4z'); el('circle', { cx: 9, cy: 9.5, r: 1.8, fill: col, stroke: 'none' }, grp); P('M4 17l5-5 3.5 3.5L15 13l5 5'); break;
       case 'cuadro': P('M4 5h16v14H4zM4 10h16M10 5v14'); break;
       case 'practica': P('M5 19l3-1 10-10-2-2L6 16z'); P('M14 6l2 2'); break;
       case 'examen': F('M12 2.8l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.7 6.6 19.6l1.1-6.1L3.2 9.2l6.1-.8z'); break;
@@ -6783,7 +6797,7 @@ function animIds(s, u){
     let yy = 148;
     if (m.tema) { txt(bg, corta(m.tema, 46), { x: 92, y: yy, 'font-size': 14, 'font-style': 'italic', 'font-weight': 'bold', fill: '#4A4534' }); yy += 20; }
 
-    // tareas por etapa (el examen va al final del tramo de mapas, antes del cartel "4. Examen")
+    // tareas por etapa: cada una en el tramo que sigue a su cartel (el examen, después de "4. Examen")
     const porEtapa = ETAPAS.map(e => m.tareas.filter(t => e.tipos.includes(t.tipo)));
     const orden = [].concat(...porEtapa);
     const etapaDe = t => ETAPAS.findIndex(e => e.tipos.includes(t.tipo));
@@ -6806,7 +6820,7 @@ function animIds(s, u){
     });
 
     /* ---------- capa viva ---------- */
-    const tramos = [[porEtapa[0], 0, 42, 42], [porEtapa[1], 1, 90, 94], [porEtapa[2].concat(porEtapa[3]), 2, 48, 44]];
+    const tramos = [[porEtapa[0], 0, 42, 42], [porEtapa[1], 1, 90, 94], [porEtapa[2], 2, 92, 52], [porEtapa[3], 3, 58, 40]];
     const items = [];
     tramos.forEach(([arr, k, pa, pb]) => {
       const a = S.marks[k], b = S.marks[k + 1], paso = (b - a - pa - pb) / Math.max(1, arr.length);
@@ -6843,7 +6857,7 @@ function animIds(s, u){
     aparece(ini, 0.35);
 
     // Carteles de etapa: del color de la materia hasta la etapa en curso, oscuros los que faltan
-    const NOMS = [['1. Lectura'], ['2. Videos'], ['3. Mapas', 'Conceptuales'], ['4. Examen']];
+    const NOMS = [['1. Lectura'], ['2. Mapas', 'Conceptuales'], ['3. Videos'], ['4. Examen']];
     R.p.forEach(([x, y], i) => {
       const act = i <= etAct, n = NOMS[i].length, w = n > 1 ? 164 : 150, h = n > 1 ? 62 : 50;
       const g = el('g', { class: 's-pill' }, svg);
@@ -7053,8 +7067,10 @@ function animIds(s, u){
     const mats = materialsForSubject(subject);
     mats.forEach((m, idx) => {
       const id = `${subject.id}-mat-${idx}`, reps = Math.min(3, getViewCount(id));
-      const esMapa = /mapa|cuadro|esquema/i.test(m.name || '');
-      T.push({ kind: 'mat', id, titulo: m.name, tipo: esMapa ? 'mapa' : (m.type === 'pdf' ? 'pdf' : 'resumen'), reps, hecho: reps >= 3, url: m.url || '' });
+      // Los PDF de imágenes (láminas explicadas por diapositiva) van al tramo "3. Mapas Conceptuales", igual que mapas, cuadros y esquemas
+      const nom = (m.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const tipo = /imagen/i.test(nom) ? 'imagenes' : /mapa|cuadro|esquema/i.test(nom) ? 'mapa' : (m.type === 'pdf' ? 'pdf' : 'resumen');
+      T.push({ kind: 'mat', id, titulo: m.name, tipo, reps, hecho: reps >= 3, url: m.url || '' });
     });
     lessons.forEach(l => { const reps = Math.min(3, getViewCount(l.id)); T.push({ kind: 'clase', id: l.id, titulo: l.title, tipo: 'clase', reps, hecho: reps >= 3 }); });
     if (adminData.quizQuestions.some(q => q.subjectId === subject.id)) {
